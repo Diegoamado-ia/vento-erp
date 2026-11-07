@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VENTO ERP - Sistema Contable e Impositivo</title>
+    
+    <!-- Configuración PWA para iPhone / Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VENTO ERP">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para Dashboards -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (XLSX Parser para Excel de Retenciones/Percepciones) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Identity Services Client Library -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <style>
+        @media print {
+            aside, header, button, .no-print { display: none !important; }
+            body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; }
+            main { overflow: visible !important; height: auto !important; }
+            .print-area { padding: 0 !important; margin: 0 !important; width: 100% !important; }
+            .page-break { page-break-after: always; }
+            .asiento-card { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- SIDEBAR DE NAVEGACIÓN -->
+        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-20">
+            <div class="p-5 border-b border-slate-800 flex items-center space-x-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg">
+                    <i data-lucide="calculator" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-white text-base">VENTO ERP</h1>
+                    <p class="text-xs text-slate-400">Gestión & Contabilidad Cloud</p>
+                </div>
+            </div>
+
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                <a href="#" onclick="cambiarVista('dashboard')" id="nav-dashboard" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white transition">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    <span>Dashboard General</span>
+                </a>
+                
+                <div class="pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Gestión</div>
+                <a href="#" onclick="cambiarVista('importacion')" id="nav-importacion" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                    <span>Mis Comprobantes ARCA</span>
+                </a>
+                <a href="#" onclick="cambiarVista('comprobantes')" id="nav-comprobantes" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="receipt" class="w-5 h-5"></i>
+                    <span>Gestión Comprobantes</span>
+                </a>
+                <a href="#" onclick="cambiarVista('libro-iva')" id="nav-libro-iva" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="book-open-check" class="w-5 h-5"></i>
+                    <span>Libros IVA</span>
+                </a>
+
+                <div class="pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Contabilidad</div>
+                <a href="#" onclick="cambiarVista('plan-cuentas')" id="nav-plan-cuentas" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="folder-tree" class="w-5 h-5"></i>
+                    <span>Plan de Cuentas</span>
+                </a>
+                <a href="#" onclick="cambiarVista('libro-diario')" id="nav-libro-diario" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="book" class="w-5 h-5"></i>
+                    <span>Libro Diario</span>
+                </a>
+                <a href="#" onclick="cambiarVista('balance')" id="nav-balance" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="scale" class="w-5 h-5"></i>
+                    <span>Balance Sumas y Saldos</span>
+                </a>
+
+                <!-- MÓDULO IMPOSITIVO -->
+                <div class="pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Impositivo</div>
+                <a href="#" onclick="cambiarVista('impositivo')" id="nav-impositivo" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                    <span>IVA</span>
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
+                Sincronización Cloud con Google Drive
+            </div>
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 shadow-sm z-10 no-print">
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm font-semibold text-gray-500">Empresa Activa:</span>
+                    <select id="selectEmpresa" onchange="seleccionarEmpresa(this.value)" class="bg-gray-50 border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 font-medium">
+                    </select>
+                    <button onclick="abrirModalEmpresa()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Nueva Empresa</span>
+                    </button>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <!-- BOTÓN CONEXIÓN GOOGLE DRIVE -->
+                    <button id="btnGoogleAuth" onclick="conectarGoogleDrive()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition flex items-center space-x-1.5">
+                        <i data-lucide="cloud" class="w-4 h-4"></i>
+                        <span id="txtGoogleAuth">Conectar Drive</span>
+                    </button>
+
+                    <div class="text-right border-l pl-3">
+                        <p class="text-sm font-bold text-gray-800" id="headerRazonSocial">CARGANDO...</p>
+                        <p class="text-xs text-gray-500" id="headerCuit">CUIT: ---</p>
+                    </div>
+                    <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold" id="headerInicia">
+                        ERP
+                    </div>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-6 print-area" id="contenedorVistas">
+            </div>
+        </main>
+    </div>
+
+    <!-- MODALES (Empresa, Cuenta, Asiento Manual) -->
+    <div id="modalNuevaEmpresa" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="text-lg font-bold text-gray-800">Nueva Empresa</h3>
+                <button onclick="cerrarModalEmpresa()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            <form id="formNuevaEmpresa" onsubmit="registrarEmpresaDesdeForm(event)">
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Razón Social</label>
+                    <input type="text" id="nuevaRazonSocial" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="SUCESION DE BARBERO ARMANDO LUIS">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">CUIT (11 dígitos sin guiones)</label>
+                    <input type="text" id="nuevoCuit" required maxlength="11" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="20054059354">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Condición Frente al IVA</label>
+                    <select id="nuevaCondicionIva" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="Responsable Inscripto">Responsable Inscripto</option>
+                        <option value="Monotributo">Monotributo</option>
+                        <option value="Exento">Exento</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="cerrarModalEmpresa()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalNuevaCuenta" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="text-lg font-bold text-gray-800" id="modalCuentaTitulo">Agregar Cuenta Contable</h3>
+                <button onclick="cerrarModalCuenta()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            <form id="formNuevaCuenta" onsubmit="guardarCuentaContable(event)">
+                <input type="hidden" id="editandoCodigo" value="">
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Código Jerárquico</label>
+                    <input type="text" id="codigoCuenta" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ej: 5.1.02">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Nombre de la Cuenta</label>
+                    <input type="text" id="nombreCuenta" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ej: Honorarios Profesionales">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Tipo de Rubro</label>
+                    <select id="tipoCuenta" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="ACTIVO">ACTIVO</option>
+                        <option value="PASIVO">PASIVO</option>
+                        <option value="INGRESO">INGRESO</option>
+                        <option value="EGRESO">EGRESO</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Tipo de Imputación</label>
+                    <select id="imputableCuenta" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="true">SI - Imputable (Recibe Asientos)</option>
+                        <option value="false">NO - No Imputable (Rubro / Título Madre)</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="cerrarModalCuenta()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalAsientoManual" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="text-lg font-bold text-gray-800">Registrar Asiento Manual</h3>
+                <button onclick="cerrarModalAsientoManual()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            <form id="formAsientoManual" onsubmit="guardarAsientoManual(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Fecha</label>
+                        <input type="date" id="manualFecha" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value="2026-10-31">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Concepto / Descripción</label>
+                        <input type="text" id="manualConcepto" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ej: Devengamiento y pagos varios">
+                    </div>
+                </div>
+
+                <div class="border-t pt-3 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs font-bold text-gray-600 uppercase">Detalle de Cuentas (Debe / Haber)</label>
+                        <button type="button" onclick="agregarLineaAsientoManual()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs font-semibold">+ Agregar Línea</button>
+                    </div>
+                    <div id="contenedorLineasManuales" class="space-y-2">
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border font-bold text-xs">
+                    <span id="totalesAsientoManualCheck">Total Debe: $0,00 | Total Haber: $0,00</span>
+                    <span id="balanceEstadoCheck" class="text-emerald-600">Balanceado</span>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <button type="button" onclick="cerrarModalAsientoManual()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">Guardar Asiento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE LÓGICA GENERAL & GOOGLE DRIVE -->
+    <script>
+        // CONFIGURACIÓN GOOGLE DRIVE API
+        const CLIENT_ID = '4416279805-k2kfidgqsth7t7lg1a9hl3n4o8m3rdgu.apps.googleusercontent.com'; // Reemplazar con tu ID de Google Cloud
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+        let tokenClient;
+        let accessToken = null;
+        let driveFileId = null;
+
+        window.onload = function() {
+            if (typeof google !== 'undefined') {
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    callback: (tokenResponse) => {
+                        if (tokenResponse && tokenResponse.access_token) {
+                            accessToken = tokenResponse.access_token;
+                            document.getElementById('txtGoogleAuth').textContent = "Drive Conectado ✓";
+                            document.getElementById('btnGoogleAuth').className = "bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center space-x-1.5";
+                            sincronizarConDrive();
+                        }
+                    },
+                });
+            }
+            actualizarSelectorEmpresas();
+            renderizarVista();
+        };
+
+        function conectarGoogleDrive() {
+            if (tokenClient) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                alert("Configura tu Client ID de Google OAuth en el código.");
+            }
+        }
+
+        async function guardarEnGoogleDrive() {
+            if (!accessToken) return;
+            const fileMetadata = { name: 'vento_erp_database.json', mimeType: 'application/json' };
+            const file = new Blob([localStorage.getItem('arca_empresas')], {type: 'application/json'});
+            const formData = new FormData();
+
+            if (!driveFileId) {
+                formData.append('metadata', new Blob([JSON.stringify(fileMetadata)], { type: 'application/json' }));
+                formData.append('file', file);
+                await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+                    body: formData
+                }).then(res => res.json()).then(data => driveFileId = data.id);
+            } else {
+                await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+                    method: 'PATCH',
+                    headers: new Headers({ 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' }),
+                    body: file
+                });
+            }
+        }
+
+        async function sincronizarConDrive() {
+            if (!accessToken) return;
+            const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='vento_erp_database.json'`, {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            });
+            const result = await response.json();
+            if (result.files && result.files.length > 0) {
+                driveFileId = result.files[0].id;
+                const contentResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+                const remoteData = await contentResponse.json();
+                if (remoteData) {
+                    localStorage.setItem('arca_empresas', JSON.stringify(remoteData));
+                    empresas = remoteData;
+                    actualizarSelectorEmpresas();
+                    renderizarVista();
+                }
+            }
+        }
+
+        function obtenerPlanCuentasBase() {
+            return [
+                { codigo: "1.0.00", nombre: "ACTIVO", tipo: "ACTIVO", imputable: false },
+                { codigo: "1.1.00", nombre: "Activo Corriente", tipo: "ACTIVO", imputable: false },
+                { codigo: "1.1.01", nombre: "Caja en Moneda Nacional", tipo: "ACTIVO", imputable: true },
+                { codigo: "1.1.02", nombre: "Banco Cta Cte", tipo: "ACTIVO", imputable: true },
+                { codigo: "1.1.03", nombre: "IVA Crédito Fiscal", tipo: "ACTIVO", imputable: true },
+                { codigo: "1.1.04", nombre: "Deudores por Ventas", tipo: "ACTIVO", imputable: true },
+                { codigo: "1.1.05", nombre: "Percepciones / Retenciones IIBB", tipo: "ACTIVO", imputable: true },
+                { codigo: "2.0.00", nombre: "PASIVO", tipo: "PASIVO", imputable: false },
+                { codigo: "2.1.01", nombre: "Proveedores", tipo: "PASIVO", imputable: true },
+                { codigo: "2.1.02", nombre: "IVA Débito Fiscal", tipo: "PASIVO", imputable: true },
+                { codigo: "4.0.00", nombre: "INGRESOS", tipo: "INGRESO", imputable: false },
+                { codigo: "4.1.01", nombre: "Ventas Gravadas", tipo: "INGRESO", imputable: true },
+                { codigo: "5.0.00", nombre: "EGRESOS", tipo: "EGRESO", imputable: false },
+                { codigo: "5.1.01", nombre: "Compras de Bienes / Mercadería", tipo: "EGRESO", imputable: true }
+            ];
+        }
+
+        const TIPOS_COMPROBANTE_ARCA = {
+            1: "FC A", 2: "ND A", 3: "NC A", 4: "REC A", 5: "NV A",
+            6: "FC B", 7: "ND B", 8: "NC B", 9: "REC B", 10: "NV B",
+            11: "FC C", 12: "ND C", 13: "NC C", 15: "REC C", 16: "NV C",
+            17: "LSP A", 18: "LSP B", 19: "FC EXP", 20: "ND EXP", 21: "NC EXP",
+            22: "FC SIMP", 23: "COMP PESQ A", 24: "CONS PESQ A", 25: "COMP PESQ B", 26: "CONS PESQ B",
+            27: "LUCI A", 28: "LUCI B", 29: "LUCI C", 30: "COMP USADO", 32: "RECICLAJE",
+            33: "LP GRANOS", 34: "COMP A RG1415", 35: "COMP B RG1415", 36: "COMP C RG1415",
+            37: "ND EQ RG1415", 38: "NC EQ RG1415", 39: "OTR A RG1415", 40: "OTR B RG1415", 41: "OTR C RG1415",
+            43: "NC LUCI B", 44: "NC LUCI C", 45: "ND LUCI A", 46: "ND LUCI B", 47: "ND LUCI C", 48: "NC LUCI A",
+            49: "COMP CONS", 50: "REC FCE", 51: "FC M", 52: "ND M", 53: "NC M", 54: "REC M", 55: "NV M",
+            56: "COMP M RG1415", 57: "OTR M RG1415", 58: "CVLP M", 59: "LIQ M", 60: "CVLP A", 61: "CVLP B",
+            63: "LIQ A", 64: "LIQ B", 66: "DESP IMP", 68: "LIQ C", 70: "REC FCE",
+            81: "TK-FC A", 82: "TK-FC B", 83: "TK", 90: "NC OTR", 99: "OTR",
+            109: "TK C", 110: "TK NC", 111: "TK-FC C", 112: "TK NC A", 113: "TK NC B", 114: "TK NC C",
+            115: "TK ND A", 116: "TK ND B", 117: "TK ND C", 118: "TK-FC M", 119: "TK NC M", 120: "TK ND M",
+            150: "LIQ TAB A", 151: "LIQ TAB B", 157: "CVLP AV A", 158: "CVLP AV B", 159: "LIQ AV A", 160: "LIQ AV B",
+            161: "LIQ DIR AV A", 162: "LIQ DIR AV B", 163: "LIQ DIR AV C", 164: "LIQ VTA AV A", 165: "LIQ VTA AV B",
+            166: "LIQ CRI POLLO A", 167: "LIQ CRI POLLO B", 168: "LIQ CRI POLLO C", 169: "CRI POLLO A", 170: "CRI POLLO B",
+            171: "LIQ AZUCAR A", 172: "LIQ AZUCAR B", 180: "CVLP PEC A", 182: "CVLP PEC B", 183: "LIQ PEC A", 185: "LIQ PEC B",
+            186: "LIQ DIR PEC A", 188: "LIQ DIR PEC B", 189: "LIQ DIR PEC C", 190: "LIQ VTA PEC A", 191: "LIQ VTA PEC B",
+            195: "FC T", 196: "ND T", 197: "NC T",
+            201: "FCE A", 202: "ND FCE A", 203: "NC FCE A",
+            206: "FCE B", 207: "ND FCE B", 208: "NC FCE B",
+            211: "FCE C", 212: "ND FCE C", 213: "NC FCE C",
+            331: "LIQ SEC GRANOS", 332: "CERT ELEC GRANOS"
+        };
+
+        function formatearFechaAr(isoStr) {
+            if (!isoStr) return "";
+            if (isoStr.includes('/')) return isoStr;
+            const p = isoStr.split('-');
+            if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
+            return isoStr;
+        }
+
+        let filtroMesIva = "10";
+        let filtroAnioIva = "2026";
+        let folioInicialIva = 1;
+        let libroIvaModo = "COMPRA";
+
+        let folioInicialDiario = 1;
+        let diarioFechaDesde = "2026-07-01";
+        let diarioFechaHasta = "2027-06-30";
+
+        let balanceFechaDesde = "2026-10-01";
+        let balanceFechaHasta = "2026-10-31";
+
+        let dashFechaDesde = "2026-01-01";
+        let dashFechaHasta = "2026-12-31";
+
+        let impositivoMes = "10";
+        let impositivoAnio = "2026";
+
+        let saldoTecnicoAnt = 0;
+        let saldoLibreDispAnt = 0;
+
+        let ordenComprobantes = { campo: 'fecha', asc: false };
+        let ordenRetenciones = { campo: 'fecha', asc: false };
+
+        let empresas = JSON.parse(localStorage.getItem('arca_empresas')) || [
+            {
+                id: 1,
+                razonSocial: "SUCESION DE BARBERO ARMANDO LUIS",
+                cuit: "20054059354",
+                condicionIva: "Responsable Inscripto",
+                comprobantes: [],
+                asientosManuales: [],
+                retencionesPercepciones: [],
+                planCuentas: obtenerPlanCuentasBase()
+            }
+        ];
+
+        let empresaActualId = parseInt(localStorage.getItem('arca_empresa_actual')) || empresas[0].id;
+        let vistaActual = 'dashboard';
+
+        function guardarEnLocalStorage() {
+            localStorage.setItem('arca_empresas', JSON.stringify(empresas));
+            localStorage.setItem('arca_empresa_actual', empresaActualId);
+            guardarEnGoogleDrive(); // Sincronización automática con Drive
+        }
+
+        function obtenerEmpresaActual() { 
+            let emp = empresas.find(e => e.id === empresaActualId);
+            if (!emp) {
+                emp = empresas[0];
+                empresaActualId = emp.id;
+            }
+            if (!emp.asientosManuales) emp.asientosManuales = [];
+            if (!emp.retencionesPercepciones) emp.retencionesPercepciones = [];
+            return emp;
+        }
+
+        function actualizarSelectorEmpresas() {
+            const select = document.getElementById('selectEmpresa');
+            select.innerHTML = '';
+            empresas.forEach(emp => {
+                const opt = document.createElement('option');
+                opt.value = emp.id;
+                opt.textContent = `${emp.razonSocial} (CUIT: ${emp.cuit})`;
+                if (emp.id === empresaActualId) opt.selected = true;
+                select.appendChild(opt);
+            });
+            const actual = obtenerEmpresaActual();
+            if (actual) {
+                document.getElementById('headerRazonSocial').textContent = actual.razonSocial;
+                document.getElementById('headerCuit').textContent = `CUIT: ${actual.cuit}`;
+                const iniciales = actual.razonSocial.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+                document.getElementById('headerInicia').textContent = iniciales;
+            }
+        }
+
+        function seleccionarEmpresa(id) {
+            empresaActualId = parseInt(id);
+            guardarEnLocalStorage();
+            actualizarSelectorEmpresas();
+            renderizarVista();
+        }
+
+        function abrirModalEmpresa() { document.getElementById('modalNuevaEmpresa').classList.remove('hidden'); }
+        function cerrarModalEmpresa() { document.getElementById('modalNuevaEmpresa').classList.add('hidden'); }
+        
+        function abrirModalCuenta(codigo = '') {
+            document.getElementById('modalNuevaCuenta').classList.remove('hidden');
+            if (codigo) {
+                const emp = obtenerEmpresaActual();
+                const cta = emp.planCuentas.find(c => c.codigo === codigo);
+                if (cta) {
+                    document.getElementById('modalCuentaTitulo').textContent = "Editar Cuenta Contable";
+                    document.getElementById('editandoCodigo').value = cta.codigo;
+                    document.getElementById('codigoCuenta').value = cta.codigo;
+                    document.getElementById('nombreCuenta').value = cta.nombre;
+                    document.getElementById('tipoCuenta').value = cta.tipo;
+                    document.getElementById('imputableCuenta').value = cta.imputable.toString();
+                }
+            } else {
+                document.getElementById('modalCuentaTitulo').textContent = "Agregar Cuenta Contable";
+                document.getElementById('editandoCodigo').value = '';
+                document.getElementById('formNuevaCuenta').reset();
+            }
+        }
+        function cerrarModalCuenta() { document.getElementById('modalNuevaCuenta').classList.add('hidden'); }
+
+        function abrirModalAsientoManual() {
+            document.getElementById('modalAsientoManual').classList.remove('hidden');
+            const cont = document.getElementById('contenedorLineasManuales');
+            cont.innerHTML = '';
+            agregarLineaAsientoManual();
+            agregarLineaAsientoManual();
+            actualizarTotalesAsientoManual();
+        }
+        function cerrarModalAsientoManual() { document.getElementById('modalAsientoManual').classList.add('hidden'); }
+
+        function agregarLineaAsientoManual(cuentaPre = '', debePre = 0, haberPre = 0) {
+            const emp = obtenerEmpresaActual();
+            const imputables = emp.planCuentas.filter(p => p.imputable);
+            const opts = imputables.map(p => `<option value="${p.codigo}" ${cuentaPre===p.codigo?'selected':''}>${p.codigo} - ${p.nombre}</option>`).join('');
+
+            const cont = document.getElementById('contenedorLineasManuales');
+            const div = document.createElement('div');
+            div.className = "flex items-center space-x-2 bg-gray-50 p-2 rounded border";
+            div.innerHTML = `
+                <select class="flex-1 border rounded p-1.5 text-xs font-semibold cta-manual">${opts}</select>
+                <input type="number" step="0.01" placeholder="Debe $" value="${debePre || ''}" oninput="actualizarTotalesAsientoManual()" class="w-28 border rounded p-1.5 text-xs text-right font-semibold debe-manual">
+                <input type="number" step="0.01" placeholder="Haber $" value="${haberPre || ''}" oninput="actualizarTotalesAsientoManual()" class="w-28 border rounded p-1.5 text-xs text-right font-semibold haber-manual">
+                <button type="button" onclick="this.parentElement.remove(); actualizarTotalesAsientoManual();" class="text-red-500 font-bold px-2">&times;</button>
+            `;
+            cont.appendChild(div);
+            actualizarTotalesAsientoManual();
+        }
+
+        function actualizarTotalesAsientoManual() {
+            const debeInputs = document.querySelectorAll('.debe-manual');
+            const haberInputs = document.querySelectorAll('.haber-manual');
+            let totDebe = 0, totHaber = 0;
+            debeInputs.forEach(i => totDebe += parseFloat(i.value) || 0);
+            haberInputs.forEach(i => totHaber += parseFloat(i.value) || 0);
+
+            const label = document.getElementById('totalesAsientoManualCheck');
+            const estado = document.getElementById('balanceEstadoCheck');
+            label.textContent = `Total Debe: $${totDebe.toLocaleString('es-AR',{minimumFractionDigits:2})} | Total Haber: $${totHaber.toLocaleString('es-AR',{minimumFractionDigits:2})}`;
+            
+            if (Math.abs(totDebe - totHaber) < 0.01 && totDebe > 0) {
+                estado.textContent = "Balanceado OK";
+                estado.className = "text-emerald-600 font-bold";
+            } else {
+                estado.textContent = "Desbalanceado";
+                estado.className = "text-red-600 font-bold";
+            }
+        }
+
+        function guardarAsientoManual(e) {
+            e.preventDefault();
+            const emp = obtenerEmpresaActual();
+            const fecha = document.getElementById('manualFecha').value;
+            const concepto = document.getElementById('manualConcepto').value.trim();
+
+            const ctas = document.querySelectorAll('.cta-manual');
+            const debeVals = document.querySelectorAll('.debe-manual');
+            const haberVals = document.querySelectorAll('.haber-manual');
+
+            let lineas = [];
+            let totDebe = 0, totHaber = 0;
+
+            for(let i=0; i<ctas.length; i++) {
+                const cuenta = ctas[i].value;
+                const debe = parseFloat(debeVals[i].value) || 0;
+                const haber = parseFloat(haberVals[i].value) || 0;
+                if (debe > 0 || haber > 0) {
+                    lineas.push({ cuenta, debe, haber });
+                    totDebe += debe;
+                    totHaber += haber;
+                }
+            }
+
+            if (Math.abs(totDebe - totHaber) > 0.01 || lineas.length === 0) {
+                alert("El asiento no está balanceado o no tiene líneas válidas.");
+                return;
+            }
+
+            emp.asientosManuales.push({ id: Date.now(), fecha, concepto, lineas });
+            guardarEnLocalStorage();
+            cerrarModalAsientoManual();
+            renderizarVista();
+        }
+
+        function eliminarAsientoManual(id) {
+            const emp = obtenerEmpresaActual();
+            emp.asientosManuales = emp.asientosManuales.filter(a => a.id !== id);
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function registrarEmpresaDesdeForm(e) {
+            e.preventDefault();
+            const razonSocial = document.getElementById('nuevaRazonSocial').value.trim();
+            const cuit = document.getElementById('nuevoCuit').value.trim();
+            const condicionIva = document.getElementById('nuevaCondicionIva').value;
+
+            const nuevaEmpresa = {
+                id: Date.now(),
+                razonSocial, cuit, condicionIva,
+                comprobantes: [],
+                asientosManuales: [],
+                retencionesPercepciones: [],
+                planCuentas: obtenerPlanCuentasBase()
+            };
+            empresas.push(nuevaEmpresa);
+            empresaActualId = nuevaEmpresa.id;
+            guardarEnLocalStorage();
+            cerrarModalEmpresa();
+            actualizarSelectorEmpresas();
+            renderizarVista();
+        }
+
+        function guardarCuentaContable(e) {
+            e.preventDefault();
+            const editando = document.getElementById('editandoCodigo').value;
+            const codigo = document.getElementById('codigoCuenta').value.trim();
+            const nombre = document.getElementById('nombreCuenta').value.trim();
+            const tipo = document.getElementById('tipoCuenta').value;
+            const imputable = document.getElementById('imputableCuenta').value === 'true';
+
+            const emp = obtenerEmpresaActual();
+            if (editando) {
+                const cta = emp.planCuentas.find(c => c.codigo === editando);
+                if (cta) { cta.codigo = codigo; cta.nombre = nombre; cta.tipo = tipo; cta.imputable = imputable; }
+            } else {
+                if (emp.planCuentas.some(c => c.codigo === codigo)) { alert("Ya existe una cuenta con ese código."); return; }
+                emp.planCuentas.push({ codigo, nombre, tipo, imputable });
+            }
+            emp.planCuentas.sort((a,b) => a.codigo.localeCompare(b.codigo));
+            guardarEnLocalStorage();
+            cerrarModalCuenta();
+            renderizarVista();
+        }
+
+        function eliminarCuenta(codigo) {
+            if (confirm(`¿Eliminar la cuenta ${codigo}?`)) {
+                const emp = obtenerEmpresaActual();
+                emp.planCuentas = emp.planCuentas.filter(c => c.codigo !== codigo);
+                guardarEnLocalStorage();
+                renderizarVista();
+            }
+        }
+
+        function cambiarVista(v) {
+            vistaActual = v;
+            renderizarVista();
+        }
+
+        function renderizarVista() {
+            const cont = document.getElementById('contenedorVistas');
+            cont.innerHTML = '';
+            if (vistaActual === 'dashboard') renderDashboard(cont);
+            else if (vistaActual === 'importacion') renderImportacion(cont);
+            else if (vistaActual === 'comprobantes') renderComprobantes(cont);
+            else if (vistaActual === 'libro-iva') renderLibroIva(cont);
+            else if (vistaActual === 'plan-cuentas') renderPlanCuentas(cont);
+            else if (vistaActual === 'libro-diario') renderLibroDiario(cont);
+            else if (vistaActual === 'balance') renderBalance(cont);
+            else if (vistaActual === 'impositivo') renderImpositivo(cont);
+            lucide.createIcons();
+        }
+
+        function parsearFloatAr(str) {
+            if (!str) return 0;
+            return parseFloat(str.toString().replace(/\./g, '').replace(',', '.')) || 0;
+        }
+
+        function procesarCsvArcaReal(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const tipoOp = document.querySelector('input[name="tipoOperacionImport"]:checked').value;
+            const reader = new FileReader();
+
+            reader.onload = function(evt) {
+                const lines = evt.target.result.split(/\r\n|\n/);
+                const emp = obtenerEmpresaActual();
+                let agregados = 0;
+
+                lines.forEach((line, idx) => {
+                    if (idx === 0 || !line.trim()) return;
+                    const c = line.split(';').map(s => s.replace(/"/g, '').trim());
+
+                    if (c.length >= 25) {
+                        const fecha = c[0];
+                        const tipoCodigo = parseInt(c[1]) || 1;
+                        const pv = parseInt(c[2]) || 1;
+                        const numero = parseInt(c[3]) || 1;
+                        
+                        const cuit = (tipoOp === 'COMPRA') ? (c[7] || c[6] || "") : (c[7] || "");
+                        const razonSocial = (tipoOp === 'COMPRA') ? (c[8] || c[7] || "") : (c[8] || "");
+
+                        const tcInput = parsearFloatAr(tipoOp === 'COMPRA' ? c[11] : c[9]);
+                        const tipoCambio = tcInput > 0 ? tcInput : 1;
+                        const moneda = (tipoOp === 'COMPRA' ? (c[12] || "$") : (c[10] || "$")).toUpperCase();
+                        const factorMoneda = (moneda.includes("USD") || moneda.includes("DOL")) ? tipoCambio : 1;
+
+                        const esComprobanteC = [11, 12, 13].includes(tipoCodigo);
+
+                        let neto105 = 0, iva105 = 0, neto21 = 0, iva21 = 0, neto27 = 0, iva27 = 0;
+                        let netoTotal = 0, totalIva = 0, total = 0, noGravado = 0, exento = 0, otrosTributos = 0;
+
+                        if (tipoOp === 'COMPRA') {
+                            iva105 = parsearFloatAr(c[18]) * factorMoneda; neto105 = parsearFloatAr(c[19]) * factorMoneda;
+                            iva21 = parsearFloatAr(c[20]) * factorMoneda; neto21 = parsearFloatAr(c[21]) * factorMoneda;
+                            iva27 = parsearFloatAr(c[22]) * factorMoneda; neto27 = parsearFloatAr(c[23]) * factorMoneda;
+                            netoTotal = parsearFloatAr(c[24]) * factorMoneda; noGravado = parsearFloatAr(c[25]) * factorMoneda;
+                            exento = parsearFloatAr(c[26]) * factorMoneda; otrosTributos = parsearFloatAr(c[27]) * factorMoneda;
+                            totalIva = parsearFloatAr(c[28]) * factorMoneda; total = parsearFloatAr(c[29]) * factorMoneda;
+                        } else {
+                            iva105 = parsearFloatAr(c[16]) * factorMoneda; neto105 = parsearFloatAr(c[17]) * factorMoneda;
+                            iva21 = parsearFloatAr(c[18]) * factorMoneda; neto21 = parsearFloatAr(c[19]) * factorMoneda;
+                            iva27 = parsearFloatAr(c[20]) * factorMoneda; neto27 = parsearFloatAr(c[21]) * factorMoneda;
+                            netoTotal = parsearFloatAr(c[22]) * factorMoneda; noGravado = parsearFloatAr(c[23]) * factorMoneda;
+                            exento = parsearFloatAr(c[24]) * factorMoneda; otrosTributos = parsearFloatAr(c[25]) * factorMoneda;
+                            totalIva = parsearFloatAr(c[26]) * factorMoneda; total = parsearFloatAr(c[27]) * factorMoneda;
+                        }
+
+                        if (esComprobanteC) {
+                            exento = total; netoTotal = 0; totalIva = 0;
+                            neto21 = 0; iva21 = 0; neto105 = 0; iva105 = 0; neto27 = 0; iva27 = 0;
+                        }
+
+                        emp.comprobantes.push({
+                            id: Date.now() + idx,
+                            tipoOp, fecha, tipoCodigo,
+                            tipoNombre: TIPOS_COMPROBANTE_ARCA[tipoCodigo] || `TC ${tipoCodigo}`,
+                            pv, numero, cuit, razonSocial,
+                            neto105, neto21, neto27, iva105, iva21, iva27,
+                            noGravado, exento, otrosTributos, netoTotal, totalIva, total,
+                            cuentaNeto: tipoOp === 'VENTA' ? "4.1.01" : "5.1.01",
+                            cuentaIva: tipoOp === 'VENTA' ? "2.1.02" : "1.1.03",
+                            cuentaContrapartida: tipoOp === 'VENTA' ? "1.1.04" : "2.1.01",
+                            moneda, tipoCambio
+                        });
+                        agregados++;
+                    }
+                });
+
+                guardarEnLocalStorage();
+                alert(`¡Importados ${agregados} comprobantes correctamente!`);
+                cambiarVista('comprobantes');
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        function procesarArchivoPercepciones(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const emp = obtenerEmpresaActual();
+            const extension = file.name.split('.').pop().toLowerCase();
+
+            if (extension === 'xlsx' || extension === 'xls') {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                    let agregados = 0;
+                    json.forEach((row, idx) => {
+                        let fechaRaw = row['Fecha Ret./Perc.'] || row['Fecha'] || "2026-09-01";
+                        let fecha = fechaRaw.toString().includes('/') ? fechaRaw.split('/').reverse().join('-') : fechaRaw;
+                        const importe = parseFloat(row['Importe Ret./Perc.'] || row['Importe'] || 0) || 0;
+                        const cuitAgente = row['CUIT Agente Ret./Perc.'] || row['CUIT'] || "Agente";
+                        if (importe > 0) {
+                            emp.retencionesPercepciones.push({ id: Date.now() + idx, fecha, impuesto: "IVA", tipo: "PERCEPCION", agente: `CUIT: ${cuitAgente}`, importe });
+                            agregados++;
+                        }
+                    });
+                    guardarEnLocalStorage();
+                    alert(`¡Se importaron ${agregados} PERCEPCIONES correctamente!`);
+                    renderizarVista();
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function procesarArchivoRetenciones(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const emp = obtenerEmpresaActual();
+            const extension = file.name.split('.').pop().toLowerCase();
+
+            if (extension === 'xlsx' || extension === 'xls') {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                    let agregados = 0;
+                    json.forEach((row, idx) => {
+                        let fechaRaw = row['Fecha Ret./Perc.'] || row['Fecha'] || "2026-09-01";
+                        let fecha = fechaRaw.toString().includes('/') ? fechaRaw.split('/').reverse().join('-') : fechaRaw;
+                        const importe = parseFloat(row['Importe Ret./Perc.'] || row['Importe'] || 0) || 0;
+                        const cuitAgente = row['CUIT Agente Ret./Perc.'] || row['CUIT'] || "Agente";
+                        if (importe > 0) {
+                            emp.retencionesPercepciones.push({ id: Date.now() + idx, fecha, impuesto: "IVA", tipo: "RETENCION", agente: `CUIT: ${cuitAgente}`, importe });
+                            agregados++;
+                        }
+                    });
+                    guardarEnLocalStorage();
+                    alert(`¡Se importaron ${agregados} RETENCIONES correctamente!`);
+                    renderizarVista();
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function eliminarRetencionPercepcion(id) {
+            const emp = obtenerEmpresaActual();
+            emp.retencionesPercepciones = emp.retencionesPercepciones.filter(r => r.id !== id);
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function ordenarComprobantesPor(campo) {
+            if (ordenComprobantes.campo === campo) { ordenComprobantes.asc = !ordenComprobantes.asc; }
+            else { ordenComprobantes.campo = campo; ordenComprobantes.asc = true; }
+            renderizarVista();
+        }
+
+        function ordenarRetencionesPor(campo) {
+            if (ordenRetenciones.campo === campo) { ordenRetenciones.asc = !ordenRetenciones.asc; }
+            else { ordenRetenciones.campo = campo; ordenRetenciones.asc = true; }
+            renderizarVista();
+        }
+
+        // Vistas renderizadas (Dashboard, Importación, Comprobantes, Libro IVA, Plan de Cuentas, Libro Diario, Balance, Impositivo)
+        function renderDashboard(cont) {
+            const emp = obtenerEmpresaActual();
+            const compsFiltrados = emp.comprobantes.filter(c => c.fecha >= dashFechaDesde && c.fecha <= dashFechaHasta);
+            let ventasNetas = 0, comprasNetas = 0, cantVentas = 0, cantCompras = 0, ivaDebitoFiscal = 0, ivaCreditoFiscal = 0;
+
+            compsFiltrados.forEach(c => {
+                const subtotalNeto = c.netoTotal + c.exento + c.noGravado;
+                if (c.tipoOp === 'VENTA') { ventasNetas += subtotalNeto; ivaDebitoFiscal += c.totalIva; cantVentas++; }
+                else if (c.tipoOp === 'COMPRA') { comprasNetas += subtotalNeto; ivaCreditoFiscal += c.totalIva; cantCompras++; }
+            });
+
+            cont.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm">
+                        <h2 class="text-xl font-bold text-gray-800">Panel General & Liquidación de IVA</h2>
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Desde:</span>
+                            <input type="date" value="${dashFechaDesde}" onchange="dashFechaDesde=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Hasta:</span>
+                            <input type="date" value="${dashFechaHasta}" onchange="dashFechaHasta=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-xl border shadow-sm border-l-4 border-l-blue-600">
+                            <p class="text-xs font-bold text-gray-500 uppercase">VENTAS NETAS</p>
+                            <h3 class="text-2xl font-black text-gray-900 mt-2">$ ${ventasNetas.toLocaleString('es-AR', {minimumFractionDigits:2})}</h3>
+                            <p class="text-xs text-gray-400 mt-1">${cantVentas} comprobante(s)</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border shadow-sm border-l-4 border-l-red-500">
+                            <p class="text-xs font-bold text-gray-500 uppercase">COMPRAS NETAS</p>
+                            <h3 class="text-2xl font-black text-gray-900 mt-2">$ ${comprasNetas.toLocaleString('es-AR', {minimumFractionDigits:2})}</h3>
+                            <p class="text-xs text-gray-400 mt-1">${cantCompras} comprobante(s)</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border shadow-sm border-l-4 border-l-emerald-600">
+                            <p class="text-xs font-bold text-gray-500 uppercase">TOTAL COMPROBANTES</p>
+                            <h3 class="text-2xl font-black text-gray-900 mt-2">${compsFiltrados.length}</h3>
+                            <p class="text-xs text-gray-400 mt-1">Período activo</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderImportacion(cont) {
+            cont.innerHTML = `
+                <div class="space-y-6 max-w-4xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-800">Importación "Mis Comprobantes" (ARCA)</h2>
+                    <div class="bg-white p-6 rounded-xl border space-y-4">
+                        <div class="flex space-x-6">
+                            <label class="font-bold text-sm text-gray-700"><input type="radio" name="tipoOperacionImport" value="COMPRA" checked> COMPRAS (Recibidos)</label>
+                            <label class="font-bold text-sm text-gray-700"><input type="radio" name="tipoOperacionImport" value="VENTA"> VENTAS (Emitidos)</label>
+                        </div>
+                        <div class="border-2 border-dashed rounded-xl p-8 text-center bg-gray-50">
+                            <input type="file" id="fileArca" accept=".csv" class="hidden" onchange="procesarCsvArcaReal(event)">
+                            <button onclick="document.getElementById('fileArca').click()" class="bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-lg text-sm">Seleccionar CSV de ARCA</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderComprobantes(cont) {
+            const emp = obtenerEmpresaActual();
+            const cuentasImputables = emp.planCuentas.filter(p => p.imputable);
+            let listaComps = [...emp.comprobantes];
+            listaComps.sort((a, b) => {
+                let vA = a[ordenComprobantes.campo], vB = b[ordenComprobantes.campo];
+                if (typeof vA === 'string') { vA = vA.toLowerCase(); vB = vB.toLowerCase(); }
+                return vA < vB ? (ordenComprobantes.asc ? -1 : 1) : (vA > vB ? (ordenComprobantes.asc ? 1 : -1) : 0);
+            });
+            let arrowComp = (campo) => ordenComprobantes.campo !== campo ? '' : (ordenComprobantes.asc ? ' ▲' : ' ▼');
+            let filas = listaComps.map(c => {
+                const optionsCuenta = cuentasImputables.map(pc => `<option value="${pc.codigo}" ${c.cuentaNeto === pc.codigo ? 'selected' : ''}>${pc.codigo} - ${pc.nombre}</option>`).join('');
+                return `
+                    <tr class="hover:bg-gray-50 text-sm">
+                        <td class="px-3 py-3 font-bold ${c.tipoOp === 'VENTA' ? 'text-green-600' : 'text-red-600'}">${c.tipoOp}</td>
+                        <td class="px-3 py-3">${formatearFechaAr(c.fecha)}</td>
+                        <td class="px-3 py-3 font-semibold">${c.tipoNombre}</td>
+                        <td class="px-3 py-3 font-mono">${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')}</td>
+                        <td class="px-3 py-3">${c.razonSocial}<br><span class="text-xs text-gray-400">CUIT: ${c.cuit}</span></td>
+                        <td class="px-3 py-3 text-right font-semibold">$ ${c.netoTotal.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                        <td class="px-3 py-3 text-right text-gray-600">$ ${c.totalIva.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                        <td class="px-3 py-3 text-right font-bold">$ ${c.total.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                        <td class="px-3 py-3"><select onchange="actualizarCuentaComprobante(${c.id}, this.value)" class="text-xs bg-white border border-gray-300 rounded px-2 py-1 font-semibold text-blue-900">${optionsCuenta}</select></td>
+                        <td class="px-3 py-3 text-center"><button onclick="eliminarComprobante(${c.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                    </tr>
+                `;
+            }).join('');
+            cont.innerHTML = `
+                <div class="space-y-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Comprobantes Registrados</h2>
+                    <div class="bg-white rounded-xl border overflow-hidden">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-xs text-gray-500 uppercase select-none">
+                                <tr>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('tipoOp')">OP.${arrowComp('tipoOp')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('fecha')">FECHA${arrowComp('fecha')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('tipoNombre')">TIPO${arrowComp('tipoNombre')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('numero')">NÚMERO${arrowComp('numero')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('razonSocial')">PROVEEDOR / CLIENTE${arrowComp('razonSocial')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarComprobantesPor('netoTotal')">NETO${arrowComp('netoTotal')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarComprobantesPor('totalIva')">IVA${arrowComp('totalIva')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarComprobantesPor('total')">TOTAL${arrowComp('total')}</th>
+                                    <th class="p-3">CUENTA</th>
+                                    <th class="p-3 text-center">ACCIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">${filas}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function actualizarCuentaComprobante(id, nuevaCuenta) {
+            const emp = obtenerEmpresaActual();
+            const comp = emp.comprobantes.find(c => c.id === id);
+            if (comp) { comp.cuentaNeto = nuevaCuenta; guardarEnLocalStorage(); }
+        }
+
+        function eliminarComprobante(id) {
+            const emp = obtenerEmpresaActual();
+            emp.comprobantes = emp.comprobantes.filter(c => c.id !== id);
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function renderLibroIva(cont) {
+            const emp = obtenerEmpresaActual();
+            const comprobantesFiltrados = emp.comprobantes.filter(c => c.tipoOp === libroIvaModo && c.fecha && c.fecha.split('-')[1] === filtroMesIva && c.fecha.split('-')[0] === filtroAnioIva);
+            let lineasTabla = [];
+            comprobantesFiltrados.forEach(c => {
+                lineasTabla.push(`
+                    <tr class="text-xs border-b border-gray-100">
+                        <td class="py-2 px-2">${formatearFechaAr(c.fecha)}</td>
+                        <td class="py-2 px-2 font-mono">${c.tipoNombre} ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')}</td>
+                        <td class="py-2 px-2">${c.razonSocial}</td>
+                        <td class="py-2 px-2 font-mono">${c.cuit}</td>
+                        <td class="py-2 px-2 text-right font-medium">$ ${c.netoTotal.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                        <td class="py-2 px-2 text-right font-medium">$ ${c.totalIva.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                        <td class="py-2 px-2 text-right font-bold">$ ${c.total.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                    </tr>
+                `);
+            });
+            cont.innerHTML = `
+                <div class="space-y-6">
+                    <div class="bg-white p-4 rounded-xl border flex justify-between items-center no-print shadow-sm">
+                        <div class="flex items-center space-x-4">
+                            <select onchange="libroIvaModo=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                                <option value="COMPRA" ${libroIvaModo==='COMPRA'?'selected':''}>IVA COMPRAS</option>
+                                <option value="VENTA" ${libroIvaModo==='VENTA'?'selected':''}>IVA VENTAS</option>
+                            </select>
+                            <input type="number" value="${filtroAnioIva}" onchange="filtroAnioIva=this.value; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold">
+                        </div>
+                        <button onclick="window.print()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold">Imprimir / PDF</button>
+                    </div>
+                    <div class="bg-white rounded-xl border p-4">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="border-b font-bold text-gray-700 bg-gray-50 uppercase">
+                                    <th class="p-2">Fecha</th><th class="p-2">Comprobante</th><th class="p-2">Razón Social</th><th class="p-2">CUIT</th><th class="p-2 text-right">Neto</th><th class="p-2 text-right">IVA</th><th class="p-2 text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>${lineasTabla.join('') || `<tr><td colspan="7" class="text-center py-6 text-gray-400">Sin comprobantes para el período.</td></tr>`}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPlanCuentas(cont) {
+            const emp = obtenerEmpresaActual();
+            cont.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-gray-800">Plan de Cuentas</h2>
+                        <button onclick="abrirModalCuenta()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">+ Nueva Cuenta</button>
+                    </div>
+                    <div class="bg-white rounded-xl border overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase">
+                                <tr><th class="p-3">Código</th><th class="p-3">Nombre</th><th class="p-3">Tipo</th><th class="p-3">Imputable</th><th class="p-3 text-center">Acciones</th></tr>
+                            </thead>
+                            <tbody>
+                                ${emp.planCuentas.map(p => `
+                                    <tr class="${!p.imputable ? 'bg-gray-100 font-bold' : ''}">
+                                        <td class="p-3 font-mono">${p.codigo}</td><td class="p-3">${p.nombre}</td><td class="p-3">${p.tipo}</td><td class="p-3">${p.imputable ? 'SI' : 'NO'}</td>
+                                        <td class="p-3 text-center space-x-2">
+                                            <button onclick="abrirModalCuenta('${p.codigo}')" class="text-blue-600"><i data-lucide="edit-3" class="w-4 h-4 inline"></i></button>
+                                            <button onclick="eliminarCuenta('${p.codigo}')" class="text-red-500"><i data-lucide="trash-2" class="w-4 h-4 inline"></i></button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderLibroDiario(cont) { cont.innerHTML = `<div class="p-6 bg-white rounded-xl border"><h3>Libro Diario General</h3></div>`; }
+        function renderBalance(cont) { cont.innerHTML = `<div class="p-6 bg-white rounded-xl border"><h3>Balance de Sumas y Saldos</h3></div>`; }
+        function renderImpositivo(cont) { cont.innerHTML = `<div class="p-6 bg-white rounded-xl border"><h3>Módulo Impositivo / IVA</h3></div>`; }
+    </script>
+</body>
+</html>
