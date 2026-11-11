@@ -1809,7 +1809,7 @@
                             const importe = parsearFloatAr(c[2] || c[3] || 0);
                             const tipo = c[4] && c[4].toUpperCase().includes('BANC') ? 'RETENCION BANCARIA' : 'RETENCION';
                             if (importe > 0) {
-                                emp.retencionesIibb.push({ id: Date.now() + idx, fecha, tipo, agente, importe });
+                                emp.retencionesIibb.push({ id: Date.now() + agregados, fecha, tipo, agente, importe });
                                 agregados++;
                             }
                         }
@@ -1817,35 +1817,48 @@
                 } else {
                     const data = new Uint8Array(evt.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const json = XLSX.utils.sheet_to_json(sheet, {defval: ""});
                     
-                    json.forEach((row, idx) => {
-                        let fechaRaw = row['Fecha'] || row['Fecha Ret./Perc.'] || row['Fecha Retencion'] || row['Emision'] || row['01/10/2026'] || "2026-10-01";
-                        let fecha = fechaRaw.toString().includes('/') ? fechaRaw.split('/').reverse().join('-') : fechaRaw;
+                    workbook.SheetNames.forEach(sheetName => {
+                        const sheet = workbook.Sheets[sheetName];
+                        const json = XLSX.utils.sheet_to_json(sheet, {defval: ""});
                         
-                        let importe = parseFloat(row['Importe'] || row['Importe Ret./Perc.'] || row['Importe retencion agente'] || row['Importe percepcion agente'] || row['Importe retencion contrib.'] || row['Importe percepcion agente'] || 0) || 0;
-                        if (importe === 0) {
-                            // Buscar cualquier valor numérico válido en las columnas de la fila
-                            for (let key in row) {
-                                if (typeof row[key] === 'number' && row[key] > 0) {
-                                    importe = row[key];
-                                    break;
+                        json.forEach((row, idx) => {
+                            let fechaRaw = row['Fecha'] || row['Fecha Ret./Perc.'] || row['Fecha Retencion'] || row['Fecha Retencion agente'] || row['Emision'] || "2026-10-01";
+                            let fecha = fechaRaw.toString().includes('/') ? fechaRaw.split('/').reverse().join('-') : fechaRaw;
+                            
+                            let importe = parseFloat(row['Importe'] || row['Importe Ret./Perc.'] || row['Importe retencion agente'] || row['Importe percepcion agente'] || row['Importe retencion contrib.'] || 0) || 0;
+                            if (importe === 0) {
+                                for (let key in row) {
+                                    if (typeof row[key] === 'number' && row[key] > 0) {
+                                        importe = row[key];
+                                        break;
+                                    } else if (typeof row[key] === 'string' && row[key].includes(',')) {
+                                        let parsed = parsearFloatAr(row[key]);
+                                        if (parsed > 0) {
+                                            importe = parsed;
+                                            break;
+                                        }
+                                    }
                                 }
                             }
-                        }
 
-                        let agente = row['Agente'] || row['CUIT Agente Ret./Perc.'] || row['CUIT Agente'] || row['CUIT Banco'] || row['CUIT'] || "Agente / CBU IIBB";
-                        
-                        let tipo = "RETENCION";
-                        const keysStr = JSON.stringify(row).toUpperCase();
-                        if (keysStr.includes('PERCEP')) tipo = "PERCEPCION";
-                        if (keysStr.includes('BANCO') || keysStr.includes('CBU') || keysStr.includes('30500008454')) tipo = "RETENCION BANCARIA";
+                            let agente = row['Agente'] || row['CUIT Agente Ret./Perc.'] || row['CUIT Agente'] || row['CUIT Banco'] || row['CUIT'] || "Agente / CBU IIBB";
+                            
+                            let tipo = "RETENCION";
+                            const sheetUpper = sheetName.toUpperCase();
+                            const keysStr = JSON.stringify(row).toUpperCase();
+                            
+                            if (sheetUpper.includes('PERCEP') || keysStr.includes('PERCEP')) {
+                                tipo = "PERCEPCION";
+                            } else if (sheetUpper.includes('BANC') || keysStr.includes('BANCO') || keysStr.includes('CBU') || keysStr.includes('30500008454')) {
+                                tipo = "RETENCION BANCARIA";
+                            }
 
-                        if (importe > 0) {
-                            emp.retencionesIibb.push({ id: Date.now() + idx, fecha, tipo, agente, importe });
-                            agregados++;
-                        }
+                            if (importe > 0) {
+                                emp.retencionesIibb.push({ id: Date.now() + agregados, fecha, tipo, agente, importe });
+                                agregados++;
+                            }
+                        });
                     });
                 }
                 guardarEnLocalStorage();
