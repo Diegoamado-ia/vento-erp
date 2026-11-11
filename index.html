@@ -399,20 +399,15 @@
         let impositivoMes = "10";
         let impositivoAnio = "2026";
 
-        // Módulo Ingresos Brutos
         let iibbMes = "10";
         let iibbAnio = "2026";
-        let iibbRegimen = "LOCAL";
-        let iibbAlicuota = 3.5;
-        let iibbCoeficiente = 1.0;
-        let iibbSaldoFavorAnt = 0;
 
         let saldoTecnicoAnt = 0;
         let saldoLibreDispAnt = 0;
 
         let ordenComprobantes = { campo: 'fecha', asc: false };
         let ordenRetenciones = { campo: 'fecha', asc: false };
-        let ordenRetencionesIibb = { campo: 'fecha', asc: false };
+        let ordenIibbRet = { campo: 'fecha', asc: false };
 
         let empresas = JSON.parse(localStorage.getItem('arca_empresas')) || [
             {
@@ -420,10 +415,14 @@
                 razonSocial: "SUCESION DE BARBERO ARMANDO LUIS",
                 cuit: "20054059354",
                 condicionIva: "Responsable Inscripto",
+                iibbRegimen: "LOCAL",
+                iibbAlicuota: 3.0,
+                iibbCoeficiente: 1.0000,
+                iibbSaldoAnt: 0,
                 comprobantes: [],
                 asientosManuales: [],
                 retencionesPercepciones: [],
-                retencionesPercepcionesIibb: [],
+                retencionesIibb: [],
                 planCuentas: obtenerPlanCuentasBase()
             }
         ];
@@ -453,7 +452,11 @@
             }
             if (!emp.asientosManuales) emp.asientosManuales = [];
             if (!emp.retencionesPercepciones) emp.retencionesPercepciones = [];
-            if (!emp.retencionesPercepcionesIibb) emp.retencionesPercepcionesIibb = [];
+            if (!emp.retencionesIibb) emp.retencionesIibb = [];
+            if (!emp.iibbRegimen) emp.iibbRegimen = "LOCAL";
+            if (emp.iibbAlicuota === undefined) emp.iibbAlicuota = 3.0;
+            if (emp.iibbCoeficiente === undefined) emp.iibbCoeficiente = 1.0000;
+            if (emp.iibbSaldoAnt === undefined) emp.iibbSaldoAnt = 0;
             return emp;
         }
 
@@ -606,10 +609,14 @@
             const nuevaEmpresa = {
                 id: Date.now(),
                 razonSocial, cuit, condicionIva,
+                iibbRegimen: "LOCAL",
+                iibbAlicuota: 3.0,
+                iibbCoeficiente: 1.0000,
+                iibbSaldoAnt: 0,
                 comprobantes: [],
                 asientosManuales: [],
                 retencionesPercepciones: [],
-                retencionesPercepcionesIibb: [],
+                retencionesIibb: [],
                 planCuentas: obtenerPlanCuentasBase()
             };
             empresas.push(nuevaEmpresa);
@@ -687,6 +694,13 @@
         }
 
         function renderizarVista() {
+            document.querySelectorAll('aside nav a').forEach(a => {
+                a.className = "flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition";
+            });
+            const navActivo = document.getElementById(`nav-${vistaActual}`);
+            if (navActivo) {
+                navActivo.className = "flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white transition";
+            }
             const cont = document.getElementById('contenedorVistas');
             cont.innerHTML = '';
             if (vistaActual === 'dashboard') renderDashboard(cont);
@@ -848,79 +862,9 @@
             }
         }
 
-        function procesarArchivoRetencionesIibb(e, tipo) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const emp = obtenerEmpresaActual();
-            const extension = file.name.split('.').pop().toLowerCase();
-
-            const guardarLineas = (items) => {
-                let agregados = 0;
-                items.forEach((row, idx) => {
-                    let fechaRaw = row['Fecha Ret./Perc.'] || row['Fecha'] || row['fecha'] || "2026-09-01";
-                    let fecha = fechaRaw.toString().includes('/') ? fechaRaw.split('/').reverse().join('-') : fechaRaw;
-                    const importe = parseFloat(row['Importe Ret./Perc.'] || row['Importe'] || row['importe'] || 0) || 0;
-                    const cuitAgente = row['CUIT Agente Ret./Perc.'] || row['CUIT'] || row['cuit'] || "Agente IIBB";
-                    const regimen = row['Regimen'] || row['Jurisdiccion'] || "Gen.";
-                    if (importe > 0) {
-                        emp.retencionesPercepcionesIibb.push({ 
-                            id: Date.now() + idx, 
-                            fecha, 
-                            impuesto: "IIBB", 
-                            tipo: tipo, 
-                            agente: `${cuitAgente} (${regimen})`, 
-                            importe 
-                        });
-                        agregados++;
-                    }
-                });
-                guardarEnLocalStorage();
-                alert(`¡Se importaron ${agregados} ${tipo} de IIBB correctamente!`);
-                renderizarVista();
-            };
-
-            if (extension === 'xlsx' || extension === 'xls') {
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    const data = new Uint8Array(evt.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                    guardarLineas(json);
-                };
-                reader.readAsArrayBuffer(file);
-            } else if (extension === 'csv') {
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    const lines = evt.target.result.split(/\r\n|\n/);
-                    let items = [];
-                    lines.forEach((line, idx) => {
-                        if (idx === 0 || !line.trim()) return;
-                        const c = line.split(';').map(s => s.replace(/"/g, '').trim());
-                        if (c.length >= 3) {
-                            items.push({
-                                'Fecha': c[0],
-                                'CUIT': c[1],
-                                'Regimen': c[2] || 'Gen.',
-                                'Importe': parsearFloatAr(c[3] || c[2])
-                            });
-                        }
-                    });
-                    guardarLineas(items);
-                };
-                reader.readAsText(file, 'utf-8');
-            }
-        }
-
         function eliminarRetencionPercepcion(id) {
             const emp = obtenerEmpresaActual();
             emp.retencionesPercepciones = emp.retencionesPercepciones.filter(r => r.id !== id);
-            guardarEnLocalStorage();
-            renderizarVista();
-        }
-
-        function eliminarRetencionPercepcionIibb(id) {
-            const emp = obtenerEmpresaActual();
-            emp.retencionesPercepcionesIibb = emp.retencionesPercepcionesIibb.filter(r => r.id !== id);
             guardarEnLocalStorage();
             renderizarVista();
         }
@@ -934,12 +878,6 @@
         function ordenarRetencionesPor(campo) {
             if (ordenRetenciones.campo === campo) { ordenRetenciones.asc = !ordenRetenciones.asc; }
             else { ordenRetenciones.campo = campo; ordenRetenciones.asc = true; }
-            renderizarVista();
-        }
-
-        function ordenarRetencionesIibbPor(campo) {
-            if (ordenRetencionesIibb.campo === campo) { ordenRetencionesIibb.asc = !ordenRetencionesIibb.asc; }
-            else { ordenRetencionesIibb.campo = campo; ordenRetencionesIibb.asc = true; }
             renderizarVista();
         }
 
@@ -1849,80 +1787,154 @@
         }
 
         // ==========================================
-        // VISTA: MÓDULO IMPOSITIVO (INGRESOS BRUTOS - IIBB)
+        // VISTA: INGRESOS BRUTOS (IIBB) UNIFICADO
         // ==========================================
+        function procesarArchivoIibbUnificado(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const emp = obtenerEmpresaActual();
+            const extension = file.name.split('.').pop().toLowerCase();
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                let agregados = 0;
+                if (extension === 'csv') {
+                    const lines = evt.target.result.split(/\r\n|\n/);
+                    lines.forEach((line, idx) => {
+                        if (idx === 0 || !line.trim()) return;
+                        const c = line.split(';').map(s => s.replace(/"/g, '').trim());
+                        if (c.length >= 3) {
+                            let fecha = c[0].includes('/') ? c[0].split('/').reverse().join('-') : c[0];
+                            const agente = c[1] || "Agente / Banco IIBB";
+                            const importe = parsearFloatAr(c[2] || c[3] || 0);
+                            const tipo = c[4] && c[4].toUpperCase().includes('BANC') ? 'RETENCION BANCARIA' : 'RETENCION';
+                            if (importe > 0) {
+                                emp.retencionesIibb.push({ id: Date.now() + idx, fecha, tipo, agente, importe });
+                                agregados++;
+                            }
+                        }
+                    });
+                } else {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(sheet, {defval: ""});
+                    
+                    json.forEach((row, idx) => {
+                        let fechaRaw = row['Fecha'] || row['Fecha Ret./Perc.'] || row['Fecha Retencion'] || row['Emision'] || row['01/10/2026'] || "2026-10-01";
+                        let fecha = fechaRaw.toString().includes('/') ? fechaRaw.split('/').reverse().join('-') : fechaRaw;
+                        
+                        let importe = parseFloat(row['Importe'] || row['Importe Ret./Perc.'] || row['Importe retencion agente'] || row['Importe percepcion agente'] || row['Importe retencion contrib.'] || row['Importe percepcion agente'] || 0) || 0;
+                        if (importe === 0) {
+                            // Buscar cualquier valor numérico válido en las columnas de la fila
+                            for (let key in row) {
+                                if (typeof row[key] === 'number' && row[key] > 0) {
+                                    importe = row[key];
+                                    break;
+                                }
+                            }
+                        }
+
+                        let agente = row['Agente'] || row['CUIT Agente Ret./Perc.'] || row['CUIT Agente'] || row['CUIT Banco'] || row['CUIT'] || "Agente / CBU IIBB";
+                        
+                        let tipo = "RETENCION";
+                        const keysStr = JSON.stringify(row).toUpperCase();
+                        if (keysStr.includes('PERCEP')) tipo = "PERCEPCION";
+                        if (keysStr.includes('BANCO') || keysStr.includes('CBU') || keysStr.includes('30500008454')) tipo = "RETENCION BANCARIA";
+
+                        if (importe > 0) {
+                            emp.retencionesIibb.push({ id: Date.now() + idx, fecha, tipo, agente, importe });
+                            agregados++;
+                        }
+                    });
+                }
+                guardarEnLocalStorage();
+                alert(`¡Se importaron ${agregados} registros unificados de IIBB (Retenciones, Percepciones y Bancarias) correctamente!`);
+                renderizarVista();
+            };
+            if (extension === 'csv') reader.readAsText(file, 'utf-8');
+            else reader.readAsArrayBuffer(file);
+        }
+
+        function eliminarRetencionIibb(id) {
+            const emp = obtenerEmpresaActual();
+            emp.retencionesIibb = emp.retencionesIibb.filter(r => r.id !== id);
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function ordenarIibbRetPor(campo) {
+            if (ordenIibbRet.campo === campo) { ordenIibbRet.asc = !ordenIibbRet.asc; }
+            else { ordenIibbRet.campo = campo; ordenIibbRet.asc = true; }
+            renderizarVista();
+        }
+
         function renderIngresosBrutos(cont) {
             const emp = obtenerEmpresaActual();
 
-            // Filtrar comprobantes de ventas del mes y año seleccionados
-            const compsVentasPeriodo = emp.comprobantes.filter(c => {
+            const ventasPeriodo = emp.comprobantes.filter(c => {
                 if (c.tipoOp !== 'VENTA' || !c.fecha) return false;
                 const partes = c.fecha.split('-');
                 return (partes.length === 3 && partes[1] === iibbMes && partes[0] === iibbAnio);
             });
 
-            // Base imponible tomada de Ventas Netas del período
-            let baseVentasBrutas = 0;
-            compsVentasPeriodo.forEach(c => {
-                baseVentasBrutas += (c.netoTotal + c.exento + c.noGravado);
+            let baseImponibleTotalVentas = 0;
+            ventasPeriodo.forEach(c => {
+                baseImponibleTotalVentas += (c.netoTotal + c.exento + c.noGravado);
             });
 
-            // Cálculo de Base Imponible según Régimen (Local o Convenio Multilateral)
-            const baseImponibleAtribuible = iibbRegimen === 'CONVENIO' 
-                ? (baseVentasBrutas * (iibbCoeficiente || 0)) 
-                : baseVentasBrutas;
+            let baseImponibleJurisdiccion = baseImponibleTotalVentas;
+            if (emp.iibbRegimen === 'CONVENIO') {
+                baseImponibleJurisdiccion = baseImponibleTotalVentas * emp.iibbCoeficiente;
+            }
 
-            // Cálculo del Impuesto Determinado
-            const impuestoDeterminado = baseImponibleAtribuible * ((iibbAlicuota || 0) / 100);
+            const impuestoDeterminado = baseImponibleJurisdiccion * (emp.iibbAlicuota / 100);
 
-            // Filtrar retenciones y percepciones IIBB del período
-            const retencionesIibbPeriodo = (emp.retencionesPercepcionesIibb || []).filter(r => {
+            const retPercIibbPeriodo = (emp.retencionesIibb || []).filter(r => {
                 if (!r.fecha) return false;
                 const partes = r.fecha.split('-');
                 return (partes.length === 3 && partes[1] === iibbMes && partes[0] === iibbAnio);
             });
 
-            let totalRetencionesIibb = 0, totalPercepcionesIibb = 0;
-            retencionesIibbPeriodo.forEach(r => {
+            let totalRetencionesIibb = 0;
+            let totalPercepcionesIibb = 0;
+            let totalBancariasIibb = 0;
+
+            retPercIibbPeriodo.forEach(r => {
                 if (r.tipo === 'RETENCION') totalRetencionesIibb += r.importe;
-                if (r.tipo === 'PERCEPCION') totalPercepcionesIibb += r.importe;
+                else if (r.tipo === 'PERCEPCION') totalPercepcionesIibb += r.importe;
+                else if (r.tipo === 'RETENCION BANCARIA') totalBancariasIibb += r.importe;
             });
 
-            // Posición Final IIBB
-            const totalPagosACuenta = totalRetencionesIibb + totalPercepcionesIibb + (iibbSaldoFavorAnt || 0);
-            const saldoFinalIibb = impuestoDeterminado - totalPagosACuenta;
+            const totalDeducciones = totalRetencionesIibb + totalPercepcionesIibb + totalBancariasIibb + emp.iibbSaldoAnt;
+            const resultadoLiquidacion = impuestoDeterminado - totalDeducciones;
 
-            let etiquetaResultadoIibb = "";
-            let montoResultadoIibb = 0;
+            let etiquetaSaldoIibb = "";
+            let montoResultadoAbs = Math.abs(resultadoLiquidacion);
 
-            if (saldoFinalIibb >= 0) {
-                etiquetaResultadoIibb = "IMPUESTO A PAGAR";
-                montoResultadoIibb = saldoFinalIibb;
+            if (resultadoLiquidacion >= 0) {
+                etiquetaSaldoIibb = "IMPUESTO A PAGAR (IIBB)";
             } else {
-                etiquetaResultadoIibb = "SALDO A FAVOR DEL CONTRIBUYENTE";
-                montoResultadoIibb = Math.abs(saldoFinalIibb);
+                etiquetaSaldoIibb = "SALDO A FAVOR REGISTRADO";
             }
 
-            // Ordenamiento de tabla de retenciones IIBB
-            let listaRetIibb = [...(emp.retencionesPercepcionesIibb || [])];
+            let listaRetIibb = [...(emp.retencionesIibb || [])];
             listaRetIibb.sort((a, b) => {
-                let valA = a[ordenRetencionesIibb.campo], valB = b[ordenRetencionesIibb.campo];
+                let valA = a[ordenIibbRet.campo], valB = b[ordenIibbRet.campo];
                 if (typeof valA === 'string') valA = valA.toLowerCase();
                 if (typeof valB === 'string') valB = valB.toLowerCase();
-                return valA < valB ? (ordenRetencionesIibb.asc ? -1 : 1) : (valA > valB ? (ordenRetencionesIibb.asc ? 1 : -1) : 0);
+                return valA < valB ? (ordenIibbRet.asc ? -1 : 1) : (valA > valB ? (ordenIibbRet.asc ? 1 : -1) : 0);
             });
+            let arrowIibb = (campo) => ordenIibbRet.campo !== campo ? '' : (ordenIibbRet.asc ? ' ▲' : ' ▼');
 
-            let arrowIibb = (campo) => ordenRetencionesIibb.campo !== campo ? '' : (ordenRetencionesIibb.asc ? ' ▲' : ' ▼');
-
-            let filasIibb = listaRetIibb.map(r => `
+            let filasRetIibb = listaRetIibb.map(r => `
                 <tr class="hover:bg-gray-50 text-sm">
                     <td class="px-3 py-3">${formatearFechaAr(r.fecha)}</td>
-                    <td class="px-3 py-3 font-bold ${r.tipo === 'RETENCION' ? 'text-blue-700' : 'text-purple-700'}">${r.tipo}</td>
-                    <td class="px-3 py-3 font-semibold">${r.impuesto}</td>
+                    <td class="px-3 py-3 font-bold ${r.tipo === 'RETENCION' ? 'text-blue-700' : (r.tipo === 'PERCEPCION' ? 'text-purple-700' : 'text-emerald-700')}">${r.tipo}</td>
                     <td class="px-3 py-3">${r.agente}</td>
                     <td class="px-3 py-3 text-right font-bold">$ ${r.importe.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                     <td class="px-3 py-3 text-center">
-                        <button onclick="eliminarRetencionPercepcionIibb(${r.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <button onclick="eliminarRetencionIibb(${r.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </td>
                 </tr>
             `).join('');
@@ -1932,16 +1944,12 @@
                     <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm">
                         <div>
                             <h2 class="text-xl font-bold text-gray-800">Módulo Impositivo - Ingresos Brutos (IIBB)</h2>
-                            <p class="text-xs text-gray-500">Liquidación mensual para Contribuyentes Locales y Convenio Multilateral</p>
+                            <p class="text-xs text-gray-500">Determinación de IIBB para Contribuyentes Locales y Convenio Multilateral</p>
                         </div>
                         <div class="flex items-center space-x-3">
-                            <input type="file" id="filePercIibb" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoRetencionesIibb(event, 'PERCEPCION')">
-                            <button onclick="document.getElementById('filePercIibb').click()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
-                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Importar Percepciones IIBB</span>
-                            </button>
-                            <input type="file" id="fileRetIibb" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoRetencionesIibb(event, 'RETENCION')">
-                            <button onclick="document.getElementById('fileRetIibb').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
-                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Importar Retenciones IIBB</span>
+                            <input type="file" id="fileIibbUnico" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoIibbUnificado(event)">
+                            <button onclick="document.getElementById('fileIibbUnico').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
+                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Importar Archivo Unificado (Ret./Perc./Bancarias)</span>
                             </button>
                         </div>
                     </div>
@@ -1949,12 +1957,15 @@
                     <div class="bg-white rounded-xl border shadow-sm p-6 space-y-6">
                         <div class="flex justify-between items-center border-b pb-4">
                             <div class="flex items-center space-x-4">
-                                <span class="text-xs font-bold text-gray-500 uppercase">Régimen:</span>
-                                <select onchange="iibbRegimen=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold bg-white text-blue-900 border-blue-300">
-                                    <option value="LOCAL" ${iibbRegimen==='LOCAL'?'selected':''}>Contribuyente Local</option>
-                                    <option value="CONVENIO" ${iibbRegimen==='CONVENIO'?'selected':''}>Convenio Multilateral</option>
-                                </select>
+                                <div>
+                                    <span class="block text-xs font-bold text-gray-500 uppercase">Régimen Contribuyente:</span>
+                                    <select onchange="obtenerEmpresaActual().iibbRegimen=this.value; guardarInmediato();" class="text-xs border border-gray-300 bg-gray-50 rounded-lg p-2 font-bold text-gray-800">
+                                        <option value="LOCAL" ${emp.iibbRegimen==='LOCAL'?'selected':''}>Local (Directo)</option>
+                                        <option value="CONVENIO" ${emp.iibbRegimen==='CONVENIO'?'selected':''}>Convenio Multilateral</option>
+                                    </select>
+                                </div>
                             </div>
+
                             <div class="flex items-center space-x-3">
                                 <span class="text-xs font-bold text-gray-500 uppercase">Mes:</span>
                                 <select onchange="iibbMes=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
@@ -1976,101 +1987,106 @@
                             </div>
                         </div>
 
-                        <!-- CAMPOS PARAMETRIZABLES -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-xl border">
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Alícuota de IIBB (%)</label>
-                                <input type="number" step="0.01" value="${iibbAlicuota}" onchange="iibbAlicuota=parseFloat(this.value)||0; renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-slate-900 bg-white" placeholder="Ej: 3.5">
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Ventas Totales Netas (Período)</label>
+                                <div class="w-full bg-white border border-gray-300 rounded p-2 text-sm font-black text-gray-900">$ ${baseImponibleTotalVentas.toLocaleString('es-AR', {minimumFractionDigits:2})}</div>
                             </div>
-                            ${iibbRegimen === 'CONVENIO' ? `
-                                <div>
-                                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Coeficiente Unificado (CM)</label>
-                                    <input type="number" step="0.0001" min="0" max="1" value="${iibbCoeficiente}" onchange="iibbCoeficiente=parseFloat(this.value)||0; renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white" placeholder="Ej: 0.4520">
-                                </div>
+                            ${emp.iibbRegimen === 'CONVENIO' ? `
+                            <div>
+                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Coeficiente Unificado (Jurisdicción)</label>
+                                <input type="number" step="0.0001" min="0" max="1" value="${emp.iibbCoeficiente}" onchange="obtenerEmpresaActual().iibbCoeficiente=parseFloat(this.value)||0; guardarInmediato();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white">
+                            </div>
                             ` : ''}
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Saldo a Favor Período Anterior ($)</label>
-                                <input type="number" step="0.01" value="${iibbSaldoFavorAnt}" onchange="iibbSaldoFavorAnt=parseFloat(this.value)||0; renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-red-600 bg-white">
+                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Alícuota de la Actividad (%)</label>
+                                <input type="number" step="0.01" value="${emp.iibbAlicuota}" onchange="obtenerEmpresaActual().iibbAlicuota=parseFloat(this.value)||0; guardarInmediato();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white" placeholder="Ej: 3.5">
                             </div>
                         </div>
 
-                        <!-- RESUMEN DE DETERMINACIÓN DE IMPUESTO -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm bg-gray-50 p-4 rounded-xl border">
-                            <div class="space-y-3">
-                                <h4 class="font-bold text-xs uppercase text-gray-500 border-b pb-1">Base Imponible y Determinación</h4>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-700">Ventas Netas Totales del Período:</span>
-                                    <span class="font-bold text-gray-900">$ ${baseVentasBrutas.toLocaleString('es-AR',{minimumFractionDigits:2})}</span>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-2">Base Imponible e Impuesto Determinado</h4>
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">Base Imponible Total:</span>
+                                    <span class="font-bold text-gray-900">$ ${baseImponibleTotalVentas.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
                                 </div>
-                                ${iibbRegimen === 'CONVENIO' ? `
-                                    <div class="flex justify-between text-xs text-blue-800">
-                                        <span>Base Imponible Atribuible (CM ${ (iibbCoeficiente * 100).toFixed(2) }%):</span>
-                                        <span class="font-bold">$ ${baseImponibleAtribuible.toLocaleString('es-AR',{minimumFractionDigits:2})}</span>
-                                    </div>
+                                ${emp.iibbRegimen === 'CONVENIO' ? `
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">Coeficiente Aplicado:</span>
+                                    <span class="font-bold text-blue-700">${(emp.iibbCoeficiente * 100).toFixed(2)}% (${emp.iibbCoeficiente})</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">Base Imponible Jurisdiccional:</span>
+                                    <span class="font-bold text-blue-900">$ ${baseImponibleJurisdiccion.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
                                 ` : ''}
-                                <div class="flex justify-between text-xs">
-                                    <span>Alícuota Aplicada:</span>
-                                    <span class="font-bold text-blue-700">${iibbAlicuota.toFixed(2)}%</span>
-                                </div>
-                                <div class="flex justify-between pt-2 border-t text-sm font-bold">
-                                    <span class="text-gray-900 uppercase">Impuesto Determinado:</span>
-                                    <span class="font-black text-blue-900">$ ${impuestoDeterminado.toLocaleString('es-AR',{minimumFractionDigits:2})}</span>
+                                <div class="flex justify-between text-sm border-t pt-2">
+                                    <span class="font-bold text-gray-900 uppercase">Impuesto Determinado (${emp.iibbAlicuota}%):</span>
+                                    <span class="font-black text-blue-900">$ ${impuestoDeterminado.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
                                 </div>
                             </div>
 
-                            <div class="space-y-3">
-                                <h4 class="font-bold text-xs uppercase text-gray-500 border-b pb-1">Deducciones y Pagos a Cuenta</h4>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-700">Retenciones IIBB:</span>
-                                    <span class="font-bold text-blue-700">$ ${totalRetencionesIibb.toLocaleString('es-AR',{minimumFractionDigits:2})}</span>
+                            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-2">Deducciones y Saldo Anterior</h4>
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">Retenciones IIBB:</span>
+                                    <span class="font-bold text-blue-700">$ ${totalRetencionesIibb.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
                                 </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-700">Percepciones IIBB:</span>
-                                    <span class="font-bold text-purple-700">$ ${totalPercepcionesIibb.toLocaleString('es-AR',{minimumFractionDigits:2})}</span>
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">Percepciones IIBB:</span>
+                                    <span class="font-bold text-purple-700">$ ${totalPercepcionesIibb.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
                                 </div>
-                                <div class="flex justify-between text-xs">
-                                    <span>Saldo a Favor Período Anterior:</span>
-                                    <span class="font-bold text-red-600">$ ${iibbSaldoFavorAnt.toLocaleString('es-AR',{minimumFractionDigits:2})}</span>
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">Retenciones Bancarias:</span>
+                                    <span class="font-bold text-emerald-700">$ ${totalBancariasIibb.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
                                 </div>
-                                <div class="flex justify-between pt-2 border-t text-sm font-bold">
-                                    <span class="text-gray-900 uppercase">Total Pagos a Cuenta:</span>
-                                    <span class="font-black text-emerald-700">$ ${totalPagosACuenta.toLocaleString('es-AR',{minimumFractionDigits:2})}</span>
+                                <div class="flex justify-between items-center text-sm border-b pb-2">
+                                    <span class="font-semibold text-gray-700">Saldo a Favor Período Anterior ($):</span>
+                                    <input type="number" step="0.01" value="${emp.iibbSaldoAnt}" onchange="obtenerEmpresaActual().iibbSaldoAnt=parseFloat(this.value)||0; guardarInmediato();" class="w-32 text-right border rounded p-1 font-bold text-red-600 bg-white">
+                                </div>
+                                <div class="flex justify-between text-sm pt-1">
+                                    <span class="font-bold uppercase text-gray-900">Total Deducciones:</span>
+                                    <span class="font-bold text-emerald-700">$ ${totalDeducciones.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- RESULTADO FINAL IIBB -->
                         <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center shadow">
                             <div>
-                                <p class="text-xs text-slate-400 uppercase font-semibold">Posición Final IIBB (${iibbRegimen}) - Período ${iibbMes}/${iibbAnio}</p>
-                                <h4 class="text-lg font-black tracking-wider ${saldoFinalIibb >= 0 ? 'text-amber-400' : 'text-emerald-400'}">${etiquetaResultadoIibb}</h4>
+                                <p class="text-xs text-slate-400 uppercase font-semibold">Resultado Liquidación Ingresos Brutos (${emp.iibbRegimen})</p>
+                                <h4 class="text-lg font-black tracking-wider ${resultadoLiquidacion >= 0 ? 'text-amber-400' : 'text-emerald-400'}">${etiquetaSaldoIibb}</h4>
                             </div>
                             <div class="text-right">
-                                <span class="text-2xl font-black">$ ${montoResultadoIibb.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                <span class="text-2xl font-black">$ ${montoResultadoAbs.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- TABLA RETENCIONES Y PERCEPCIONES IIBB -->
-                    <div class="bg-white rounded-xl border overflow-hidden shadow-sm">
-                        <div class="p-4 border-b bg-gray-50 font-bold text-sm text-gray-700">Listado de Retenciones y Percepciones de IIBB</div>
+                    <div class="bg-white rounded-xl border overflow-hidden">
+                        <div class="p-4 border-b bg-gray-50 font-bold text-sm text-gray-700">Listado de Retenciones, Percepciones y Retenciones Bancarias de IIBB</div>
                         <table class="w-full text-left">
                             <thead class="bg-gray-50 text-xs text-gray-500 uppercase select-none">
                                 <tr>
-                                    <th class="p-3 cursor-pointer" onclick="ordenarRetencionesIibbPor('fecha')">FECHA${arrowIibb('fecha')}</th>
-                                    <th class="p-3 cursor-pointer" onclick="ordenarRetencionesIibbPor('tipo')">TIPO${arrowIibb('tipo')}</th>
-                                    <th class="p-3 cursor-pointer" onclick="ordenarRetencionesIibbPor('impuesto')">IMPUESTO${arrowIibb('impuesto')}</th>
-                                    <th class="p-3 cursor-pointer" onclick="ordenarRetencionesIibbPor('agente')">AGENTE / JURISDICCIÓN${arrowIibb('agente')}</th>
-                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarRetencionesIibbPor('importe')">IMPORTE${arrowIibb('importe')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('fecha')">FECHA${arrowIibb('fecha')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('tipo')">TIPO${arrowIibb('tipo')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('agente')">AGENTE / BANCO${arrowIibb('agente')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarIibbRetPor('importe')">IMPORTE${arrowIibb('importe')}</th>
                                     <th class="p-3 text-center">ACCIÓN</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y">${filasIibb || `<tr><td colspan="6" class="text-center py-6 text-gray-400">No hay retenciones o percepciones de IIBB registradas.</td></tr>`}</tbody>
+                            <tbody class="divide-y">${filasRetIibb || `<tr><td colspan="5" class="text-center py-6 text-gray-400">No hay registros de IIBB importados.</td></tr>`}</tbody>
                         </table>
                     </div>
                 </div>
             `;
         }
+
+        function guardarInmediato() {
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
     </script>
 </body>
 </html>
