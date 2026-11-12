@@ -40,7 +40,7 @@
         <!-- SIDEBAR DE NAVEGACIÓN -->
         <aside id="sidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-20 transition-all duration-300 overflow-hidden shrink-0">
             <div class="p-5 border-b border-slate-800 flex items-center space-x-3 whitespace-nowrap">
-                <div class="bg-blue-600 text-white p-2 rounded-lg shrink-0">
+                <div class="bg-blue-600 text-white p-2 rounded-lg">
                     <i data-lucide="calculator" class="w-6 h-6"></i>
                 </div>
                 <div>
@@ -51,97 +51,95 @@
 
             <nav class="flex-1 p-4 space-y-1 overflow-y-auto whitespace-nowrap">
                 <a href="#" onclick="cambiarVista('dashboard')" id="nav-dashboard" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white transition">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5 shrink-0"></i>
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
                     <span>Dashboard General</span>
                 </a>
                 
                 <div class="pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Gestión</div>
                 <a href="#" onclick="cambiarVista('importacion')" id="nav-importacion" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="file-spreadsheet" class="w-5 h-5 shrink-0"></i>
+                    <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
                     <span>Mis Comprobantes ARCA</span>
                 </a>
                 <a href="#" onclick="cambiarVista('comprobantes')" id="nav-comprobantes" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="receipt" class="w-5 h-5 shrink-0"></i>
+                    <i data-lucide="receipt" class="w-5 h-5"></i>
                     <span>Gestión Comprobantes</span>
                 </a>
                 <a href="#" onclick="cambiarVista('libro-iva')" id="nav-libro-iva" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="book-open-check" class="w-5 h-5 shrink-0"></i>
+                    <i data-lucide="book-open-check" class="w-5 h-5"></i>
                     <span>Libros IVA</span>
                 </a>
 
                 <div class="pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Contabilidad</div>
                 <a href="#" onclick="cambiarVista('plan-cuentas')" id="nav-plan-cuentas" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="folder-tree" class="w-5 h-5 shrink-0"></i>
+                    <i data-lucide="folder-tree" class="w-5 h-5"></i>
                     <span>Plan de Cuentas</span>
                 </a>
                 <a href="#" onclick="cambiarVista('libro-diario')" id="nav-libro-diario" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="book" class="w-5 h-5 shrink-0"></i>
+                    <i data-lucide="book" class="w-5 h-5"></i>
                     <span>Libro Diario</span>
                 </a>
                 <a href="#" onclick="cambiarVista('balance')" id="nav-balance" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="scale" class="w-5 h-5 shrink-0"></i>
+                    <i data-lucide="scale" class="w-5 h-5"></i>
                     <span>Balance Sumas y Saldos</span>
                 </a>
 
                 <!-- MÓDULO IMPOSITIVO -->
                 <div class="pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Impositivo</div>
                 <a href="#" onclick="cambiarVista('impositivo')" id="nav-impositivo" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="shield-check" class="w-5 h-5 shrink-0"></i>
+                    <i data-lucide="shield-check" class="w-5 h-5"></i>
                     <span>IVA</span>
                 </a>
                 <a href="#" onclick="cambiarVista('ingresos-brutos')" id="nav-ingresos-brutos" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="landmark" class="w-5 h-5 shrink-0"></i>
+                    <i data-lucide="landmark" class="w-5 h-5"></i>
                     <span>Ingresos Brutos</span>
                 </a>
             </nav>
 
-            <div class="p-4 border-t border-slate-800 text-xs text-slate-500 text-center whitespace-nowrap">
+            <div class="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
                 Sincronización Cloud con Google Drive
             </div>
         </aside>
 
         <!-- CONTENIDO PRINCIPAL -->
-        <main class="flex-1 flex flex-col overflow-hidden min-w-0">
-            <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 md:px-6 shadow-sm z-10 no-print">
-                <div class="flex items-center space-x-2 md:space-x-4 overflow-x-auto">
-                    <!-- BOTÓN PARA MOSTRAR/OCULTAR MENÚ -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 shadow-sm z-10 no-print">
+                <div class="flex items-center space-x-4">
                     <button onclick="toggleSidebar()" title="Mostrar / Ocultar menú" class="p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition focus:outline-none shrink-0">
                         <i data-lucide="menu" class="w-5 h-5"></i>
                     </button>
-
-                    <span class="text-sm font-semibold text-gray-500 hidden sm:inline">Empresa Activa:</span>
-                    <select id="selectEmpresa" onchange="seleccionarEmpresa(this.value)" class="bg-gray-50 border border-gray-300 text-gray-800 text-xs md:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 font-medium max-w-[160px] sm:max-w-xs">
+                    <span class="text-sm font-semibold text-gray-500">Empresa Activa:</span>
+                    <select id="selectEmpresa" onchange="seleccionarEmpresa(this.value)" class="bg-gray-50 border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 font-medium">
                     </select>
-                    <button onclick="abrirModalEmpresa()" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 md:px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1 shrink-0">
+                    <button onclick="abrirModalEmpresa()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
                         <i data-lucide="plus" class="w-4 h-4"></i>
-                        <span class="hidden sm:inline">Nueva Empresa</span>
+                        <span>Nueva Empresa</span>
                     </button>
                 </div>
                 
-                <div class="flex items-center space-x-2 md:space-x-3 shrink-0">
+                <div class="flex items-center space-x-3">
                     <!-- BOTÓN CONEXIÓN GOOGLE DRIVE -->
-                    <button id="btnGoogleAuth" onclick="conectarGoogleDrive()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 md:px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition flex items-center space-x-1.5">
+                    <button id="btnGoogleAuth" onclick="conectarGoogleDrive()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition flex items-center space-x-1.5">
                         <i data-lucide="cloud" class="w-4 h-4"></i>
-                        <span id="txtGoogleAuth" class="hidden sm:inline">Conectar Drive</span>
+                        <span id="txtGoogleAuth">Conectar Drive</span>
                     </button>
 
-                    <div class="text-right border-l pl-3 hidden lg:block">
+                    <div class="text-right border-l pl-3">
                         <p class="text-sm font-bold text-gray-800" id="headerRazonSocial">CARGANDO...</p>
                         <p class="text-xs text-gray-500" id="headerCuit">CUIT: ---</p>
                     </div>
-                    <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs" id="headerInicia">
+                    <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold" id="headerInicia">
                         ERP
                     </div>
                 </div>
             </header>
 
-            <div class="flex-1 overflow-y-auto p-4 md:p-6 print-area" id="contenedorVistas">
+            <div class="flex-1 overflow-y-auto p-6 print-area" id="contenedorVistas">
             </div>
         </main>
     </div>
 
     <!-- MODAL NUEVA EMPRESA -->
-    <div id="modalNuevaEmpresa" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+    <div id="modalNuevaEmpresa" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
             <div class="flex justify-between items-center mb-4 border-b pb-3">
                 <h3 class="text-lg font-bold text-gray-800">Nueva Empresa</h3>
@@ -173,7 +171,7 @@
     </div>
 
     <!-- MODAL AGREGAR CUENTA CONTABLE -->
-    <div id="modalNuevaCuenta" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+    <div id="modalNuevaCuenta" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
             <div class="flex justify-between items-center mb-4 border-b pb-3">
                 <h3 class="text-lg font-bold text-gray-800" id="modalCuentaTitulo">Agregar Cuenta Contable</h3>
@@ -214,14 +212,14 @@
     </div>
 
     <!-- MODAL NUEVO ASIENTO MANUAL -->
-    <div id="modalAsientoManual" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+    <div id="modalAsientoManual" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4 border-b pb-3">
                 <h3 class="text-lg font-bold text-gray-800">Registrar Asiento Manual</h3>
                 <button onclick="cerrarModalAsientoManual()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
             </div>
             <form id="formAsientoManual" onsubmit="guardarAsientoManual(event)" class="space-y-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Fecha</label>
                         <input type="date" id="manualFecha" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value="2026-10-31">
@@ -262,17 +260,6 @@
         let accessToken = null;
         let driveFileId = null;
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            if (sidebar.classList.contains('w-64')) {
-                sidebar.classList.remove('w-64');
-                sidebar.classList.add('w-0');
-            } else {
-                sidebar.classList.remove('w-0');
-                sidebar.classList.add('w-64');
-            }
-        }
-
         function inicializarGoogleGIS() {
             if (typeof google !== 'undefined') {
                 tokenClient = google.accounts.oauth2.initTokenClient({
@@ -282,7 +269,7 @@
                         if (tokenResponse && tokenResponse.access_token) {
                             accessToken = tokenResponse.access_token;
                             document.getElementById('txtGoogleAuth').textContent = "Drive Conectado ✓";
-                            document.getElementById('btnGoogleAuth').className = "bg-blue-600 text-white px-2.5 md:px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center space-x-1.5";
+                            document.getElementById('btnGoogleAuth').className = "bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center space-x-1.5";
                             sincronizarConDrive();
                         }
                     },
@@ -452,12 +439,25 @@
             guardarEnGoogleDrive();
         }
 
-        window.onload = function() {
-            // En celulares / iPhone, arranca con la barra lateral oculta
-            if (window.innerWidth < 768) {
-                const sidebar = document.getElementById('sidebar');
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar) return;
+            if (sidebar.classList.contains('w-64')) {
                 sidebar.classList.remove('w-64');
                 sidebar.classList.add('w-0');
+            } else {
+                sidebar.classList.remove('w-0');
+                sidebar.classList.add('w-64');
+            }
+        }
+
+        window.onload = function() {
+            if (window.innerWidth < 768) {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) {
+                    sidebar.classList.remove('w-64');
+                    sidebar.classList.add('w-0');
+                }
             }
             if (typeof google !== 'undefined' && !tokenClient) {
                 inicializarGoogleGIS();
@@ -685,9 +685,7 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(evt) {
-                const lines = evt.target.result.split(/
-|
-/);
+                const lines = evt.target.result.split(/\r\n|\n/);
                 const emp = obtenerEmpresaActual();
                 let count = 0;
                 lines.forEach((line, idx) => {
@@ -714,11 +712,12 @@
 
         function cambiarVista(v) {
             vistaActual = v;
-            // En celulares / iPhone, oculta el menú automáticamente al seleccionar una sección
             if (window.innerWidth < 768) {
                 const sidebar = document.getElementById('sidebar');
-                sidebar.classList.remove('w-64');
-                sidebar.classList.add('w-0');
+                if (sidebar) {
+                    sidebar.classList.remove('w-64');
+                    sidebar.classList.add('w-0');
+                }
             }
             renderizarVista();
         }
@@ -757,9 +756,7 @@
             const reader = new FileReader();
 
             reader.onload = function(evt) {
-                const lines = evt.target.result.split(/
-|
-/);
+                const lines = evt.target.result.split(/\r\n|\n/);
                 const emp = obtenerEmpresaActual();
                 let agregados = 0;
 
@@ -949,9 +946,9 @@
 
             cont.innerHTML = `
                 <div class="space-y-6">
-                    <div class="flex flex-col sm:flex-row justify-between sm:items-center bg-white p-4 rounded-xl border shadow-sm gap-3">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm">
                         <h2 class="text-xl font-bold text-gray-800">Panel General & Liquidación de IVA</h2>
-                        <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center space-x-3">
                             <span class="text-xs font-bold text-gray-500 uppercase">Desde:</span>
                             <input type="date" value="${dashFechaDesde}" onchange="dashFechaDesde=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                             <span class="text-xs font-bold text-gray-500 uppercase">Hasta:</span>
@@ -959,7 +956,7 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-3 gap-6">
                         <div class="bg-white p-6 rounded-xl border shadow-sm border-l-4 border-l-blue-600">
                             <p class="text-xs font-bold text-gray-500 uppercase">VENTAS NETAS</p>
                             <h3 class="text-2xl font-black text-gray-900 mt-2">$ ${ventasNetas.toLocaleString('es-AR', {minimumFractionDigits:2})}</h3>
@@ -1077,13 +1074,13 @@
                 return `
                     <tr class="hover:bg-gray-50 text-sm">
                         <td class="px-3 py-3 font-bold ${c.tipoOp === 'VENTA' ? 'text-green-600' : 'text-red-600'}">${c.tipoOp}</td>
-                        <td class="px-3 py-3 whitespace-nowrap">${formatearFechaAr(c.fecha)}</td>
-                        <td class="px-3 py-3 font-semibold whitespace-nowrap">${c.tipoNombre}</td>
-                        <td class="px-3 py-3 font-mono whitespace-nowrap">${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')}</td>
+                        <td class="px-3 py-3">${formatearFechaAr(c.fecha)}</td>
+                        <td class="px-3 py-3 font-semibold">${c.tipoNombre}</td>
+                        <td class="px-3 py-3 font-mono">${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')}</td>
                         <td class="px-3 py-3">${c.razonSocial}<br><span class="text-xs text-gray-400">CUIT: ${c.cuit}</span></td>
-                        <td class="px-3 py-3 text-right font-semibold whitespace-nowrap">$ ${c.netoTotal.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                        <td class="px-3 py-3 text-right text-gray-600 whitespace-nowrap">$ ${c.totalIva.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                        <td class="px-3 py-3 text-right font-bold whitespace-nowrap">$ ${c.total.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                        <td class="px-3 py-3 text-right font-semibold">$ ${c.netoTotal.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                        <td class="px-3 py-3 text-right text-gray-600">$ ${c.totalIva.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                        <td class="px-3 py-3 text-right font-bold">$ ${c.total.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                         <td class="px-3 py-3"><select onchange="actualizarCuentaComprobante(${c.id}, this.value)" class="text-xs bg-white border border-gray-300 rounded px-2 py-1 font-semibold text-blue-900">${optionsCuenta}</select></td>
                         <td class="px-3 py-3 text-center"><button onclick="eliminarComprobante(${c.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
                     </tr>
@@ -1093,7 +1090,7 @@
             cont.innerHTML = `
                 <div class="space-y-6">
                     <h2 class="text-2xl font-bold text-gray-800">Comprobantes Registrados</h2>
-                    <div class="bg-white rounded-xl border overflow-x-auto">
+                    <div class="bg-white rounded-xl border overflow-hidden">
                         <table class="w-full text-left">
                             <thead class="bg-gray-50 text-xs text-gray-500 uppercase select-none">
                                 <tr>
@@ -1173,15 +1170,15 @@
                 desgloses.forEach((d, idx) => {
                     lineasTabla.push(`
                         <tr class="text-xs border-b border-gray-100">
-                            <td class="py-2 px-2 whitespace-nowrap">${idx === 0 ? formatearFechaAr(c.fecha) : ''}</td>
-                            <td class="py-2 px-2 font-mono whitespace-nowrap">${idx === 0 ? c.tipoNombre + ' ' + String(c.pv).padStart(4,'0') + '-' + String(c.numero).padStart(8,'0') : ''}</td>
+                            <td class="py-2 px-2">${idx === 0 ? formatearFechaAr(c.fecha) : ''}</td>
+                            <td class="py-2 px-2 font-mono">${idx === 0 ? c.tipoNombre + ' ' + String(c.pv).padStart(4,'0') + '-' + String(c.numero).padStart(8,'0') : ''}</td>
                             <td class="py-2 px-2">${idx === 0 ? c.razonSocial : ''}</td>
-                            <td class="py-2 px-2 font-mono whitespace-nowrap">${idx === 0 ? c.cuit : ''}</td>
-                            <td class="py-2 px-2 text-right whitespace-nowrap">${idx === 0 && exentoNoGravCalculado > 0 ? exentoNoGravCalculado.toLocaleString('es-AR',{minimumFractionDigits:2}) : ''}</td>
-                            <td class="py-2 px-2 text-right font-medium whitespace-nowrap">${d.neto > 0 ? d.neto.toLocaleString('es-AR',{minimumFractionDigits:2}) : ''}</td>
-                            <td class="py-2 px-2 text-right font-bold text-blue-800 whitespace-nowrap">${d.tasa !== '0,00%' ? d.tasa : ''}</td>
-                            <td class="py-2 px-2 text-right font-medium whitespace-nowrap">${d.iva > 0 ? d.iva.toLocaleString('es-AR',{minimumFractionDigits:2}) + ' Dir. Grav.' : ''}</td>
-                            <td class="py-2 px-2 text-right font-bold whitespace-nowrap">${idx === 0 ? '$ ' + c.total.toLocaleString('es-AR',{minimumFractionDigits:2}) : ''}</td>
+                            <td class="py-2 px-2 font-mono">${idx === 0 ? c.cuit : ''}</td>
+                            <td class="py-2 px-2 text-right">${idx === 0 && exentoNoGravCalculado > 0 ? exentoNoGravCalculado.toLocaleString('es-AR',{minimumFractionDigits:2}) : ''}</td>
+                            <td class="py-2 px-2 text-right font-medium">${d.neto > 0 ? d.neto.toLocaleString('es-AR',{minimumFractionDigits:2}) : ''}</td>
+                            <td class="py-2 px-2 text-right font-bold text-blue-800">${d.tasa !== '0,00%' ? d.tasa : ''}</td>
+                            <td class="py-2 px-2 text-right font-medium">${d.iva > 0 ? d.iva.toLocaleString('es-AR',{minimumFractionDigits:2}) + ' Dir. Grav.' : ''}</td>
+                            <td class="py-2 px-2 text-right font-bold">${idx === 0 ? '$ ' + c.total.toLocaleString('es-AR',{minimumFractionDigits:2}) : ''}</td>
                         </tr>
                     `);
                 });
@@ -1189,8 +1186,8 @@
 
             cont.innerHTML = `
                 <div class="space-y-6">
-                    <div class="bg-white p-4 rounded-xl border flex flex-wrap justify-between items-center gap-3 no-print shadow-sm">
-                        <div class="flex flex-wrap items-center gap-3">
+                    <div class="bg-white p-4 rounded-xl border flex justify-between items-center no-print shadow-sm">
+                        <div class="flex items-center space-x-4">
                             <div class="flex items-center space-x-2">
                                 <span class="text-xs font-bold text-gray-500 uppercase">Libro:</span>
                                 <select onchange="libroIvaModo=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
@@ -1219,9 +1216,9 @@
                                 <span class="text-xs font-bold text-gray-500 uppercase">Año:</span>
                                 <input type="number" value="${filtroAnioIva}" onchange="filtroAnioIva=this.value; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold">
                             </div>
-                            <div class="flex items-center space-x-2 border-l pl-3">
+                            <div class="flex items-center space-x-2 border-l pl-4">
                                 <span class="text-xs font-bold text-gray-500 uppercase">N° Hoja:</span>
-                                <input type="number" value="${folioInicialIva}" onchange="folioInicialIva=parseInt(this.value)||1; renderizarVista();" class="w-16 text-xs border rounded p-1.5 font-bold text-blue-600">
+                                <input type="number" value="${folioInicialIva}" onchange="folioInicialIva=parseInt(this.value)||1; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold text-blue-600">
                             </div>
                         </div>
                         <button onclick="window.print()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 shadow">
@@ -1229,18 +1226,18 @@
                         </button>
                     </div>
 
-                    <div class="bg-white p-6 border-b-2 border-gray-900 flex flex-col sm:flex-row justify-between items-start gap-2">
+                    <div class="bg-white p-6 border-b-2 border-gray-900 flex justify-between items-start">
                         <div>
                             <h1 class="text-lg font-black uppercase text-gray-900">${emp.razonSocial}</h1>
                             <p class="text-xs text-gray-600">CUIT: ${emp.cuit} — Condición: ${emp.condicionIva}</p>
                         </div>
-                        <div class="sm:text-right">
+                        <div class="text-right">
                             <h2 class="text-xl font-bold text-gray-900">Libro IVA ${libroIvaModo === 'COMPRA' ? 'Compras' : 'Ventas'}</h2>
                             <p class="text-xs text-gray-600">Período: ${filtroMesIva}/${filtroAnioIva} | Hoja Nro: ${folioInicialIva}</p>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border p-4 overflow-x-auto">
+                    <div class="bg-white rounded-xl border p-4">
                         <table class="w-full text-left text-xs border-collapse">
                             <thead>
                                 <tr class="border-b font-bold text-gray-700 bg-gray-50 uppercase">
@@ -1266,7 +1263,7 @@
             const emp = obtenerEmpresaActual();
             cont.innerHTML = `
                 <div class="space-y-6">
-                    <div class="flex flex-wrap justify-between items-center gap-3">
+                    <div class="flex justify-between items-center">
                         <h2 class="text-2xl font-bold text-gray-800">Plan de Cuentas</h2>
                         <div class="flex space-x-3">
                             <input type="file" id="filePlan" accept=".csv,.txt" class="hidden" onchange="importarPlanCuentas(event)">
@@ -1278,7 +1275,7 @@
                             </button>
                         </div>
                     </div>
-                    <div class="bg-white rounded-xl border overflow-x-auto">
+                    <div class="bg-white rounded-xl border overflow-hidden">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase">
                                 <tr>
@@ -1292,11 +1289,11 @@
                             <tbody>
                                 ${emp.planCuentas.map(p => `
                                     <tr class="${!p.imputable ? 'bg-gray-100 font-bold' : ''}">
-                                        <td class="p-3 font-mono whitespace-nowrap">${p.codigo}</td>
+                                        <td class="p-3 font-mono">${p.codigo}</td>
                                         <td class="p-3">${p.nombre}</td>
                                         <td class="p-3">${p.tipo}</td>
                                         <td class="p-3">${p.imputable ? 'SI' : 'NO'}</td>
-                                        <td class="p-3 text-center space-x-2 whitespace-nowrap">
+                                        <td class="p-3 text-center space-x-2">
                                             <button onclick="abrirModalCuenta('${p.codigo}')" class="text-blue-600 hover:text-blue-800"><i data-lucide="edit-3" class="w-4 h-4 inline"></i></button>
                                             <button onclick="eliminarCuenta('${p.codigo}')" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-4 h-4 inline"></i></button>
                                         </td>
@@ -1334,15 +1331,10 @@
                 return item.fecha >= diarioFechaDesde && item.fecha <= diarioFechaHasta;
             });
 
-            let txt = `================================================================================
-`;
-            txt += `LIBRO DIARIO - ${emp.razonSocial}
-`;
-            txt += `CUIT: ${emp.cuit} | Período Desde: ${formatearFechaAr(diarioFechaDesde)} Hasta: ${formatearFechaAr(diarioFechaHasta)}
-`;
-            txt += `================================================================================
-
-`;
+            let txt = `================================================================================\n`;
+            txt += `LIBRO DIARIO - ${emp.razonSocial}\n`;
+            txt += `CUIT: ${emp.cuit} | Período Desde: ${formatearFechaAr(diarioFechaDesde)} Hasta: ${formatearFechaAr(diarioFechaHasta)}\n`;
+            txt += `================================================================================\n\n`;
 
             asientosOrdenados.forEach((item, i) => {
                 const nro = i + 1;
@@ -1352,46 +1344,31 @@
                     const codigoIva = c.cuentaIva || (c.tipoOp === 'VENTA' ? '2.1.02' : '1.1.03');
                     const codigoProvCliente = c.cuentaContrapartida || (c.tipoOp === 'VENTA' ? '1.1.04' : '2.1.01');
 
-                    txt += `Asiento N° ${nro} — Fecha: ${formatearFechaAr(c.fecha)}
-`;
-                    txt += `Ref: ${c.tipoNombre} ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} - ${c.razonSocial}
-`;
-                    txt += `--------------------------------------------------------------------------------
-`;
+                    txt += `Asiento N° ${nro} — Fecha: ${formatearFechaAr(c.fecha)}\n`;
+                    txt += `Ref: ${c.tipoNombre} ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} - ${c.razonSocial}\n`;
+                    txt += `--------------------------------------------------------------------------------\n`;
 
                     if (c.tipoOp === 'VENTA') {
-                        txt += `  [DEBE]  ${codigoProvCliente} - ${mapaCuentas[codigoProvCliente] || ''}: $${c.total.toFixed(2)}
-`;
-                        if (c.netoTotal > 0) txt += `  [HABER] ${codigoNeto} - ${mapaCuentas[codigoNeto] || ''}: $${c.netoTotal.toFixed(2)}
-`;
-                        if (c.totalIva > 0) txt += `  [HABER] ${codigoIva} - ${mapaCuentas[codigoIva] || ''}: $${c.totalIva.toFixed(2)}
-`;
+                        txt += `  [DEBE]  ${codigoProvCliente} - ${mapaCuentas[codigoProvCliente] || ''}: $${c.total.toFixed(2)}\n`;
+                        if (c.netoTotal > 0) txt += `  [HABER] ${codigoNeto} - ${mapaCuentas[codigoNeto] || ''}: $${c.netoTotal.toFixed(2)}\n`;
+                        if (c.totalIva > 0) txt += `  [HABER] ${codigoIva} - ${mapaCuentas[codigoIva] || ''}: $${c.totalIva.toFixed(2)}\n`;
                     } else {
-                        if (c.netoTotal > 0) txt += `  [DEBE]  ${codigoNeto} - ${mapaCuentas[codigoNeto] || ''}: $${c.netoTotal.toFixed(2)}
-`;
-                        if (c.totalIva > 0) txt += `  [DEBE]  ${codigoIva} - ${mapaCuentas[codigoIva] || ''}: $${c.totalIva.toFixed(2)}
-`;
-                        txt += `  [HABER] ${codigoProvCliente} - ${mapaCuentas[codigoProvCliente] || ''}: $${c.total.toFixed(2)}
-`;
+                        if (c.netoTotal > 0) txt += `  [DEBE]  ${codigoNeto} - ${mapaCuentas[codigoNeto] || ''}: $${c.netoTotal.toFixed(2)}\n`;
+                        if (c.totalIva > 0) txt += `  [DEBE]  ${codigoIva} - ${mapaCuentas[codigoIva] || ''}: $${c.totalIva.toFixed(2)}\n`;
+                        txt += `  [HABER] ${codigoProvCliente} - ${mapaCuentas[codigoProvCliente] || ''}: $${c.total.toFixed(2)}\n`;
                     }
                 } else {
                     const m = item.manual;
-                    txt += `Asiento Manual N° ${nro} — Fecha: ${formatearFechaAr(m.fecha)}
-`;
-                    txt += `Concepto: ${m.concepto}
-`;
-                    txt += `--------------------------------------------------------------------------------
-`;
+                    txt += `Asiento Manual N° ${nro} — Fecha: ${formatearFechaAr(m.fecha)}\n`;
+                    txt += `Concepto: ${m.concepto}\n`;
+                    txt += `--------------------------------------------------------------------------------\n`;
                     m.lineas.forEach(l => {
                         const de = l.debe > 0 ? `[DEBE] ` : `[HABER]`;
                         const imp = l.debe > 0 ? l.debe : l.haber;
-                        txt += `  ${de} ${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}: $${imp.toFixed(2)}
-`;
+                        txt += `  ${de} ${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}: $${imp.toFixed(2)}\n`;
                     });
                 }
-                txt += `--------------------------------------------------------------------------------
-
-`;
+                txt += `--------------------------------------------------------------------------------\n\n`;
             });
 
             const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
@@ -1436,24 +1413,24 @@
                         totHaberAcumulado += (c.netoTotal + c.totalIva + c.exento + c.noGravado);
 
                         filasRenglon = `
-                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectContrapartida}</td><td class="py-1.5 px-3 text-right font-bold whitespace-nowrap">$ ${c.total.toLocaleString('es-AR',{minimumFractionDigits:2})}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>
-                            ${c.netoTotal > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-8 text-gray-700">${selectNeto}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium whitespace-nowrap">$ ${c.netoTotal.toLocaleString('es-AR',{minimumFractionDigits:2})}</td></tr>` : ''}
-                            ${c.totalIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-8 text-gray-700">${selectIva}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium whitespace-nowrap">$ ${c.totalIva.toLocaleString('es-AR',{minimumFractionDigits:2})}</td></tr>` : ''}
+                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectContrapartida}</td><td class="py-1.5 px-3 text-right font-bold">$ ${c.total.toLocaleString('es-AR',{minimumFractionDigits:2})}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>
+                            ${c.netoTotal > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-8 text-gray-700">${selectNeto}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium">$ ${c.netoTotal.toLocaleString('es-AR',{minimumFractionDigits:2})}</td></tr>` : ''}
+                            ${c.totalIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-8 text-gray-700">${selectIva}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium">$ ${c.totalIva.toLocaleString('es-AR',{minimumFractionDigits:2})}</td></tr>` : ''}
                         `;
                     } else {
                         totDebeAcumulado += (c.netoTotal + c.totalIva + c.exento + c.noGravado);
                         totHaberAcumulado += c.total;
 
                         filasRenglon = `
-                            ${c.netoTotal > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectNeto}</td><td class="py-1.5 px-3 text-right font-medium whitespace-nowrap">$ ${c.netoTotal.toLocaleString('es-AR',{minimumFractionDigits:2})}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
-                            ${c.totalIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectIva}</td><td class="py-1.5 px-3 text-right font-medium whitespace-nowrap">$ ${c.totalIva.toLocaleString('es-AR',{minimumFractionDigits:2})}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
-                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-8 text-gray-700">${selectContrapartida}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-bold whitespace-nowrap">$ ${c.total.toLocaleString('es-AR',{minimumFractionDigits:2})}</td></tr>
+                            ${c.netoTotal > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectNeto}</td><td class="py-1.5 px-3 text-right font-medium">$ ${c.netoTotal.toLocaleString('es-AR',{minimumFractionDigits:2})}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
+                            ${c.totalIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectIva}</td><td class="py-1.5 px-3 text-right font-medium">$ ${c.totalIva.toLocaleString('es-AR',{minimumFractionDigits:2})}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
+                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-8 text-gray-700">${selectContrapartida}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-bold">$ ${c.total.toLocaleString('es-AR',{minimumFractionDigits:2})}</td></tr>
                         `;
                     }
 
                     return `
-                        <div class="bg-white border rounded-xl overflow-x-auto mb-4 asiento-card">
-                            <div class="bg-gray-50 border-b px-4 py-2 flex flex-wrap justify-between items-center text-xs gap-2">
+                        <div class="bg-white border rounded-xl overflow-hidden mb-4 asiento-card">
+                            <div class="bg-gray-50 border-b px-4 py-2 flex justify-between items-center text-xs">
                                 <span class="font-bold text-gray-900">ASIENTO N° ${nroAsiento} — ${formatearFechaAr(c.fecha)}</span>
                                 <span class="text-gray-600 font-mono">${c.tipoNombre} N° ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} | ${c.razonSocial}</span>
                             </div>
@@ -1479,14 +1456,14 @@
                     filasRenglon = m.lineas.map(l => `
                         <tr class="border-b border-gray-100">
                             <td class="py-1.5 px-3 ${l.haber > 0 ? 'pl-8 text-gray-700' : 'font-semibold'}">${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}</td>
-                            <td class="py-1.5 px-3 text-right whitespace-nowrap">${l.debe > 0 ? '$ ' + l.debe.toLocaleString('es-AR',{minimumFractionDigits:2}) : '-'}</td>
-                            <td class="py-1.5 px-3 text-right whitespace-nowrap">${l.haber > 0 ? '$ ' + l.haber.toLocaleString('es-AR',{minimumFractionDigits:2}) : '-'}</td>
+                            <td class="py-1.5 px-3 text-right">${l.debe > 0 ? '$ ' + l.debe.toLocaleString('es-AR',{minimumFractionDigits:2}) : '-'}</td>
+                            <td class="py-1.5 px-3 text-right">${l.haber > 0 ? '$ ' + l.haber.toLocaleString('es-AR',{minimumFractionDigits:2}) : '-'}</td>
                         </tr>
                     `).join('');
 
                     return `
-                        <div class="bg-white border rounded-xl overflow-x-auto mb-4 asiento-card">
-                            <div class="bg-gray-50 border-b px-4 py-2 flex flex-wrap justify-between items-center text-xs gap-2">
+                        <div class="bg-white border rounded-xl overflow-hidden mb-4 asiento-card">
+                            <div class="bg-gray-50 border-b px-4 py-2 flex justify-between items-center text-xs">
                                 <span class="font-bold text-gray-900">ASIENTO N° ${nroAsiento} — ${formatearFechaAr(m.fecha)}</span>
                                 <div class="flex items-center space-x-3">
                                     <span class="text-gray-600 font-medium">${m.concepto}</span>
@@ -1510,8 +1487,8 @@
 
             cont.innerHTML = `
                 <div class="space-y-6">
-                    <div class="bg-white p-4 rounded-xl border flex flex-wrap justify-between items-center gap-3 no-print shadow-sm">
-                        <div class="flex flex-wrap items-center gap-3">
+                    <div class="bg-white p-4 rounded-xl border flex justify-between items-center no-print shadow-sm">
+                        <div class="flex items-center space-x-4">
                             <div class="flex items-center space-x-2">
                                 <span class="text-xs font-bold text-gray-500 uppercase">Desde:</span>
                                 <input type="date" value="${diarioFechaDesde}" onchange="diarioFechaDesde=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
@@ -1520,12 +1497,12 @@
                                 <span class="text-xs font-bold text-gray-500 uppercase">Hasta:</span>
                                 <input type="date" value="${diarioFechaHasta}" onchange="diarioFechaHasta=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                             </div>
-                            <div class="flex items-center space-x-2 border-l pl-3">
+                            <div class="flex items-center space-x-2 border-l pl-4">
                                 <span class="text-xs font-bold text-gray-500 uppercase">N° Hoja:</span>
-                                <input type="number" value="${folioInicialDiario}" onchange="folioInicialDiario=parseInt(this.value)||1; renderizarVista();" class="w-16 text-xs border rounded p-1.5 font-bold text-blue-600">
+                                <input type="number" value="${folioInicialDiario}" onchange="folioInicialDiario=parseInt(this.value)||1; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold text-blue-600">
                             </div>
                         </div>
-                        <div class="flex flex-wrap gap-2">
+                        <div class="flex space-x-2">
                             <button onclick="abrirModalAsientoManual()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
                                 <i data-lucide="plus" class="w-4 h-4"></i><span>+ Asiento Manual</span>
                             </button>
@@ -1538,12 +1515,12 @@
                         </div>
                     </div>
 
-                    <div class="bg-white p-6 border-b-2 border-gray-900 flex flex-col sm:flex-row justify-between items-start gap-2">
+                    <div class="bg-white p-6 border-b-2 border-gray-900 flex justify-between items-start">
                         <div>
                             <h1 class="text-lg font-black uppercase text-gray-900">${emp.razonSocial}</h1>
                             <p class="text-xs text-gray-600">CUIT: ${emp.cuit} — Condición: ${emp.condicionIva}</p>
                         </div>
-                        <div class="sm:text-right">
+                        <div class="text-right">
                             <h2 class="text-xl font-bold text-gray-900">Libro Diario General</h2>
                             <p class="text-xs text-gray-600">Período Del: ${formatearFechaAr(diarioFechaDesde)} Al: ${formatearFechaAr(diarioFechaHasta)} | Hoja Nro: ${folioInicialDiario}</p>
                         </div>
@@ -1551,12 +1528,12 @@
 
                     <div>${htmlAsientos || '<div class="bg-white p-8 rounded-xl border text-center text-gray-400">Sin asientos en el rango seleccionado.</div>'}</div>
 
-                    <div class="bg-white rounded-xl border p-4 overflow-x-auto">
+                    <div class="bg-white rounded-xl border p-4">
                         <table class="w-full text-xs font-black">
                             <tr class="border-t-2 border-gray-900 pt-2 text-gray-900">
                                 <td class="p-2 uppercase">TOTALES GENERALES ACUMULADOS DEL PERÍODO</td>
-                                <td class="p-2 text-right text-blue-900 w-36 whitespace-nowrap">$ ${totDebeAcumulado.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                                <td class="p-2 text-right text-blue-900 w-36 whitespace-nowrap">$ ${totHaberAcumulado.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                                <td class="p-2 text-right text-blue-900 w-36">$ ${totDebeAcumulado.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                                <td class="p-2 text-right text-blue-900 w-36">$ ${totHaberAcumulado.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
                             </tr>
                         </table>
                     </div>
@@ -1621,12 +1598,12 @@
 
                     filasBalance += `
                         <tr class="text-xs border-b hover:bg-gray-50">
-                            <td class="p-3 font-mono font-bold whitespace-nowrap">${acc.codigo}</td>
+                            <td class="p-3 font-mono font-bold">${acc.codigo}</td>
                             <td class="p-3">${acc.nombre}</td>
-                            <td class="p-3 text-right whitespace-nowrap">$ ${acc.debe.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                            <td class="p-3 text-right whitespace-nowrap">$ ${acc.haber.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                            <td class="p-3 text-right font-medium text-blue-800 whitespace-nowrap">$ ${saldoDeudor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                            <td class="p-3 text-right font-medium text-emerald-800 whitespace-nowrap">$ ${saldoAcreedor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                            <td class="p-3 text-right">$ ${acc.debe.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                            <td class="p-3 text-right">$ ${acc.haber.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                            <td class="p-3 text-right font-medium text-blue-800">$ ${saldoDeudor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                            <td class="p-3 text-right font-medium text-emerald-800">$ ${saldoAcreedor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
                         </tr>
                     `;
                 }
@@ -1634,9 +1611,9 @@
 
             cont.innerHTML = `
                 <div class="space-y-6">
-                    <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-xl border shadow-sm gap-3 no-print">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm no-print">
                         <h2 class="text-xl font-bold text-gray-800">Balance de Sumas y Saldos</h2>
-                        <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center space-x-3">
                             <span class="text-xs font-bold text-gray-500 uppercase">Desde:</span>
                             <input type="date" value="${balanceFechaDesde}" onchange="balanceFechaDesde=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                             <span class="text-xs font-bold text-gray-500 uppercase">Hasta:</span>
@@ -1647,7 +1624,7 @@
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border overflow-x-auto p-4">
+                    <div class="bg-white rounded-xl border overflow-hidden p-4">
                         <div class="text-center pb-4 border-b mb-4">
                             <h1 class="text-base font-black uppercase text-gray-900">${emp.razonSocial}</h1>
                             <p class="text-xs text-gray-500">CUIT: ${emp.cuit} — Balance de Sumas y Saldos (Del ${formatearFechaAr(balanceFechaDesde)} al ${formatearFechaAr(balanceFechaHasta)})</p>
@@ -1667,10 +1644,10 @@
                             <tfoot class="border-t-2 border-gray-900 font-bold bg-gray-50">
                                 <tr>
                                     <td colspan="2" class="p-3 uppercase">Totales Generales:</td>
-                                    <td class="p-3 text-right whitespace-nowrap">$ ${totalDebe.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                                    <td class="p-3 text-right whitespace-nowrap">$ ${totalHaber.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                                    <td class="p-3 text-right text-blue-900 whitespace-nowrap">$ ${totalSaldoDeudor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                                    <td class="p-3 text-right text-emerald-900 whitespace-nowrap">$ ${totalSaldoAcreedor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                                    <td class="p-3 text-right">$ ${totalDebe.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                                    <td class="p-3 text-right">$ ${totalHaber.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                                    <td class="p-3 text-right text-blue-900">$ ${totalSaldoDeudor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                                    <td class="p-3 text-right text-emerald-900">$ ${totalSaldoAcreedor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -1737,11 +1714,11 @@
 
             let filas = listaRet.map(r => `
                 <tr class="hover:bg-gray-50 text-sm">
-                    <td class="px-3 py-3 whitespace-nowrap">${formatearFechaAr(r.fecha)}</td>
+                    <td class="px-3 py-3">${formatearFechaAr(r.fecha)}</td>
                     <td class="px-3 py-3 font-bold ${r.tipo === 'RETENCION' ? 'text-blue-700' : 'text-purple-700'}">${r.tipo}</td>
                     <td class="px-3 py-3 font-semibold">${r.impuesto}</td>
                     <td class="px-3 py-3">${r.agente}</td>
-                    <td class="px-3 py-3 text-right font-bold whitespace-nowrap">$ ${r.importe.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    <td class="px-3 py-3 text-right font-bold">$ ${r.importe.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                     <td class="px-3 py-3 text-center">
                         <button onclick="eliminarRetencionPercepcion(${r.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </td>
@@ -1750,12 +1727,12 @@
 
             cont.innerHTML = `
                 <div class="space-y-6">
-                    <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-xl border shadow-sm gap-3">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm">
                         <div>
                             <h2 class="text-xl font-bold text-gray-800">Módulo Impositivo - IVA</h2>
                             <p class="text-xs text-gray-500">Liquidación mensual de IVA</p>
                         </div>
-                        <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center space-x-3">
                             <input type="file" id="filePerc" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoPercepciones(event)">
                             <button onclick="document.getElementById('filePerc').click()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
                                 <i data-lucide="upload" class="w-4 h-4"></i><span>+ Importar Percepciones</span>
@@ -1768,9 +1745,9 @@
                     </div>
 
                     <div class="bg-white rounded-xl border shadow-sm p-6 space-y-4">
-                        <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
+                        <div class="flex justify-between items-center border-b pb-3">
                             <h3 class="text-sm font-bold text-gray-900 uppercase">Determinación de IVA por Período</h3>
-                            <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-3">
                                 <span class="text-xs font-bold text-gray-500">Mes:</span>
                                 <select onchange="impositivoMes=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                                     <option value="01" ${impositivoMes==='01'?'selected':''}>Enero</option>
@@ -1818,7 +1795,7 @@
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border overflow-x-auto">
+                    <div class="bg-white rounded-xl border overflow-hidden">
                         <div class="p-4 border-b bg-gray-50 font-bold text-sm text-gray-700">Listado de Retenciones y Percepciones Registradas</div>
                         <table class="w-full text-left">
                             <thead class="bg-gray-50 text-xs text-gray-500 uppercase select-none">
@@ -1851,9 +1828,7 @@
             reader.onload = function(evt) {
                 let agregados = 0;
                 if (extension === 'csv') {
-                    const lines = evt.target.result.split(/
-|
-/);
+                    const lines = evt.target.result.split(/\r\n|\n/);
                     lines.forEach((line, idx) => {
                         if (idx === 0 || !line.trim()) return;
                         const c = line.split(';').map(s => s.replace(/"/g, '').trim());
@@ -1996,10 +1971,10 @@
 
             let filasRetIibb = listaRetIibb.map(r => `
                 <tr class="hover:bg-gray-50 text-sm">
-                    <td class="px-3 py-3 whitespace-nowrap">${formatearFechaAr(r.fecha)}</td>
+                    <td class="px-3 py-3">${formatearFechaAr(r.fecha)}</td>
                     <td class="px-3 py-3 font-bold ${r.tipo === 'RETENCION' ? 'text-blue-700' : (r.tipo === 'PERCEPCION' ? 'text-purple-700' : 'text-emerald-700')}">${r.tipo}</td>
                     <td class="px-3 py-3">${r.agente}</td>
-                    <td class="px-3 py-3 text-right font-bold whitespace-nowrap">$ ${r.importe.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    <td class="px-3 py-3 text-right font-bold">$ ${r.importe.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
                     <td class="px-3 py-3 text-center">
                         <button onclick="eliminarRetencionIibb(${r.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </td>
@@ -2008,7 +1983,7 @@
 
             cont.innerHTML = `
                 <div class="space-y-6">
-                    <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-xl border shadow-sm gap-3">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm">
                         <div>
                             <h2 class="text-xl font-bold text-gray-800">Módulo Impositivo - Ingresos Brutos (IIBB)</h2>
                             <p class="text-xs text-gray-500">Determinación de IIBB para Contribuyentes Locales y Convenio Multilateral</p>
@@ -2022,7 +1997,7 @@
                     </div>
 
                     <div class="bg-white rounded-xl border shadow-sm p-6 space-y-6">
-                        <div class="flex flex-wrap justify-between items-center border-b pb-4 gap-3">
+                        <div class="flex justify-between items-center border-b pb-4">
                             <div class="flex items-center space-x-4">
                                 <div>
                                     <span class="block text-xs font-bold text-gray-500 uppercase">Régimen Contribuyente:</span>
@@ -2033,7 +2008,7 @@
                                 </div>
                             </div>
 
-                            <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-3">
                                 <span class="text-xs font-bold text-gray-500 uppercase">Mes:</span>
                                 <select onchange="iibbMes=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                                     <option value="01" ${iibbMes==='01'?'selected':''}>Enero</option>
@@ -2130,7 +2105,7 @@
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border overflow-x-auto">
+                    <div class="bg-white rounded-xl border overflow-hidden">
                         <div class="p-4 border-b bg-gray-50 font-bold text-sm text-gray-700">Listado de Retenciones, Percepciones y Retenciones Bancarias de IIBB</div>
                         <table class="w-full text-left">
                             <thead class="bg-gray-50 text-xs text-gray-500 uppercase select-none">
