@@ -117,6 +117,17 @@
                 </div>
                 
                 <div class="flex items-center space-x-3">
+                    <!-- BACKUP LOCAL JSON -->
+                    <input type="file" id="fileBackupJson" accept=".json" class="hidden" onchange="importarBackupJson(event)">
+                    <button onclick="exportarBackupJson()" title="Descargar copia de seguridad JSON" class="bg-slate-700 hover:bg-slate-800 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        <span>Backup</span>
+                    </button>
+                    <button onclick="document.getElementById('fileBackupJson').click()" title="Restaurar copia de seguridad JSON" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
+                        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                        <span>Restaurar</span>
+                    </button>
+
                     <!-- BOTÓN CONEXIÓN GOOGLE DRIVE -->
                     <button id="btnGoogleAuth" onclick="conectarGoogleDrive()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition flex items-center space-x-1.5">
                         <i data-lucide="cloud" class="w-4 h-4"></i>
@@ -310,23 +321,68 @@
 
         async function sincronizarConDrive() {
             if (!accessToken) return;
-            const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='vento_erp_database.json'`, {
-                headers: { 'Authorization': 'Bearer ' + accessToken }
-            });
-            const result = await response.json();
-            if (result.files && result.files.length > 0) {
-                driveFileId = result.files[0].id;
-                const contentResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+            try {
+                const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='vento_erp_database.json' and trashed=false`, {
                     headers: { 'Authorization': 'Bearer ' + accessToken }
                 });
-                const remoteData = await contentResponse.json();
-                if (remoteData) {
-                    localStorage.setItem('arca_empresas', JSON.stringify(remoteData));
-                    empresas = remoteData;
-                    actualizarSelectorEmpresas();
-                    renderizarVista();
+                const result = await response.json();
+                if (result.files && result.files.length > 0) {
+                    driveFileId = result.files[0].id;
+                    const contentResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+                        headers: { 'Authorization': 'Bearer ' + accessToken }
+                    });
+                    const remoteData = await contentResponse.json();
+                    if (Array.isArray(remoteData) && remoteData.length > 0) {
+                        const localTieneDatos = empresas.some(e => (e.comprobantes && e.comprobantes.length > 0) || (e.retencionesPercepciones && e.retencionesPercepciones.length > 0) || (e.retencionesIibb && e.retencionesIibb.length > 0));
+                        if (!localTieneDatos || confirm("Se encontró una copia de seguridad en Google Drive. ¿Desea descargarla y reemplazar los datos locales actuales? (Cancelar mantendrá sus datos locales y los subirá a Drive)")) {
+                            localStorage.setItem('arca_empresas', JSON.stringify(remoteData));
+                            empresas = remoteData;
+                            actualizarSelectorEmpresas();
+                            renderizarVista();
+                        } else {
+                            await guardarEnGoogleDrive();
+                        }
+                    }
+                } else {
+                    await guardarEnGoogleDrive();
                 }
+            } catch (err) {
+                console.error("Error sincronizando con Drive:", err);
             }
+        }
+
+        function exportarBackupJson() {
+            const dataStr = JSON.stringify(empresas, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `VENTO_ERP_Backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        }
+
+        function importarBackupJson(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = JSON.parse(evt.target.result);
+                    if (Array.isArray(data) && data.length > 0) {
+                        empresas = data;
+                        empresaActualId = empresas[0].id;
+                        guardarEnLocalStorage();
+                        actualizarSelectorEmpresas();
+                        renderizarVista();
+                        alert("¡Copia de seguridad restaurada correctamente!");
+                    } else {
+                        alert("El archivo JSON no tiene el formato válido de VENTO ERP.");
+                    }
+                } catch (err) {
+                    alert("Error al leer el archivo de respaldo: " + err.message);
+                }
+            };
+            reader.readAsText(file, 'utf-8');
         }
 
         function obtenerPlanCuentasBase() {
@@ -1862,6 +1918,52 @@
             return isNaN(num) ? 0 : num;
         }
 
+        function parsearXmlSpreadsheet2003(xmlText) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+            const worksheets = xmlDoc.getElementsByTagNameNS("*", "Worksheet");
+            const result = {};
+            for (let i = 0; i < worksheets.length; i++) {
+                const ws = worksheets[i];
+                const sheetName = ws.getAttribute("ss:Name") || ws.getAttribute("Name") || `Hoja_${i+1}`;
+                const rows = ws.getElementsByTagNameNS("*", "Row");
+                if (rows.length < 2) {
+                    result[sheetName] = [];
+                    continue;
+                }
+                const headers = [];
+                const headerCells = rows[0].getElementsByTagNameNS("*", "Cell");
+                let colIdx = 0;
+                for (let c = 0; c < headerCells.length; c++) {
+                    const idxAttr = headerCells[c].getAttribute("ss:Index");
+                    if (idxAttr) colIdx = parseInt(idxAttr, 10) - 1;
+                    const dataEl = headerCells[c].getElementsByTagNameNS("*", "Data")[0];
+                    headers[colIdx] = dataEl ? dataEl.textContent.trim() : `Col_${colIdx}`;
+                    colIdx++;
+                }
+                const sheetRows = [];
+                for (let r = 1; r < rows.length; r++) {
+                    const cells = rows[r].getElementsByTagNameNS("*", "Cell");
+                    const rowObj = {};
+                    let cIdx = 0;
+                    let hasValue = false;
+                    for (let c = 0; c < cells.length; c++) {
+                        const idxAttr = cells[c].getAttribute("ss:Index");
+                        if (idxAttr) cIdx = parseInt(idxAttr, 10) - 1;
+                        const dataEl = cells[c].getElementsByTagNameNS("*", "Data")[0];
+                        const val = dataEl ? dataEl.textContent.trim() : "";
+                        if (val !== "") hasValue = true;
+                        const hName = headers[cIdx] || `Col_${cIdx}`;
+                        rowObj[hName] = val;
+                        cIdx++;
+                    }
+                    if (hasValue) sheetRows.push(rowObj);
+                }
+                result[sheetName] = sheetRows;
+            }
+            return result;
+        }
+
         function procesarArchivoIibbUnificado(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -1872,6 +1974,8 @@
             reader.onload = function(evt) {
                 try {
                     let agregados = 0;
+                    const hojasDetectadas = [];
+
                     if (extension === 'csv') {
                         const lines = evt.target.result.split(/\r\n|\n/);
                         lines.forEach((line, idx) => {
@@ -1883,21 +1987,33 @@
                                 const importe = parsearImporteImportacion(c[2] || c[3] || 0);
                                 const tipo = c[4] && c[4].toUpperCase().includes('BANC') ? 'RETENCION BANCARIA' : 'RETENCION';
                                 if (importe !== 0) {
-                                    emp.retencionesIibb.push({ id: Date.now() + agregados, fecha, tipo, agente, importe });
+                                    emp.retencionesIibb.push({ id: Date.now() + agregados + Math.random(), fecha, tipo, agente, importe });
                                     agregados++;
                                 }
                             }
                         });
                     } else {
-                        const data = new Uint8Array(evt.target.result);
-                        const workbook = XLSX.read(data, {type: 'array'});
+                        const buffer = evt.target.result;
+                        const textPreview = new TextDecoder("utf-8").decode(new Uint8Array(buffer.slice(0, 500)));
+                        let sheetsMap = {};
 
-                        workbook.SheetNames.forEach(sheetName => {
-                            const sheet = workbook.Sheets[sheetName];
-                            const json = XLSX.utils.sheet_to_json(sheet, {defval: ""});
+                        if (textPreview.includes("<?xml") && textPreview.includes("schemas-microsoft-com:office:spreadsheet")) {
+                            const fullXml = new TextDecoder("utf-8").decode(new Uint8Array(buffer));
+                            sheetsMap = parsearXmlSpreadsheet2003(fullXml);
+                        } else {
+                            const data = new Uint8Array(buffer);
+                            const workbook = XLSX.read(data, {type: 'array'});
+                            workbook.SheetNames.forEach(sn => {
+                                sheetsMap[sn] = XLSX.utils.sheet_to_json(workbook.Sheets[sn], {defval: ""});
+                            });
+                        }
+
+                        Object.keys(sheetsMap).forEach(sheetName => {
+                            const json = sheetsMap[sheetName] || [];
                             const sheetUpper = sheetName.toUpperCase();
+                            let countHoja = 0;
 
-                            json.forEach((row, idx) => {
+                            json.forEach((row) => {
                                 let tipo = "RETENCION";
                                 if (sheetUpper.includes('DEVOLUC')) {
                                     tipo = "DEVOLUCION BANCARIA";
@@ -1967,16 +2083,22 @@
                                 }
 
                                 if (importe !== 0) {
-                                    emp.retencionesIibb.push({ id: Date.now() + agregados, fecha, tipo, agente, importe });
+                                    emp.retencionesIibb.push({ id: Date.now() + agregados + Math.random(), fecha, tipo, agente, importe });
                                     agregados++;
+                                    countHoja++;
                                 }
                             });
+
+                            if (countHoja > 0) {
+                                hojasDetectadas.push(`${sheetName}: ${countHoja}`);
+                            }
                         });
                     }
                     e.target.value = '';
                     guardarEnLocalStorage();
-                    alert(`¡Se importaron ${agregados} registros unificados de IIBB (Retenciones, Percepciones y Bancarias) correctamente!`);
                     renderizarVista();
+                    const detalleHojas = hojasDetectadas.length ? `\nDetalle: ${hojasDetectadas.join(' | ')}` : '';
+                    alert(`Empresa: ${emp.razonSocial}\n¡Se importaron ${agregados} registros unificados de IIBB correctamente!${detalleHojas}`);
                 } catch (err) {
                     console.error("Error al procesar archivo IIBB:", err);
                     alert("Error al leer el archivo de Ingresos Brutos: " + err.message);
