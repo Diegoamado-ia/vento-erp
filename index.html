@@ -434,10 +434,11 @@
 
         function formatearFechaAr(isoStr) {
             if (!isoStr) return "";
-            if (isoStr.includes('/')) return isoStr;
-            const p = isoStr.split('-');
+            const s = String(isoStr);
+            if (s.includes('/')) return s;
+            const p = s.split('-');
             if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
-            return isoStr;
+            return s;
         }
 
         let filtroMesIva = "10";
@@ -522,37 +523,92 @@
             renderizarVista();
         };
 
+        function normalizarEstructuraEmpresa(emp) {
+            if (!emp || typeof emp !== 'object') return null;
+            if (!emp.razonSocial) emp.razonSocial = "EMPRESA SIN NOMBRE";
+            if (!emp.cuit) emp.cuit = "00000000000";
+            if (!emp.condicionIva) emp.condicionIva = "Responsable Inscripto";
+            if (!Array.isArray(emp.comprobantes)) emp.comprobantes = [];
+            if (!Array.isArray(emp.asientosManuales)) emp.asientosManuales = [];
+            if (!Array.isArray(emp.retencionesPercepciones)) emp.retencionesPercepciones = [];
+            if (!Array.isArray(emp.retencionesIibb)) emp.retencionesIibb = [];
+            if (!Array.isArray(emp.planCuentas) || emp.planCuentas.length === 0) emp.planCuentas = obtenerPlanCuentasBase();
+            if (!emp.iibbRegimen) emp.iibbRegimen = "LOCAL";
+            if (typeof emp.iibbAlicuota !== 'number' || isNaN(emp.iibbAlicuota)) emp.iibbAlicuota = parseFloat(emp.iibbAlicuota) || 3.0;
+            if (typeof emp.iibbCoeficiente !== 'number' || isNaN(emp.iibbCoeficiente)) emp.iibbCoeficiente = parseFloat(emp.iibbCoeficiente) || 1.0000;
+            if (typeof emp.iibbSaldoAnt !== 'number' || isNaN(emp.iibbSaldoAnt)) emp.iibbSaldoAnt = parseFloat(emp.iibbSaldoAnt) || 0;
+
+            emp.comprobantes.forEach(c => {
+                if (!c.fecha) c.fecha = "";
+                c.neto105 = Number(c.neto105) || 0;
+                c.neto21 = Number(c.neto21) || 0;
+                c.neto27 = Number(c.neto27) || 0;
+                c.iva105 = Number(c.iva105) || 0;
+                c.iva21 = Number(c.iva21) || 0;
+                c.iva27 = Number(c.iva27) || 0;
+                c.noGravado = Number(c.noGravado) || 0;
+                c.exento = Number(c.exento) || 0;
+                c.otrosTributos = Number(c.otrosTributos) || 0;
+                c.netoTotal = Number(c.netoTotal) || 0;
+                c.totalIva = Number(c.totalIva) || 0;
+                c.total = Number(c.total) || 0;
+            });
+
+            emp.retencionesPercepciones.forEach(r => {
+                if (!r.fecha) r.fecha = "";
+                r.importe = Number(r.importe) || 0;
+            });
+
+            emp.retencionesIibb.forEach(r => {
+                if (!r.fecha) r.fecha = "";
+                r.importe = Number(r.importe) || 0;
+            });
+
+            return emp;
+        }
+
         function obtenerEmpresaActual() { 
-            let emp = empresas.find(e => e.id === empresaActualId);
+            if (!Array.isArray(empresas) || empresas.length === 0) {
+                empresas = [{
+                    id: 1,
+                    razonSocial: "SUCESION DE BARBERO ARMANDO LUIS",
+                    cuit: "20054059354",
+                    condicionIva: "Responsable Inscripto",
+                    iibbRegimen: "LOCAL",
+                    iibbAlicuota: 3.0,
+                    iibbCoeficiente: 1.0000,
+                    iibbSaldoAnt: 0,
+                    comprobantes: [],
+                    asientosManuales: [],
+                    retencionesPercepciones: [],
+                    retencionesIibb: [],
+                    planCuentas: obtenerPlanCuentasBase()
+                }];
+            }
+            let emp = empresas.find(e => String(e.id) === String(empresaActualId));
             if (!emp) {
                 emp = empresas[0];
                 empresaActualId = emp.id;
             }
-            if (!emp.asientosManuales) emp.asientosManuales = [];
-            if (!emp.retencionesPercepciones) emp.retencionesPercepciones = [];
-            if (!emp.retencionesIibb) emp.retencionesIibb = [];
-            if (!emp.iibbRegimen) emp.iibbRegimen = "LOCAL";
-            if (emp.iibbAlicuota === undefined) emp.iibbAlicuota = 3.0;
-            if (emp.iibbCoeficiente === undefined) emp.iibbCoeficiente = 1.0000;
-            if (emp.iibbSaldoAnt === undefined) emp.iibbSaldoAnt = 0;
-            return emp;
+            return normalizarEstructuraEmpresa(emp);
         }
 
         function actualizarSelectorEmpresas() {
             const select = document.getElementById('selectEmpresa');
             select.innerHTML = '';
             empresas.forEach(emp => {
+                normalizarEstructuraEmpresa(emp);
                 const opt = document.createElement('option');
                 opt.value = emp.id;
                 opt.textContent = `${emp.razonSocial} (CUIT: ${emp.cuit})`;
-                if (emp.id === empresaActualId) opt.selected = true;
+                if (String(emp.id) === String(empresaActualId)) opt.selected = true;
                 select.appendChild(opt);
             });
             const actual = obtenerEmpresaActual();
             if (actual) {
                 document.getElementById('headerRazonSocial').textContent = actual.razonSocial;
                 document.getElementById('headerCuit').textContent = `CUIT: ${actual.cuit}`;
-                const iniciales = actual.razonSocial.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+                const iniciales = (actual.razonSocial || 'ER').split(' ').filter(Boolean).map(w=>w[0]).join('').substring(0,2).toUpperCase();
                 document.getElementById('headerInicia').textContent = iniciales;
             }
         }
@@ -788,16 +844,44 @@
             }
             const cont = document.getElementById('contenedorVistas');
             cont.innerHTML = '';
-            if (vistaActual === 'dashboard') renderDashboard(cont);
-            else if (vistaActual === 'importacion') renderImportacion(cont);
-            else if (vistaActual === 'comprobantes') renderComprobantes(cont);
-            else if (vistaActual === 'libro-iva') renderLibroIva(cont);
-            else if (vistaActual === 'plan-cuentas') renderPlanCuentas(cont);
-            else if (vistaActual === 'libro-diario') renderLibroDiario(cont);
-            else if (vistaActual === 'balance') renderBalance(cont);
-            else if (vistaActual === 'impositivo') renderImpositivo(cont);
-            else if (vistaActual === 'ingresos-brutos') renderIngresosBrutos(cont);
-            lucide.createIcons();
+            try {
+                if (vistaActual === 'dashboard') renderDashboard(cont);
+                else if (vistaActual === 'importacion') renderImportacion(cont);
+                else if (vistaActual === 'comprobantes') renderComprobantes(cont);
+                else if (vistaActual === 'libro-iva') renderLibroIva(cont);
+                else if (vistaActual === 'plan-cuentas') renderPlanCuentas(cont);
+                else if (vistaActual === 'libro-diario') renderLibroDiario(cont);
+                else if (vistaActual === 'balance') renderBalance(cont);
+                else if (vistaActual === 'impositivo') renderImpositivo(cont);
+                else if (vistaActual === 'ingresos-brutos') renderIngresosBrutos(cont);
+            } catch (err) {
+                console.error("Error al renderizar vista:", err);
+                const emp = obtenerEmpresaActual();
+                cont.innerHTML = `
+                    <div class="bg-red-50 border-l-4 border-red-600 p-6 rounded-xl shadow max-w-2xl mx-auto mt-8 space-y-3">
+                        <h3 class="text-lg font-bold text-red-800">Se detectó un error en los datos guardados de "${emp ? emp.razonSocial : 'Empresa'}"</h3>
+                        <p class="text-xs font-mono bg-white p-3 rounded border text-red-700">${err.message}</p>
+                        <p class="text-xs text-gray-600">Esto suele ocurrir cuando un registro importado anteriormente quedó con un campo vacío o corrupto.</p>
+                        <div class="flex space-x-3 pt-2">
+                            <button onclick="repararEmpresaActual()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow">Reparar Registros de esta Empresa</button>
+                            <button onclick="exportarBackupJson()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-bold">Descargar Backup JSON</button>
+                        </div>
+                    </div>
+                `;
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function repararEmpresaActual() {
+            const emp = obtenerEmpresaActual();
+            emp.comprobantes = (emp.comprobantes || []).filter(c => c && typeof c === 'object');
+            emp.retencionesPercepciones = (emp.retencionesPercepciones || []).filter(r => r && typeof r === 'object');
+            emp.retencionesIibb = (emp.retencionesIibb || []).filter(r => r && typeof r === 'object');
+            emp.asientosManuales = (emp.asientosManuales || []).filter(a => a && typeof a === 'object' && Array.isArray(a.lineas));
+            normalizarEstructuraEmpresa(emp);
+            guardarEnLocalStorage();
+            renderizarVista();
+            alert("¡Datos de la empresa reparados correctamente!");
         }
 
         function parsearFloatAr(str) {
