@@ -1,0 +1,1889 @@
+[
+  {
+    "id": 1,
+    "razonSocial": "SUCESION DE BARBERO ARMANDO LUIS",
+    "cuit": "20054059354",
+    "condicionIva": "Responsable Inscripto",
+    "comprobantes": [
+      {
+        "id": 1793831848904,
+        "tipoOp": "VENTA",
+        "fecha": "2026-10-06",
+        "tipoCodigo": 201,
+        "tipoNombre": "FCE A",
+        "pv": 3,
+        "numero": 88,
+        "cuit": "30647227119",
+        "razonSocial": "FINNING ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 9216900,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 1935548.9999999998,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 9216900,
+        "totalIva": 1935548.9999999998,
+        "total": 11152449,
+        "cuentaNeto": "4101001",
+        "cuentaIva": "2102001",
+        "cuentaContrapartida": "1102100",
+        "moneda": "USD",
+        "tipoCambio": 1540
+      },
+      {
+        "id": 1793841896090,
+        "tipoOp": "COMPRA",
+        "fecha": "2026-10-08",
+        "tipoCodigo": 1,
+        "tipoNombre": "FC A",
+        "pv": 5,
+        "numero": 919,
+        "cuit": "20244287752",
+        "razonSocial": "GONZALEZ MARIANO GASTON",
+        "neto105": 0,
+        "neto21": 52438,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 11011.98,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 52438,
+        "totalIva": 11011.98,
+        "total": 63450,
+        "cuentaNeto": "4102018",
+        "cuentaIva": "2102002",
+        "cuentaContrapartida": "2.1.01",
+        "moneda": "$",
+        "tipoCambio": 1
+      },
+      {
+        "id": 1793841896091,
+        "tipoOp": "COMPRA",
+        "fecha": "2026-10-16",
+        "tipoCodigo": 11,
+        "tipoNombre": "FC C",
+        "pv": 1,
+        "numero": 60,
+        "cuit": "27441110443",
+        "razonSocial": "DUCA MANZUR LUISINA",
+        "neto105": 0,
+        "neto21": 0,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 0,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 1800000,
+        "otrosTributos": 1400000,
+        "netoTotal": 0,
+        "totalIva": 0,
+        "total": 1800000,
+        "cuentaNeto": "4102018",
+        "cuentaIva": "1.1.03",
+        "cuentaContrapartida": "2.1.01",
+        "moneda": "$",
+        "tipoCambio": 1
+      },
+      {
+        "id": 1793841896092,
+        "tipoOp": "COMPRA",
+        "fecha": "2026-10-31",
+        "tipoCodigo": 63,
+        "tipoNombre": "LIQ A",
+        "pv": 1020,
+        "numero": 98775,
+        "cuit": "30500008454",
+        "razonSocial": "BANCO SANTANDER ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 90.57,
+        "neto21": 0,
+        "neto27": 0,
+        "iva105": 9.51,
+        "iva21": 0,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 90.57,
+        "totalIva": 9.51,
+        "total": 100.08,
+        "cuentaNeto": "4102017",
+        "cuentaIva": "2102002",
+        "cuentaContrapartida": "1101200",
+        "moneda": "$",
+        "tipoCambio": 1
+      },
+      {
+        "id": 1793841896093,
+        "tipoOp": "COMPRA",
+        "fecha": "2026-10-23",
+        "tipoCodigo": 1,
+        "tipoNombre": "FC A",
+        "pv": 6,
+        "numero": 5356,
+        "cuit": "20244287752",
+        "razonSocial": "GONZALEZ MARIANO GASTON",
+        "neto105": 0,
+        "neto21": 3202479.33,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 672520.66,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 3202479.33,
+        "totalIva": 672520.66,
+        "total": 3875000,
+        "cuentaNeto": "4102018",
+        "cuentaIva": "2102002",
+        "cuentaContrapartida": "2.1.01",
+        "moneda": "$",
+        "tipoCambio": 1
+      },
+      {
+        "id": 1793882844396,
+        "tipoOp": "VENTA",
+        "fecha": "2026-01-01",
+        "tipoCodigo": 201,
+        "tipoNombre": "FCE A",
+        "pv": 3,
+        "numero": 79,
+        "cuit": "30647227119",
+        "razonSocial": "FINNING ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 8857800,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 1860137.9999999998,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 8857800,
+        "totalIva": 1860137.9999999998,
+        "total": 10717938,
+        "cuentaNeto": "4101001",
+        "cuentaIva": "2102001",
+        "cuentaContrapartida": "1101200",
+        "moneda": "USD",
+        "tipoCambio": 1480
+      },
+      {
+        "id": 1793882844397,
+        "tipoOp": "VENTA",
+        "fecha": "2026-02-01",
+        "tipoCodigo": 201,
+        "tipoNombre": "FCE A",
+        "pv": 3,
+        "numero": 80,
+        "cuit": "30647227119",
+        "razonSocial": "FINNING ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 8768025,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 1841285.2499999998,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 8768025,
+        "totalIva": 1841285.2499999998,
+        "total": 10609310.25,
+        "cuentaNeto": "4101001",
+        "cuentaIva": "2102001",
+        "cuentaContrapartida": "1101200",
+        "moneda": "USD",
+        "tipoCambio": 1465
+      },
+      {
+        "id": 1793882844398,
+        "tipoOp": "VENTA",
+        "fecha": "2026-03-01",
+        "tipoCodigo": 201,
+        "tipoNombre": "FCE A",
+        "pv": 3,
+        "numero": 81,
+        "cuit": "30647227119",
+        "razonSocial": "FINNING ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 8498700,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 1784726.9999999998,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 8498700,
+        "totalIva": 1784726.9999999998,
+        "total": 10283427,
+        "cuentaNeto": "4101001",
+        "cuentaIva": "2102001",
+        "cuentaContrapartida": "1101200",
+        "moneda": "USD",
+        "tipoCambio": 1420
+      },
+      {
+        "id": 1793882844399,
+        "tipoOp": "VENTA",
+        "fecha": "2026-04-01",
+        "tipoCodigo": 201,
+        "tipoNombre": "FCE A",
+        "pv": 3,
+        "numero": 82,
+        "cuit": "30647227119",
+        "razonSocial": "FINNING ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 8408925,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 1765874.2499999998,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 8408925,
+        "totalIva": 1765874.2499999998,
+        "total": 10174799.25,
+        "cuentaNeto": "4101001",
+        "cuentaIva": "2102001",
+        "cuentaContrapartida": "1101200",
+        "moneda": "USD",
+        "tipoCambio": 1405
+      },
+      {
+        "id": 1793882844400,
+        "tipoOp": "VENTA",
+        "fecha": "2026-05-02",
+        "tipoCodigo": 201,
+        "tipoNombre": "FCE A",
+        "pv": 3,
+        "numero": 83,
+        "cuit": "30647227119",
+        "razonSocial": "FINNING ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 8468775,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 1778442.7499999998,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 8468775,
+        "totalIva": 1778442.7499999998,
+        "total": 10247217.75,
+        "cuentaNeto": "4101001",
+        "cuentaIva": "2102001",
+        "cuentaContrapartida": "1101200",
+        "moneda": "USD",
+        "tipoCambio": 1415
+      },
+      {
+        "id": 1793882844401,
+        "tipoOp": "VENTA",
+        "fecha": "2026-06-01",
+        "tipoCodigo": 201,
+        "tipoNombre": "FCE A",
+        "pv": 3,
+        "numero": 84,
+        "cuit": "30647227119",
+        "razonSocial": "FINNING ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 8558550,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 1797295.4999999998,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 8558550,
+        "totalIva": 1797295.4999999998,
+        "total": 10355845.5,
+        "cuentaNeto": "4101001",
+        "cuentaIva": "2102001",
+        "cuentaContrapartida": "1101200",
+        "moneda": "USD",
+        "tipoCambio": 1430
+      },
+      {
+        "id": 1793882844402,
+        "tipoOp": "VENTA",
+        "fecha": "2026-07-01",
+        "tipoCodigo": 201,
+        "tipoNombre": "FCE A",
+        "pv": 3,
+        "numero": 85,
+        "cuit": "30647227119",
+        "razonSocial": "FINNING ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 8977500,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 1885274.9999999998,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 8977500,
+        "totalIva": 1885274.9999999998,
+        "total": 10862775,
+        "cuentaNeto": "4101001",
+        "cuentaIva": "2102001",
+        "cuentaContrapartida": "1101200",
+        "moneda": "USD",
+        "tipoCambio": 1500
+      },
+      {
+        "id": 1793882844403,
+        "tipoOp": "VENTA",
+        "fecha": "2026-08-01",
+        "tipoCodigo": 201,
+        "tipoNombre": "FCE A",
+        "pv": 3,
+        "numero": 86,
+        "cuit": "30647227119",
+        "razonSocial": "FINNING ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 9037350,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 1897843.4999999998,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 9037350,
+        "totalIva": 1897843.4999999998,
+        "total": 10935193.5,
+        "cuentaNeto": "4101001",
+        "cuentaIva": "2102001",
+        "cuentaContrapartida": "1101200",
+        "moneda": "USD",
+        "tipoCambio": 1510
+      },
+      {
+        "id": 1793882844404,
+        "tipoOp": "VENTA",
+        "fecha": "2026-09-01",
+        "tipoCodigo": 201,
+        "tipoNombre": "FCE A",
+        "pv": 3,
+        "numero": 87,
+        "cuit": "30647227119",
+        "razonSocial": "FINNING ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 9157050,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 1922980.4999999998,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 9157050,
+        "totalIva": 1922980.4999999998,
+        "total": 11080030.5,
+        "cuentaNeto": "4101001",
+        "cuentaIva": "2102001",
+        "cuentaContrapartida": "1101200",
+        "moneda": "USD",
+        "tipoCambio": 1530
+      },
+      {
+        "id": 1794192033499,
+        "tipoOp": "VENTA",
+        "fecha": "2026-11-01",
+        "tipoCodigo": 201,
+        "tipoNombre": "FCE A",
+        "pv": 3,
+        "numero": 89,
+        "cuit": "30647227119",
+        "razonSocial": "FINNING ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 9336600,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 1960685.9999999998,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 9336600,
+        "totalIva": 1960685.9999999998,
+        "total": 11297286,
+        "cuentaNeto": "4.1.01",
+        "cuentaIva": "2.1.02",
+        "cuentaContrapartida": "1.1.04",
+        "moneda": "USD",
+        "tipoCambio": 1560
+      }
+    ],
+    "planCuentas": [
+      {
+        "codigo": "1000000",
+        "nombre": "Activo",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1100000",
+        "nombre": "Activo Corriente",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1101000",
+        "nombre": "Caja y Bancos",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1101100",
+        "nombre": "Caja",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1101200",
+        "nombre": "Banco Santander Rio Cta. Cte.",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1101300",
+        "nombre": "Fondo Fijo",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1101400",
+        "nombre": "Valores a Depositar",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1102000",
+        "nombre": "Créditos por Ventas",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1102100",
+        "nombre": "Deudores Varios",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1102150",
+        "nombre": "Deudores por Ventas",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1102200",
+        "nombre": "Documentos a Cobrar",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1102300",
+        "nombre": "Deudores Morosos",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1102400",
+        "nombre": "Deudores en Gestion Judicial",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103000",
+        "nombre": "Otros Créditos",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1103001",
+        "nombre": "Deudores Varios",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103006",
+        "nombre": "Percepciones IVA",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103100",
+        "nombre": "Retenciones Imp. a las Gcias.",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103200",
+        "nombre": "Imp. creditos compensable",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103300",
+        "nombre": "Accionistas",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103301",
+        "nombre": "Cuenta Particular XX",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103302",
+        "nombre": "Cuenta Particular YY",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103400",
+        "nombre": "IVA Saldo a Favor Art.24 2ºPar",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103401",
+        "nombre": "IVA Saldo a Favor Libre Dispon",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103500",
+        "nombre": "Retenciones Ing. Brutos",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103501",
+        "nombre": "Retenc. SIRCREB Ing. Brutos",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103600",
+        "nombre": "Anticipo Imp. a las Ganancias",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103700",
+        "nombre": "Percepciones Ing. Brutos",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103800",
+        "nombre": "Saldo a Favor Ing. Brutos",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103900",
+        "nombre": "Saldo a Favor Imp. a las Gcias",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1104000",
+        "nombre": "Inversiones",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1104100",
+        "nombre": "Fondos Comunes de Inversion",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1200000",
+        "nombre": "Activo No Corriente",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1201000",
+        "nombre": "Bienes de Uso",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1201100",
+        "nombre": "V.O. Maquinarias",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1201101",
+        "nombre": "Amort. Acum. Maquinarias",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1201200",
+        "nombre": "V.O. Equipos y Herramientas",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1201201",
+        "nombre": "Amort. Acum. Equipos y Herram",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1202000",
+        "nombre": "Activos Intangibles",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1202001",
+        "nombre": "Gastos de Organizacion",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1202002",
+        "nombre": "Amort. Acum. Gs.de Organizacio",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2000000",
+        "nombre": "Pasivo",
+        "tipo": "PASIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "2100000",
+        "nombre": "Pasivo Corriente",
+        "tipo": "PASIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "2101001",
+        "nombre": "Proveedores",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2101200",
+        "nombre": "Prestamos comerciales",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2101300",
+        "nombre": "Dividendos a Pagar",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2101900",
+        "nombre": "Otros Proveedores",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2101951",
+        "nombre": "Honorarios Directores provisio",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2101999",
+        "nombre": "Otras Deudas",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102000",
+        "nombre": "Deudas Fiscales",
+        "tipo": "PASIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "2102001",
+        "nombre": "IVA Debito Fiscal",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102002",
+        "nombre": "IVA Credito Fiscal",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102003",
+        "nombre": "IVA a Pagar",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102004",
+        "nombre": "IVA Saldo a Favor Libre Disp.",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102005",
+        "nombre": "IVA Saldo a Favor Art.24 2ºPar",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102100",
+        "nombre": "Ingresos Brutos a pagar",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102200",
+        "nombre": "Imp. a las Ganancias a pagar",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102201",
+        "nombre": "Ret. Imp. a las Ganancias",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102300",
+        "nombre": "Provision Imp. a las Ganancias",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2110000",
+        "nombre": "Deudas Comerciales",
+        "tipo": "PASIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "3000000",
+        "nombre": "Patrimonio Neto",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": false
+      },
+      {
+        "codigo": "3100000",
+        "nombre": "Aportes de los propietarios",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": false
+      },
+      {
+        "codigo": "3101001",
+        "nombre": "Capital Social",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3101002",
+        "nombre": "Aportes Irrevocables fut. susc",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3101003",
+        "nombre": "Otros Ajustes",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3102000",
+        "nombre": "Resultados Acumulados",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": false
+      },
+      {
+        "codigo": "3102001",
+        "nombre": "Reserva Legal",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3102002",
+        "nombre": "Otras Reservas",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3102100",
+        "nombre": "Resultados Diferidos",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3102200",
+        "nombre": "Resultados No Asignados",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3102300",
+        "nombre": "Ajustes Rdos. Ejerc. Anteriore",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3102400",
+        "nombre": "Resultado del Ejercicio",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "4000000",
+        "nombre": "Resultados",
+        "tipo": "RESULTADOS",
+        "imputable": false
+      },
+      {
+        "codigo": "4101000",
+        "nombre": "Resultados Positivos",
+        "tipo": "RESULTADOS",
+        "imputable": false
+      },
+      {
+        "codigo": "4101001",
+        "nombre": "Alquileres de inmuebles",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102000",
+        "nombre": "Resultados Negativos",
+        "tipo": "RESULTADOS",
+        "imputable": false
+      },
+      {
+        "codigo": "4102001",
+        "nombre": "Compra Repuestos",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102002",
+        "nombre": "Compra Mano de Obra",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102003",
+        "nombre": "Gastos Varios",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102004",
+        "nombre": "Telefonía",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102005",
+        "nombre": "Fletes y Viajes",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102006",
+        "nombre": "Combustibles",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102007",
+        "nombre": "Compra Herramientas",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102008",
+        "nombre": "Gas",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102009",
+        "nombre": "Luz",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102010",
+        "nombre": "Servicios Sanitarios",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102011",
+        "nombre": "Seguros",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102012",
+        "nombre": "Cursos y Capacitacion",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102013",
+        "nombre": "Publicidad",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102014",
+        "nombre": "Obra Social",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102015",
+        "nombre": "Muebles y Utiles",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102016",
+        "nombre": "Gastos de Administración",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102017",
+        "nombre": "Intereses y Com. Bcra",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102018",
+        "nombre": "Mantenimiento de Inmueble",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102019",
+        "nombre": "Papeleria e Insumos",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102020",
+        "nombre": "Alquiler de equipos",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102021",
+        "nombre": "Hoteles y Comidas",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102022",
+        "nombre": "Rodados",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102023",
+        "nombre": "Mantenimiento Bs de Uso",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102024",
+        "nombre": "Internet",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102025",
+        "nombre": "Limpieza y Otros",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102026",
+        "nombre": "Regalos",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102027",
+        "nombre": "Insumos Taller",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102028",
+        "nombre": "Diferencia de Cambio",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      }
+    ],
+    "asientosManuales": [],
+    "retencionesPercepciones": [
+      {
+        "id": 1793988082220,
+        "fecha": "2026-09-04",
+        "impuesto": "IVA",
+        "tipo": "RETENCION",
+        "agente": "CUIT Agente: 30647227119",
+        "importe": 1538384.4
+      },
+      {
+        "id": 1793993443849,
+        "fecha": "2026-09-11",
+        "impuesto": "IVA",
+        "tipo": "PERCEPCION",
+        "agente": "CUIT: 30657864281 (Rég. 493)",
+        "importe": 2126.19
+      },
+      {
+        "id": 1794506438750,
+        "fecha": "2026-10-16",
+        "impuesto": "IVA",
+        "tipo": "RETENCION",
+        "agente": "30647227119 (Rég. 212)",
+        "importe": 1548439.2
+      },
+      {
+        "id": 1794506466772,
+        "fecha": "2026-10-13",
+        "impuesto": "IVA",
+        "tipo": "PERCEPCION",
+        "agente": "30657864281 (Rég. 493)",
+        "importe": 1551.27
+      }
+    ],
+    "retencionesIibb": [
+      {
+        "id": 1794616224150,
+        "fecha": 33692401,
+        "tipo": "PERCEPCION",
+        "agente": 30657864281,
+        "importe": 2.585
+      },
+      {
+        "id": 1794616224151,
+        "fecha": "2026-10-16",
+        "tipo": "RETENCION",
+        "agente": 30647227119,
+        "importe": 230.422
+      },
+      {
+        "id": 1794616224152,
+        "fecha": "2026-10-01",
+        "tipo": "RETENCION BANCARIA",
+        "agente": 30500008454,
+        "importe": 232.184
+      },
+      {
+        "id": 1794616224153,
+        "fecha": "2026-10-01",
+        "tipo": "RETENCION BANCARIA",
+        "agente": 30500008454,
+        "importe": 143
+      }
+    ],
+    "iibbRegimen": "LOCAL",
+    "iibbAlicuota": 5,
+    "iibbCoeficiente": 1,
+    "iibbSaldoAnt": 0
+  },
+  {
+    "id": 1793834763824,
+    "razonSocial": "MAQUINARIAS OLAVARRIA S.A.",
+    "cuit": "30709024635",
+    "condicionIva": "Responsable Inscripto",
+    "comprobantes": [
+      {
+        "id": 1793984809751,
+        "tipoOp": "COMPRA",
+        "fecha": "2026-07-30",
+        "tipoCodigo": 63,
+        "tipoNombre": "LIQ A",
+        "pv": 1002,
+        "numero": 20119,
+        "cuit": "30500008454",
+        "razonSocial": "BANCO SANTANDER ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 69996,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 14699.16,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 69996,
+        "totalIva": 14699.16,
+        "total": 84695.16,
+        "cuentaNeto": "4102601",
+        "cuentaIva": "2102002",
+        "cuentaContrapartida": "1101200",
+        "moneda": "$",
+        "tipoCambio": 1
+      },
+      {
+        "id": 1793984809752,
+        "tipoOp": "COMPRA",
+        "fecha": "2026-08-31",
+        "tipoCodigo": 63,
+        "tipoNombre": "LIQ A",
+        "pv": 1019,
+        "numero": 55252,
+        "cuit": "30500008454",
+        "razonSocial": "BANCO SANTANDER ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 69996,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 14699.16,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 69996,
+        "totalIva": 14699.16,
+        "total": 84695.16,
+        "cuentaNeto": "4102601",
+        "cuentaIva": "2102002",
+        "cuentaContrapartida": "1101200",
+        "moneda": "$",
+        "tipoCambio": 1
+      },
+      {
+        "id": 1793984809753,
+        "tipoOp": "COMPRA",
+        "fecha": "2026-09-30",
+        "tipoCodigo": 63,
+        "tipoNombre": "LIQ A",
+        "pv": 1002,
+        "numero": 102079,
+        "cuit": "30500008454",
+        "razonSocial": "BANCO SANTANDER ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 69996,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 14699.16,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 69996,
+        "totalIva": 14699.16,
+        "total": 84695.16,
+        "cuentaNeto": "4102601",
+        "cuentaIva": "2102002",
+        "cuentaContrapartida": "1101200",
+        "moneda": "$",
+        "tipoCambio": 1
+      },
+      {
+        "id": 1793984809754,
+        "tipoOp": "COMPRA",
+        "fecha": "2026-10-31",
+        "tipoCodigo": 63,
+        "tipoNombre": "LIQ A",
+        "pv": 1002,
+        "numero": 121162,
+        "cuit": "30500008454",
+        "razonSocial": "BANCO SANTANDER ARGENTINA SOCIEDAD ANONIMA",
+        "neto105": 0,
+        "neto21": 69996,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 14699.16,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 69996,
+        "totalIva": 14699.16,
+        "total": 84695.16,
+        "cuentaNeto": "4102601",
+        "cuentaIva": "2102002",
+        "cuentaContrapartida": "1101200",
+        "moneda": "$",
+        "tipoCambio": 1
+      },
+      {
+        "id": 1793984844524,
+        "tipoOp": "VENTA",
+        "fecha": "2026-04-27",
+        "tipoCodigo": 1,
+        "tipoNombre": "FC A",
+        "pv": 2,
+        "numero": 35,
+        "cuit": "30664056549",
+        "razonSocial": "SERVICIOS OLAVARRIA SA",
+        "neto105": 0,
+        "neto21": 500000,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 105000,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 500000,
+        "totalIva": 105000,
+        "total": 605000,
+        "cuentaNeto": "4101001",
+        "cuentaIva": "2102001",
+        "cuentaContrapartida": "1102100",
+        "moneda": "$",
+        "tipoCambio": 1
+      },
+      {
+        "id": 1793984844525,
+        "tipoOp": "VENTA",
+        "fecha": "2026-09-16",
+        "tipoCodigo": 1,
+        "tipoNombre": "FC A",
+        "pv": 2,
+        "numero": 36,
+        "cuit": "30664056549",
+        "razonSocial": "SERVICIOS OLAVARRIA SA",
+        "neto105": 0,
+        "neto21": 2500000,
+        "neto27": 0,
+        "iva105": 0,
+        "iva21": 525000,
+        "iva27": 0,
+        "noGravado": 0,
+        "exento": 0,
+        "otrosTributos": 0,
+        "netoTotal": 2500000,
+        "totalIva": 525000,
+        "total": 3025000,
+        "cuentaNeto": "4101001",
+        "cuentaIva": "2102001",
+        "cuentaContrapartida": "1102100",
+        "moneda": "$",
+        "tipoCambio": 1
+      }
+    ],
+    "asientosManuales": [],
+    "planCuentas": [
+      {
+        "codigo": "1000000",
+        "nombre": "Activo",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1100000",
+        "nombre": "Activo Corriente",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1101000",
+        "nombre": "Caja y Bancos",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1101100",
+        "nombre": "Caja",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1101200",
+        "nombre": "Banco Santander Rio Cta. Cte.",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1101300",
+        "nombre": "Fondo Fijo",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1101400",
+        "nombre": "Valores a Depositar",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1102000",
+        "nombre": "Créditos por Ventas",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1102100",
+        "nombre": "Deudores Varios",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1102150",
+        "nombre": "Deudores por Ventas",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1102200",
+        "nombre": "Documentos a Cobrar",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1102300",
+        "nombre": "Deudores Morosos",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1102400",
+        "nombre": "Deudores en Gestion Judicial",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103000",
+        "nombre": "Otros Créditos",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1103001",
+        "nombre": "Deudores Varios",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103006",
+        "nombre": "Percepciones IVA",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103100",
+        "nombre": "Retenciones Imp. a las Gcias.",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103200",
+        "nombre": "Imp. creditos compensable",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103300",
+        "nombre": "Accionistas",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103301",
+        "nombre": "Cuenta Particular Barbero",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103302",
+        "nombre": "Cuenta Particular Serv. Olavar",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103400",
+        "nombre": "IVA Saldo a Favor Art.24 2ºPar",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103401",
+        "nombre": "IVA Saldo a Favor Libre Dispon",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103500",
+        "nombre": "Retenciones Ing. Brutos",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103501",
+        "nombre": "Retenc. SIRCREB Ing. Brutos",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103600",
+        "nombre": "Anticipo Imp. a las Ganancias",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103700",
+        "nombre": "Percepciones Ing. Brutos",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103800",
+        "nombre": "Saldo a Favor Ing. Brutos",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1103900",
+        "nombre": "Saldo a Favor Imp. a las Gcias",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1104000",
+        "nombre": "Inversiones",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1104100",
+        "nombre": "Fondos Comunes de Inversion",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1200000",
+        "nombre": "Activo No Corriente",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1201000",
+        "nombre": "Bienes de Uso",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1201100",
+        "nombre": "V.O. Maquinarias",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1201101",
+        "nombre": "Amort. Acum. Maquinarias",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1201200",
+        "nombre": "V.O. Equipos y Herramientas",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1201201",
+        "nombre": "Amort. Acum. Equipos y Herram",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1202000",
+        "nombre": "Activos Intangibles",
+        "tipo": "ACTIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "1202001",
+        "nombre": "Gastos de Organizacion",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "1202002",
+        "nombre": "Amort. Acum. Gs.de Organizacio",
+        "tipo": "ACTIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2000000",
+        "nombre": "Pasivo",
+        "tipo": "PASIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "2100000",
+        "nombre": "Pasivo Corriente",
+        "tipo": "PASIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "2101001",
+        "nombre": "Proveedores",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2101200",
+        "nombre": "Prestamos comerciales",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2101300",
+        "nombre": "Dividendos a Pagar",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2101900",
+        "nombre": "Otros Proveedores",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2101951",
+        "nombre": "Honorarios Directores provisio",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2101999",
+        "nombre": "Otras Deudas",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102000",
+        "nombre": "Deudas Fiscales",
+        "tipo": "PASIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "2102001",
+        "nombre": "IVA Debito Fiscal",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102002",
+        "nombre": "IVA Credito Fiscal",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102003",
+        "nombre": "IVA a Pagar",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102004",
+        "nombre": "IVA Saldo a Favor Libre Disp.",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102005",
+        "nombre": "IVA Saldo a Favor Art.24 2ºPar",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102100",
+        "nombre": "Ingresos Brutos a pagar",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102200",
+        "nombre": "Imp. a las Ganancias a pagar",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102201",
+        "nombre": "Ret. Imp. a las Ganancias",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2102300",
+        "nombre": "Provision Imp. a las Ganancias",
+        "tipo": "PASIVO",
+        "imputable": true
+      },
+      {
+        "codigo": "2110000",
+        "nombre": "Deudas Comerciales",
+        "tipo": "PASIVO",
+        "imputable": false
+      },
+      {
+        "codigo": "3000000",
+        "nombre": "Patrimonio Neto",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": false
+      },
+      {
+        "codigo": "3100000",
+        "nombre": "Aportes de los propietarios",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": false
+      },
+      {
+        "codigo": "3101001",
+        "nombre": "Capital Social",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3101002",
+        "nombre": "Aportes Irrevocables fut. susc",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3101003",
+        "nombre": "Otros Ajustes",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3102000",
+        "nombre": "Resultados Acumulados",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": false
+      },
+      {
+        "codigo": "3102001",
+        "nombre": "Reserva Legal",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3102002",
+        "nombre": "Otras Reservas",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3102100",
+        "nombre": "Resultados Diferidos",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3102200",
+        "nombre": "Resultados No Asignados",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3102300",
+        "nombre": "Ajustes Rdos. Ejerc. Anteriore",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "3102400",
+        "nombre": "Resultado del Ejercicio",
+        "tipo": "PATRIMONIO NETO",
+        "imputable": true
+      },
+      {
+        "codigo": "4000000",
+        "nombre": "Resultados",
+        "tipo": "RESULTADOS",
+        "imputable": false
+      },
+      {
+        "codigo": "4101000",
+        "nombre": "Resultados Positivos",
+        "tipo": "RESULTADOS",
+        "imputable": false
+      },
+      {
+        "codigo": "4101001",
+        "nombre": "Locacion de Bienes",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102000",
+        "nombre": "Resultados Negativos",
+        "tipo": "RESULTADOS",
+        "imputable": false
+      },
+      {
+        "codigo": "4102001",
+        "nombre": "Costo de Locaciones de Bienes",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102050",
+        "nombre": "Reparaciones",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102051",
+        "nombre": "Repuestos",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102100",
+        "nombre": "Imprentas y Papeleria",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102101",
+        "nombre": "Fletes y Correspondencia",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102102",
+        "nombre": "Honorarios",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102103",
+        "nombre": "Telefonia",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102104",
+        "nombre": "Seguros",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102200",
+        "nombre": "Publicidad",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102300",
+        "nombre": "Ingresos Brutos",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102301",
+        "nombre": "Impuestos y Tasas Municipales",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102302",
+        "nombre": "Imp. sobre Creditos Bancarios",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102303",
+        "nombre": "Imp. sobre Debitos Bancarios",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102400",
+        "nombre": "Depreciaciones del Ejercicio",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102500",
+        "nombre": "Otros Gastos",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102600",
+        "nombre": "Rdos. Financ y Tcia. (Inc REI)",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102601",
+        "nombre": "Comisiones e Intereses Bancari",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102602",
+        "nombre": "Diferencias de Cambio",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102603",
+        "nombre": "Rdo.por Exposición a Inflación",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102700",
+        "nombre": "Otros Ingresos y Egresos",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      },
+      {
+        "codigo": "4102800",
+        "nombre": "Impuesto a las Ganancias",
+        "tipo": "RESULTADOS",
+        "imputable": true
+      }
+    ],
+    "retencionesPercepciones": [
+      {
+        "id": 1793992739559,
+        "fecha": "2026-09-29",
+        "impuesto": "IVA",
+        "tipo": "PERCEPCION",
+        "agente": "CUIT Agente: 30500008454",
+        "importe": 2070
+      }
+    ],
+    "retencionesIibb": [],
+    "iibbRegimen": "LOCAL",
+    "iibbAlicuota": 3,
+    "iibbCoeficiente": 1,
+    "iibbSaldoAnt": 0
+  }
+]
