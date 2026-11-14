@@ -476,7 +476,7 @@
             if (!emp.retencionesPercepciones) emp.retencionesPercepciones = [];
             if (!emp.retencionesIibb) emp.retencionesIibb = [];
             if (!emp.iibbRegimen) emp.iibbRegimen = "LOCAL";
-            if (emp.iibbAlicuota === undefined) emp.iibbAlicuota = 5.0;
+            if (emp.iibbAlicuota === undefined) emp.iibbAlicuota = 3.0;
             if (emp.iibbCoeficiente === undefined) emp.iibbCoeficiente = 1.0000;
             if (emp.iibbSaldoAnt === undefined) emp.iibbSaldoAnt = 0;
             return emp;
@@ -1818,6 +1818,50 @@
         // ==========================================
         // VISTA: INGRESOS BRUTOS (IIBB) UNIFICADO
         // ==========================================
+        function normalizarFechaImportacion(fechaRaw) {
+            if (!fechaRaw) return "";
+            if (typeof fechaRaw === 'number' && fechaRaw > 20000) {
+                const dateObj = new Date(Math.round((fechaRaw - 25569) * 86400 * 1000));
+                const y = dateObj.getUTCFullYear();
+                const m = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+                const d = String(dateObj.getUTCDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+            const str = fechaRaw.toString().trim().split(' ')[0];
+            if (str.includes('/')) {
+                const p = str.split('/');
+                if (p.length === 3) {
+                    const anio = p[2].length === 2 ? `20${p[2]}` : p[2];
+                    return `${anio}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+                }
+            }
+            if (str.includes('-')) {
+                const p = str.split('-');
+                if (p.length === 3 && p[0].length === 2) {
+                    return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+                }
+            }
+            return str;
+        }
+
+        function parsearImporteImportacion(val) {
+            if (val === null || val === undefined || val === '') return 0;
+            if (typeof val === 'number') return isNaN(val) ? 0 : val;
+            let s = val.toString().trim().replace(/[^0-9,.-]/g, '');
+            if (!s) return 0;
+            if (s.includes(',') && s.includes('.')) {
+                if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+                    s = s.replace(/\./g, '').replace(',', '.');
+                } else {
+                    s = s.replace(/,/g, '');
+                }
+            } else if (s.includes(',')) {
+                s = s.replace(',', '.');
+            }
+            const num = parseFloat(s);
+            return isNaN(num) ? 0 : num;
+        }
+
         function procesarArchivoIibbUnificado(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -1826,73 +1870,117 @@
 
             const reader = new FileReader();
             reader.onload = function(evt) {
-                let agregados = 0;
-                if (extension === 'csv') {
-                    const lines = evt.target.result.split(/\r\n|\n/);
-                    lines.forEach((line, idx) => {
-                        if (idx === 0 || !line.trim()) return;
-                        const c = line.split(';').map(s => s.replace(/"/g, '').trim());
-                        if (c.length >= 3) {
-                            let fecha = c[0].includes('/') ? c[0].split('/').reverse().join('-') : c[0];
-                            const agente = c[1] || "Agente / Banco IIBB";
-                            const importe = parsearFloatAr(c[2] || c[3] || 0);
-                            const tipo = c[4] && c[4].toUpperCase().includes('BANC') ? 'RETENCION BANCARIA' : 'RETENCION';
-                            if (importe > 0) {
-                                emp.retencionesIibb.push({ id: Date.now() + agregados, fecha, tipo, agente, importe });
-                                agregados++;
+                try {
+                    let agregados = 0;
+                    if (extension === 'csv') {
+                        const lines = evt.target.result.split(/\r\n|\n/);
+                        lines.forEach((line, idx) => {
+                            if (idx === 0 || !line.trim()) return;
+                            const c = line.split(';').map(s => s.replace(/"/g, '').trim());
+                            if (c.length >= 3) {
+                                const fecha = normalizarFechaImportacion(c[0]);
+                                const agente = c[1] || "Agente / Banco IIBB";
+                                const importe = parsearImporteImportacion(c[2] || c[3] || 0);
+                                const tipo = c[4] && c[4].toUpperCase().includes('BANC') ? 'RETENCION BANCARIA' : 'RETENCION';
+                                if (importe !== 0) {
+                                    emp.retencionesIibb.push({ id: Date.now() + agregados, fecha, tipo, agente, importe });
+                                    agregados++;
+                                }
                             }
-                        }
-                    });
-                } else {
-                    const data = new Uint8Array(evt.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    
-                    workbook.SheetNames.forEach(sheetName => {
-                        const sheet = workbook.Sheets[sheetName];
-                        const json = XLSX.utils.sheet_to_json(sheet, {defval: ""});
-                        
-                        json.forEach((row, idx) => {
-                            let fechaRaw = row['Fecha'] || row['Fecha Ret./Perc.'] || row['Fecha Retencion'] || row['Fecha Retencion agente'] || row['Emision'] || "2026-10-01";
-                            let fecha = fechaRaw.toString().includes('/') ? fechaRaw.split('/').reverse().join('-') : fechaRaw;
-                            
-                            let importe = parseFloat(row['Importe'] || row['Importe Ret./Perc.'] || row['Importe retencion agente'] || row['Importe percepcion agente'] || row['Importe retencion contrib.'] || 0) || 0;
-                            if (importe === 0) {
-                                for (let key in row) {
-                                    if (typeof row[key] === 'number' && row[key] > 0) {
-                                        importe = row[key];
-                                        break;
-                                    } else if (typeof row[key] === 'string' && row[key].includes(',')) {
-                                        let parsed = parsearFloatAr(row[key]);
-                                        if (parsed > 0) {
-                                            importe = parsed;
+                        });
+                    } else {
+                        const data = new Uint8Array(evt.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+
+                        workbook.SheetNames.forEach(sheetName => {
+                            const sheet = workbook.Sheets[sheetName];
+                            const json = XLSX.utils.sheet_to_json(sheet, {defval: ""});
+                            const sheetUpper = sheetName.toUpperCase();
+
+                            json.forEach((row, idx) => {
+                                let tipo = "RETENCION";
+                                if (sheetUpper.includes('DEVOLUC')) {
+                                    tipo = "DEVOLUCION BANCARIA";
+                                } else if (sheetUpper.includes('PERCEP')) {
+                                    tipo = "PERCEPCION";
+                                } else if (sheetUpper.includes('BANC')) {
+                                    tipo = "RETENCION BANCARIA";
+                                }
+
+                                let fechaRaw = row['Fecha'] ||
+                                    row['Fecha Ret./Perc.'] ||
+                                    row['Fecha Retencion'] ||
+                                    row['Fecha Retencion contrib.'] ||
+                                    row['Fecha Retencion agente'] ||
+                                    row['Fecha Percepcion contrib.'] ||
+                                    row['Fecha Percepcion Agente'] ||
+                                    row['Fecha depacho'] ||
+                                    row['Fecha despacho'] ||
+                                    "";
+
+                                if (!fechaRaw) {
+                                    for (let key in row) {
+                                        if (key.toLowerCase().includes('fecha') && row[key]) {
+                                            fechaRaw = row[key];
                                             break;
                                         }
                                     }
                                 }
-                            }
+                                const fecha = normalizarFechaImportacion(fechaRaw) || `${iibbAnio}-${iibbMes}-01`;
 
-                            let agente = row['Agente'] || row['CUIT Agente Ret./Perc.'] || row['CUIT Agente'] || row['CUIT Banco'] || row['CUIT'] || "Agente / CBU IIBB";
-                            
-                            let tipo = "RETENCION";
-                            const sheetUpper = sheetName.toUpperCase();
-                            const keysStr = JSON.stringify(row).toUpperCase();
-                            
-                            if (sheetUpper.includes('PERCEP') || keysStr.includes('PERCEP')) {
-                                tipo = "PERCEPCION";
-                            } else if (sheetUpper.includes('BANC') || keysStr.includes('BANCO') || keysStr.includes('CBU') || keysStr.includes('30500008454')) {
-                                tipo = "RETENCION BANCARIA";
-                            }
+                                let rawImporte = row['Importe'] ||
+                                    row['Importe Ret./Perc.'] ||
+                                    row['Importe contrib.'] ||
+                                    row['Importe percepcion agente'] ||
+                                    row['Importe retencion contrib.'] ||
+                                    row['Importe retencion agente'] ||
+                                    row['Importe devolucion contrib.'] ||
+                                    row['Importe devolucion agente'] ||
+                                    "";
 
-                            if (importe > 0) {
-                                emp.retencionesIibb.push({ id: Date.now() + agregados, fecha, tipo, agente, importe });
-                                agregados++;
-                            }
+                                if (rawImporte === "" || rawImporte === null || rawImporte === undefined) {
+                                    for (let key in row) {
+                                        if (key.toLowerCase().includes('importe') && row[key] !== "") {
+                                            rawImporte = row[key];
+                                            break;
+                                        }
+                                    }
+                                }
+                                let importe = parsearImporteImportacion(rawImporte);
+
+                                if (importe !== 0 && tipo === "DEVOLUCION BANCARIA") {
+                                    importe = -Math.abs(importe);
+                                }
+
+                                let agente = (row['Agente'] ||
+                                    row['CUIT Agente Ret./Perc.'] ||
+                                    row['CUIT Agente'] ||
+                                    row['CUIT Banco'] ||
+                                    row['CUIT'] ||
+                                    row['Despacho'] ||
+                                    "Agente / CBU IIBB").toString().trim();
+
+                                if (row['CBU']) {
+                                    agente = `${agente} (CBU ${row['CBU']})`;
+                                } else if (row['Sucursal'] && row['Emision']) {
+                                    agente = `${agente} (Comp. ${row['Sucursal']}-${row['Emision']})`;
+                                }
+
+                                if (importe !== 0) {
+                                    emp.retencionesIibb.push({ id: Date.now() + agregados, fecha, tipo, agente, importe });
+                                    agregados++;
+                                }
+                            });
                         });
-                    });
+                    }
+                    e.target.value = '';
+                    guardarEnLocalStorage();
+                    alert(`¡Se importaron ${agregados} registros unificados de IIBB (Retenciones, Percepciones y Bancarias) correctamente!`);
+                    renderizarVista();
+                } catch (err) {
+                    console.error("Error al procesar archivo IIBB:", err);
+                    alert("Error al leer el archivo de Ingresos Brutos: " + err.message);
                 }
-                guardarEnLocalStorage();
-                alert(`¡Se importaron ${agregados} registros unificados de IIBB (Retenciones, Percepciones y Bancarias) correctamente!`);
-                renderizarVista();
             };
             if (extension === 'csv') reader.readAsText(file, 'utf-8');
             else reader.readAsArrayBuffer(file);
@@ -1945,7 +2033,7 @@
             retPercIibbPeriodo.forEach(r => {
                 if (r.tipo === 'RETENCION') totalRetencionesIibb += r.importe;
                 else if (r.tipo === 'PERCEPCION') totalPercepcionesIibb += r.importe;
-                else if (r.tipo === 'RETENCION BANCARIA') totalBancariasIibb += r.importe;
+                else if (r.tipo === 'RETENCION BANCARIA' || r.tipo === 'DEVOLUCION BANCARIA') totalBancariasIibb += r.importe;
             });
 
             const totalDeducciones = totalRetencionesIibb + totalPercepcionesIibb + totalBancariasIibb + emp.iibbSaldoAnt;
