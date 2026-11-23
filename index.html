@@ -1513,6 +1513,7 @@
             if (comp) {
                 if (campo === 'neto') comp.cuentaNeto = nuevaCuenta;
                 else if (campo === 'iva') comp.cuentaIva = nuevaCuenta;
+                else if (campo === 'otrosTributos') comp.cuentaOtrosTributos = nuevaCuenta;
                 else if (campo === 'contrapartida') comp.cuentaContrapartida = nuevaCuenta;
                 guardarEnLocalStorage();
                 renderizarVista();
@@ -1714,7 +1715,7 @@
             const emp = obtenerEmpresaActual();
             const mapaCuentas = {};
             emp.planCuentas.forEach(p => mapaCuentas[p.codigo] = p.nombre);
-            
+
             const asientosOrdenados = obtenerAsientosUnificadosOrdenados().filter(item => {
                 return item.fecha >= diarioFechaDesde && item.fecha <= diarioFechaHasta;
             });
@@ -1730,24 +1731,38 @@
                     const c = item.comp;
                     const codigoNeto = c.cuentaNeto || (c.tipoOp === 'VENTA' ? '4.1.01' : '5.1.01');
                     const codigoIva = c.cuentaIva || (c.tipoOp === 'VENTA' ? '2.1.02' : '1.1.03');
+                    const codigoOtros = c.cuentaOtrosTributos || '1.1.05';
                     const codigoProvCliente = c.cuentaContrapartida || (c.tipoOp === 'VENTA' ? '1.1.04' : '2.1.01');
+                    const baseNeta = (c.netoTotal || 0) + (c.exento || 0) + (c.noGravado || 0);
+                    const otrosTrib = c.otrosTributos || 0;
+                    const totIva = c.totalIva || 0;
 
-                    txt += `Asiento N° ${nro} — Fecha: ${formatearFechaAr(c.fecha)}\n`;
+                    const debeCalc = c.tipoOp === 'VENTA' ? (c.total || 0) : (baseNeta + totIva + otrosTrib);
+                    const haberCalc = c.tipoOp === 'VENTA' ? (baseNeta + totIva + otrosTrib) : (c.total || 0);
+                    const diff = debeCalc - haberCalc;
+
+                    txt += `Asiento N° ${nro} — Fecha: ${formatearFechaAr(c.fecha)}${Math.abs(diff) > 0.01 ? ` [DESBALANCEADO: Dif. $ ${fmtMoneda(diff)}]` : ''}\n`;
                     txt += `Ref: ${c.tipoNombre} ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} - ${c.razonSocial}\n`;
                     txt += `--------------------------------------------------------------------------------\n`;
 
                     if (c.tipoOp === 'VENTA') {
                         txt += `  [DEBE]  ${codigoProvCliente} - ${mapaCuentas[codigoProvCliente] || ''}: $ ${fmtMoneda(c.total)}\n`;
-                        if (c.netoTotal > 0) txt += `  [HABER] ${codigoNeto} - ${mapaCuentas[codigoNeto] || ''}: $ ${fmtMoneda(c.netoTotal)}\n`;
-                        if (c.totalIva > 0) txt += `  [HABER] ${codigoIva} - ${mapaCuentas[codigoIva] || ''}: $ ${fmtMoneda(c.totalIva)}\n`;
+                        if (baseNeta > 0) txt += `  [HABER] ${codigoNeto} - ${mapaCuentas[codigoNeto] || ''}: $ ${fmtMoneda(baseNeta)}\n`;
+                        if (totIva > 0) txt += `  [HABER] ${codigoIva} - ${mapaCuentas[codigoIva] || ''}: $ ${fmtMoneda(totIva)}\n`;
+                        if (otrosTrib > 0) txt += `  [HABER] ${codigoOtros} - ${mapaCuentas[codigoOtros] || ''}: $ ${fmtMoneda(otrosTrib)}\n`;
                     } else {
-                        if (c.netoTotal > 0) txt += `  [DEBE]  ${codigoNeto} - ${mapaCuentas[codigoNeto] || ''}: $ ${fmtMoneda(c.netoTotal)}\n`;
-                        if (c.totalIva > 0) txt += `  [DEBE]  ${codigoIva} - ${mapaCuentas[codigoIva] || ''}: $ ${fmtMoneda(c.totalIva)}\n`;
+                        if (baseNeta > 0) txt += `  [DEBE]  ${codigoNeto} - ${mapaCuentas[codigoNeto] || ''}: $ ${fmtMoneda(baseNeta)}\n`;
+                        if (totIva > 0) txt += `  [DEBE]  ${codigoIva} - ${mapaCuentas[codigoIva] || ''}: $ ${fmtMoneda(totIva)}\n`;
+                        if (otrosTrib > 0) txt += `  [DEBE]  ${codigoOtros} - ${mapaCuentas[codigoOtros] || ''}: $ ${fmtMoneda(otrosTrib)}\n`;
                         txt += `  [HABER] ${codigoProvCliente} - ${mapaCuentas[codigoProvCliente] || ''}: $ ${fmtMoneda(c.total)}\n`;
                     }
                 } else {
                     const m = item.manual;
-                    txt += `Asiento Manual N° ${nro} — Fecha: ${formatearFechaAr(m.fecha)}\n`;
+                    let dMan = 0, hMan = 0;
+                    m.lineas.forEach(l => { dMan += (l.debe || 0); hMan += (l.haber || 0); });
+                    const diffMan = dMan - hMan;
+
+                    txt += `Asiento Manual N° ${nro} — Fecha: ${formatearFechaAr(m.fecha)}${Math.abs(diffMan) > 0.01 ? ` [DESBALANCEADO: Dif. $ ${fmtMoneda(diffMan)}]` : ''}\n`;
                     txt += `Concepto: ${m.concepto}\n`;
                     txt += `--------------------------------------------------------------------------------\n`;
                     m.lineas.forEach(l => {
@@ -1781,6 +1796,7 @@
             });
 
             let totDebeAcumulado = 0, totHaberAcumulado = 0;
+            let asientosDesbalanceados = 0;
 
             let htmlAsientos = asientosUnificados.map((item, i) => {
                 const nroAsiento = i + 1;
@@ -1788,38 +1804,60 @@
 
                 if (item.tipo === 'COMPRA_VENTA') {
                     const c = item.comp;
-                    const codigoNeto = c.cuentaNeto || (c.tipoOp === 'VENTA' ? '4.1.01' : '5.1.01');
-                    const codigoIva = c.cuentaIva || (c.tipoOp === 'VENTA' ? '2.1.02' : '1.1.03');
-                    const codigoProvCliente = c.cuentaContrapartida || (c.tipoOp === 'VENTA' ? '1.1.04' : '2.1.01');
+                    const esVenta = c.tipoOp === 'VENTA';
+                    const codigoNeto = c.cuentaNeto || (esVenta ? '4.1.01' : '5.1.01');
+                    const codigoIva = c.cuentaIva || (esVenta ? '2.1.02' : '1.1.03');
+                    const codigoOtros = c.cuentaOtrosTributos || '1.1.05';
+                    const codigoProvCliente = c.cuentaContrapartida || (esVenta ? '1.1.04' : '2.1.01');
 
-                    const selectNeto = `<select onchange="actualizarCuentaAsiento(${c.id}, 'neto', this.value)" class="text-xs bg-white border border-gray-300 rounded px-1.5 py-0.5 font-semibold text-blue-900 no-print">${cuentasImputables.map(pc => `<option value="${pc.codigo}" ${codigoNeto===pc.codigo?'selected':''}>${pc.codigo} - ${pc.nombre}</option>`).join('')}</select><span class="hidden print:inline font-semibold">${codigoNeto} - ${mapaCuentas[codigoNeto]||''}</span>`;
-                    const selectIva = `<select onchange="actualizarCuentaAsiento(${c.id}, 'iva', this.value)" class="text-xs bg-white border border-gray-300 rounded px-1.5 py-0.5 font-semibold text-blue-900 no-print">${cuentasImputables.map(pc => `<option value="${pc.codigo}" ${codigoIva===pc.codigo?'selected':''}>${pc.codigo} - ${pc.nombre}</option>`).join('')}</select><span class="hidden print:inline font-semibold">${codigoIva} - ${mapaCuentas[codigoIva]||''}</span>`;
-                    const selectContrapartida = `<select onchange="actualizarCuentaAsiento(${c.id}, 'contrapartida', this.value)" class="text-xs bg-white border border-gray-300 rounded px-1.5 py-0.5 font-semibold text-blue-900 no-print">${cuentasImputables.map(pc => `<option value="${pc.codigo}" ${codigoProvCliente===pc.codigo?'selected':''}>${pc.codigo} - ${pc.nombre}</option>`).join('')}</select><span class="hidden print:inline font-semibold">${codigoProvCliente} - ${mapaCuentas[codigoProvCliente]||''}</span>`;
+                    const baseNeta = (c.netoTotal || 0) + (c.exento || 0) + (c.noGravado || 0);
+                    const totIva = c.totalIva || 0;
+                    const otrosTrib = c.otrosTributos || 0;
+                    const totalComp = c.total || 0;
 
-                    if (c.tipoOp === 'VENTA') {
-                        totDebeAcumulado += c.total;
-                        totHaberAcumulado += (c.netoTotal + c.totalIva + c.exento + c.noGravado);
+                    const debeAsiento = esVenta ? totalComp : (baseNeta + totIva + otrosTrib);
+                    const haberAsiento = esVenta ? (baseNeta + totIva + otrosTrib) : totalComp;
+                    const diffAsiento = debeAsiento - haberAsiento;
+                    const desbalanceado = Math.abs(diffAsiento) > 0.01;
+                    if (desbalanceado) asientosDesbalanceados++;
 
+                    totDebeAcumulado += debeAsiento;
+                    totHaberAcumulado += haberAsiento;
+
+                    const renderSelect = (campo, valorActual) => `
+                        <select onchange="actualizarCuentaAsiento(${c.id}, '${campo}', this.value)" class="text-xs bg-white border border-gray-300 rounded px-1.5 py-0.5 font-semibold text-blue-900 no-print">
+                            ${cuentasImputables.map(pc => `<option value="${pc.codigo}" ${valorActual === pc.codigo ? 'selected' : ''}>${pc.codigo} - ${pc.nombre}</option>`).join('')}
+                        </select>
+                        <span class="hidden print:inline font-semibold">${valorActual} - ${mapaCuentas[valorActual] || ''}</span>
+                    `;
+
+                    if (esVenta) {
                         filasRenglon = `
-                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectContrapartida}</td><td class="py-1.5 px-3 text-right font-bold num-row">$ ${fmtMoneda(c.total)}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>
-                            ${c.netoTotal > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-6 sm:pl-8 text-gray-700">${selectNeto}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(c.netoTotal)}</td></tr>` : ''}
-                            ${c.totalIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-6 sm:pl-8 text-gray-700">${selectIva}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(c.totalIva)}</td></tr>` : ''}
+                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${renderSelect('contrapartida', codigoProvCliente)}</td><td class="py-1.5 px-3 text-right font-bold num-row">$ ${fmtMoneda(totalComp)}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>
+                            ${baseNeta > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-6 sm:pl-8 text-gray-700">${renderSelect('neto', codigoNeto)}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(baseNeta)}</td></tr>` : ''}
+                            ${totIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-6 sm:pl-8 text-gray-700">${renderSelect('iva', codigoIva)}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(totIva)}</td></tr>` : ''}
+                            ${otrosTrib > 0 ? `<tr class="border-b border-gray-100 bg-amber-50/40"><td class="py-1.5 px-3 pl-6 sm:pl-8 text-gray-700">${renderSelect('otrosTributos', codigoOtros)} <span class="text-[10px] text-amber-800 font-semibold">(Otros Tributos)</span></td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(otrosTrib)}</td></tr>` : ''}
                         `;
                     } else {
-                        totDebeAcumulado += (c.netoTotal + c.totalIva + c.exento + c.noGravado);
-                        totHaberAcumulado += c.total;
-
                         filasRenglon = `
-                            ${c.netoTotal > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectNeto}</td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(c.netoTotal)}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
-                            ${c.totalIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectIva}</td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(c.totalIva)}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
-                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-6 sm:pl-8 text-gray-700">${selectContrapartida}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-bold num-row">$ ${fmtMoneda(c.total)}</td></tr>
+                            ${baseNeta > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${renderSelect('neto', codigoNeto)}</td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(baseNeta)}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
+                            ${totIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${renderSelect('iva', codigoIva)}</td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(totIva)}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
+                            ${otrosTrib > 0 ? `<tr class="border-b border-gray-100 bg-amber-50/40"><td class="py-1.5 px-3 font-semibold">${renderSelect('otrosTributos', codigoOtros)} <span class="text-[10px] text-amber-800 font-semibold">(Otros Tributos)</span></td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(otrosTrib)}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
+                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-6 sm:pl-8 text-gray-700">${renderSelect('contrapartida', codigoProvCliente)}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-bold num-row">$ ${fmtMoneda(totalComp)}</td></tr>
                         `;
                     }
 
+                    const badgeBalance = desbalanceado
+                        ? `<span class="bg-red-100 text-red-800 border border-red-300 px-2 py-0.5 rounded text-[11px] font-bold num-row">⚠ No balancea (Dif: $ ${fmtMoneda(diffAsiento)})</span>`
+                        : `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-semibold">Balanceado</span>`;
+
                     return `
-                        <div class="bg-white border rounded-xl overflow-x-auto mb-3 sm:mb-4 asiento-card">
-                            <div class="bg-gray-50 border-b px-3 sm:px-4 py-2 flex flex-wrap justify-between items-center text-xs gap-1">
-                                <span class="font-bold text-gray-900 num-row">ASIENTO N° ${fmtMoneda(nroAsiento, 0)} — ${formatearFechaAr(c.fecha)}</span>
+                        <div class="bg-white border ${desbalanceado ? 'border-red-400' : 'border-gray-200'} rounded-xl overflow-x-auto mb-3 sm:mb-4 asiento-card">
+                            <div class="${desbalanceado ? 'bg-red-50' : 'bg-gray-50'} border-b px-3 sm:px-4 py-2 flex flex-wrap justify-between items-center text-xs gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="font-bold text-gray-900 num-row">ASIENTO N° ${fmtMoneda(nroAsiento, 0)} — ${formatearFechaAr(c.fecha)}</span>
+                                    ${badgeBalance}
+                                </div>
                                 <span class="text-gray-600 font-mono text-[11px]">${c.tipoNombre} ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} | ${c.razonSocial}</span>
                             </div>
                             <table class="w-full text-xs text-left mobile-compact-table">
@@ -1836,10 +1874,21 @@
                     `;
                 } else {
                     const m = item.manual;
+                    let dMan = 0, hMan = 0;
                     m.lineas.forEach(l => {
-                        totDebeAcumulado += l.debe;
-                        totHaberAcumulado += l.haber;
+                        dMan += (l.debe || 0);
+                        hMan += (l.haber || 0);
                     });
+                    totDebeAcumulado += dMan;
+                    totHaberAcumulado += hMan;
+
+                    const diffMan = dMan - hMan;
+                    const desbalanceadoMan = Math.abs(diffMan) > 0.01;
+                    if (desbalanceadoMan) asientosDesbalanceados++;
+
+                    const badgeBalanceMan = desbalanceadoMan
+                        ? `<span class="bg-red-100 text-red-800 border border-red-300 px-2 py-0.5 rounded text-[11px] font-bold num-row">⚠ No balancea (Dif: $ ${fmtMoneda(diffMan)})</span>`
+                        : `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[11px] font-semibold">Balanceado</span>`;
 
                     filasRenglon = m.lineas.map(l => `
                         <tr class="border-b border-gray-100">
@@ -1850,9 +1899,12 @@
                     `).join('');
 
                     return `
-                        <div class="bg-white border rounded-xl overflow-x-auto mb-3 sm:mb-4 asiento-card">
-                            <div class="bg-gray-50 border-b px-3 sm:px-4 py-2 flex flex-wrap justify-between items-center text-xs gap-1">
-                                <span class="font-bold text-gray-900 num-row">ASIENTO N° ${fmtMoneda(nroAsiento, 0)} — ${formatearFechaAr(m.fecha)}</span>
+                        <div class="bg-white border ${desbalanceadoMan ? 'border-red-400' : 'border-gray-200'} rounded-xl overflow-x-auto mb-3 sm:mb-4 asiento-card">
+                            <div class="${desbalanceadoMan ? 'bg-red-50' : 'bg-gray-50'} border-b px-3 sm:px-4 py-2 flex flex-wrap justify-between items-center text-xs gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="font-bold text-gray-900 num-row">ASIENTO N° ${fmtMoneda(nroAsiento, 0)} — ${formatearFechaAr(m.fecha)}</span>
+                                    ${badgeBalanceMan}
+                                </div>
                                 <div class="flex items-center space-x-2">
                                     <span class="text-gray-600 font-medium">${m.concepto}</span>
                                     <button onclick="eliminarAsientoManual(${m.id})" class="text-red-500 hover:text-red-700 no-print"><i data-lucide="trash-2" class="w-4 h-4 inline"></i></button>
@@ -1872,6 +1924,14 @@
                     `;
                 }
             }).join('');
+
+            const diffTotal = totDebeAcumulado - totHaberAcumulado;
+            const alertaGlobalBalance = asientosDesbalanceados > 0
+                ? `<div class="bg-red-50 border-l-4 border-red-600 text-red-900 p-3.5 rounded-xl text-xs sm:text-sm font-semibold flex flex-wrap justify-between items-center gap-2">
+                        <span>⚠ Atención: se detectaron <strong>${asientosDesbalanceados}</strong> asiento(s) que no balancean en el período.</span>
+                        <span class="num-row font-black">Diferencia acumulada: $ ${fmtMoneda(diffTotal)}</span>
+                   </div>`
+                : '';
 
             cont.innerHTML = `
                 <div class="space-y-4 sm:space-y-6">
@@ -1902,6 +1962,8 @@
                             </button>
                         </div>
                     </div>
+
+                    ${alertaGlobalBalance}
 
                     <div class="bg-white p-4 sm:p-6 border-b-2 border-gray-900 flex flex-wrap justify-between items-start gap-2">
                         <div>
