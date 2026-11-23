@@ -1,0 +1,2428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VENTO ERP - Sistema Contable e Impositivo</title>
+    
+    <!-- Configuración PWA para iPhone / Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VENTO ERP">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para Dashboards -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (XLSX Parser para Excel de Retenciones/Percepciones) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Identity Services Client Library -->
+    <script src="https://accounts.google.com/gsi/client" async defer onload="inicializarGoogleGIS()"></script>
+
+    <style>
+        @media print {
+            aside, header, button, .no-print { display: none !important; }
+            body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; }
+            main { overflow: visible !important; height: auto !important; }
+            .print-area { padding: 0 !important; margin: 0 !important; width: 100% !important; }
+            .page-break { page-break-after: always; }
+            .asiento-card { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- SIDEBAR DE NAVEGACIÓN -->
+        <aside id="sidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-20 transition-all duration-300 overflow-hidden shrink-0">
+            <div class="p-5 border-b border-slate-800 flex items-center space-x-3 whitespace-nowrap">
+                <div class="bg-blue-600 text-white p-2 rounded-lg">
+                    <i data-lucide="calculator" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-white text-base">VENTO ERP</h1>
+                    <p class="text-xs text-slate-400">Gestión & Contabilidad Cloud</p>
+                </div>
+            </div>
+
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto whitespace-nowrap">
+                <a href="#" onclick="cambiarVista('dashboard')" id="nav-dashboard" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white transition">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                    <span>Dashboard General</span>
+                </a>
+                
+                <div class="pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Gestión</div>
+                <a href="#" onclick="cambiarVista('importacion')" id="nav-importacion" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                    <span>Mis Comprobantes ARCA</span>
+                </a>
+                <a href="#" onclick="cambiarVista('comprobantes')" id="nav-comprobantes" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="receipt" class="w-5 h-5"></i>
+                    <span>Gestión Comprobantes</span>
+                </a>
+                <a href="#" onclick="cambiarVista('libro-iva')" id="nav-libro-iva" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="book-open-check" class="w-5 h-5"></i>
+                    <span>Libros IVA</span>
+                </a>
+
+                <div class="pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Contabilidad</div>
+                <a href="#" onclick="cambiarVista('plan-cuentas')" id="nav-plan-cuentas" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="folder-tree" class="w-5 h-5"></i>
+                    <span>Plan de Cuentas</span>
+                </a>
+                <a href="#" onclick="cambiarVista('libro-diario')" id="nav-libro-diario" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="book" class="w-5 h-5"></i>
+                    <span>Libro Diario</span>
+                </a>
+                <a href="#" onclick="cambiarVista('balance')" id="nav-balance" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="scale" class="w-5 h-5"></i>
+                    <span>Balance Sumas y Saldos</span>
+                </a>
+
+                <!-- MÓDULO IMPOSITIVO -->
+                <div class="pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Impositivo</div>
+                <a href="#" onclick="cambiarVista('impositivo')" id="nav-impositivo" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                    <span>IVA</span>
+                </a>
+                <a href="#" onclick="cambiarVista('ingresos-brutos')" id="nav-ingresos-brutos" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="landmark" class="w-5 h-5"></i>
+                    <span>Ingresos Brutos</span>
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
+                Sincronización Cloud con Google Drive
+            </div>
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 shadow-sm z-10 no-print">
+                <div class="flex items-center space-x-4">
+                    <button onclick="toggleSidebar()" title="Mostrar / Ocultar menú" class="p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition focus:outline-none shrink-0">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <span class="text-sm font-semibold text-gray-500">Empresa Activa:</span>
+                    <select id="selectEmpresa" onchange="seleccionarEmpresa(this.value)" class="bg-gray-50 border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 font-medium">
+                    </select>
+                    <button onclick="abrirModalEmpresa()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>Nueva Empresa</span>
+                    </button>
+                </div>
+                
+                <div class="flex items-center space-x-3">
+                    <!-- BACKUP LOCAL JSON -->
+                    <input type="file" id="fileBackupJson" accept=".json" class="hidden" onchange="importarBackupJson(event)">
+                    <button onclick="exportarBackupJson()" title="Descargar copia de seguridad JSON" class="bg-slate-700 hover:bg-slate-800 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        <span>Backup</span>
+                    </button>
+                    <button onclick="document.getElementById('fileBackupJson').click()" title="Restaurar copia de seguridad JSON" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
+                        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                        <span>Restaurar</span>
+                    </button>
+
+                    <!-- BOTÓN CONEXIÓN GOOGLE DRIVE -->
+                    <button id="btnGoogleAuth" onclick="conectarGoogleDrive()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition flex items-center space-x-1.5">
+                        <i data-lucide="cloud" class="w-4 h-4"></i>
+                        <span id="txtGoogleAuth">Conectar Drive</span>
+                    </button>
+
+                    <div class="text-right border-l pl-3">
+                        <p class="text-sm font-bold text-gray-800" id="headerRazonSocial">CARGANDO...</p>
+                        <p class="text-xs text-gray-500" id="headerCuit">CUIT: ---</p>
+                    </div>
+                    <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold" id="headerInicia">
+                        ERP
+                    </div>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-6 print-area" id="contenedorVistas">
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL NUEVA EMPRESA -->
+    <div id="modalNuevaEmpresa" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="text-lg font-bold text-gray-800">Nueva Empresa</h3>
+                <button onclick="cerrarModalEmpresa()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            <form id="formNuevaEmpresa" onsubmit="registrarEmpresaDesdeForm(event)">
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Razón Social</label>
+                    <input type="text" id="nuevaRazonSocial" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="SUCESION DE BARBERO ARMANDO LUIS">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">CUIT (11 dígitos sin guiones)</label>
+                    <input type="text" id="nuevoCuit" required maxlength="11" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="20054059354">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Condición Frente al IVA</label>
+                    <select id="nuevaCondicionIva" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="Responsable Inscripto">Responsable Inscripto</option>
+                        <option value="Monotributo">Monotributo</option>
+                        <option value="Exento">Exento</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="cerrarModalEmpresa()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL AGREGAR CUENTA CONTABLE -->
+    <div id="modalNuevaCuenta" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="text-lg font-bold text-gray-800" id="modalCuentaTitulo">Agregar Cuenta Contable</h3>
+                <button onclick="cerrarModalCuenta()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            <form id="formNuevaCuenta" onsubmit="guardarCuentaContable(event)">
+                <input type="hidden" id="editandoCodigo" value="">
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Código Jerárquico</label>
+                    <input type="text" id="codigoCuenta" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ej: 5.1.02">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Nombre de la Cuenta</label>
+                    <input type="text" id="nombreCuenta" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ej: Honorarios Profesionales">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Tipo de Rubro</label>
+                    <select id="tipoCuenta" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="ACTIVO">ACTIVO</option>
+                        <option value="PASIVO">PASIVO</option>
+                        <option value="INGRESO">INGRESO</option>
+                        <option value="EGRESO">EGRESO</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Tipo de Imputación</label>
+                    <select id="imputableCuenta" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="true">SI - Imputable (Recibe Asientos)</option>
+                        <option value="false">NO - No Imputable (Rubro / Título Madre)</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="cerrarModalCuenta()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL NUEVO ASIENTO MANUAL -->
+    <div id="modalAsientoManual" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 class="text-lg font-bold text-gray-800">Registrar Asiento Manual</h3>
+                <button onclick="cerrarModalAsientoManual()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            <form id="formAsientoManual" onsubmit="guardarAsientoManual(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Fecha</label>
+                        <input type="date" id="manualFecha" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value="2026-10-31">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Concepto / Descripción</label>
+                        <input type="text" id="manualConcepto" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="Ej: Devengamiento y pagos varios">
+                    </div>
+                </div>
+
+                <div class="border-t pt-3 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <label class="text-xs font-bold text-gray-600 uppercase">Detalle de Cuentas (Debe / Haber)</label>
+                        <button type="button" onclick="agregarLineaAsientoManual()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-xs font-semibold">+ Agregar Línea</button>
+                    </div>
+                    <div id="contenedorLineasManuales" class="space-y-2">
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border font-bold text-xs">
+                    <span id="totalesAsientoManualCheck">Total Debe: $0,00 | Total Haber: $0,00</span>
+                    <span id="balanceEstadoCheck" class="text-emerald-600">Balanceado</span>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <button type="button" onclick="cerrarModalAsientoManual()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">Guardar Asiento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE LÓGICA GENERAL & GOOGLE DRIVE API -->
+    <script>
+        const CLIENT_ID = '4416279805-nrr8v0a7jtdogk05931io2mvti7s39i8.apps.googleusercontent.com';
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+        let tokenClient;
+        let accessToken = null;
+        let driveFileId = null;
+
+        function inicializarGoogleGIS() {
+            if (typeof google !== 'undefined') {
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    callback: (tokenResponse) => {
+                        if (tokenResponse && tokenResponse.access_token) {
+                            accessToken = tokenResponse.access_token;
+                            document.getElementById('txtGoogleAuth').textContent = "Drive Conectado ✓";
+                            document.getElementById('btnGoogleAuth').className = "bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center space-x-1.5";
+                            sincronizarConDrive();
+                        }
+                    },
+                });
+            }
+        }
+
+        function conectarGoogleDrive() {
+            if (tokenClient) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                alert("La librería de Google aún se está cargando o falta inicializar.");
+            }
+        }
+
+        async function guardarEnGoogleDrive() {
+            if (!accessToken) return;
+            const fileMetadata = { name: 'vento_erp_database.json', mimeType: 'application/json' };
+            const file = new Blob([localStorage.getItem('arca_empresas')], {type: 'application/json'});
+            const formData = new FormData();
+
+            if (!driveFileId) {
+                formData.append('metadata', new Blob([JSON.stringify(fileMetadata)], { type: 'application/json' }));
+                formData.append('file', file);
+                await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+                    body: formData
+                }).then(res => res.json()).then(data => driveFileId = data.id);
+            } else {
+                await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+                    method: 'PATCH',
+                    headers: new Headers({ 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json' }),
+                    body: file
+                });
+            }
+        }
+
+        async function sincronizarConDrive() {
+            if (!accessToken) return;
+            try {
+                const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='vento_erp_database.json' and trashed=false`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+                const result = await response.json();
+                if (result.files && result.files.length > 0) {
+                    driveFileId = result.files[0].id;
+                    const contentResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, {
+                        headers: { 'Authorization': 'Bearer ' + accessToken }
+                    });
+                    const remoteData = await contentResponse.json();
+                    if (Array.isArray(remoteData) && remoteData.length > 0) {
+                        const localTieneDatos = empresas.some(e => (e.comprobantes && e.comprobantes.length > 0) || (e.retencionesPercepciones && e.retencionesPercepciones.length > 0) || (e.retencionesIibb && e.retencionesIibb.length > 0));
+                        if (!localTieneDatos || confirm("Se encontró una copia de seguridad en Google Drive. ¿Desea descargarla y reemplazar los datos locales actuales? (Cancelar mantendrá sus datos locales y los subirá a Drive)")) {
+                            localStorage.setItem('arca_empresas', JSON.stringify(remoteData));
+                            empresas = remoteData;
+                            actualizarSelectorEmpresas();
+                            renderizarVista();
+                        } else {
+                            await guardarEnGoogleDrive();
+                        }
+                    }
+                } else {
+                    await guardarEnGoogleDrive();
+                }
+            } catch (err) {
+                console.error("Error sincronizando con Drive:", err);
+            }
+        }
+
+        function exportarBackupJson() {
+            const dataStr = JSON.stringify(empresas, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `VENTO_ERP_Backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        }
+
+        function importarBackupJson(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = JSON.parse(evt.target.result);
+                    if (Array.isArray(data) && data.length > 0) {
+                        empresas = data;
+                        empresaActualId = empresas[0].id;
+                        guardarEnLocalStorage();
+                        actualizarSelectorEmpresas();
+                        renderizarVista();
+                        alert("¡Copia de seguridad restaurada correctamente!");
+                    } else {
+                        alert("El archivo JSON no tiene el formato válido de VENTO ERP.");
+                    }
+                } catch (err) {
+                    alert("Error al leer el archivo de respaldo: " + err.message);
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        function obtenerPlanCuentasBase() {
+            return [
+                { codigo: "1.0.00", nombre: "ACTIVO", tipo: "ACTIVO", imputable: false },
+                { codigo: "1.1.00", nombre: "Activo Corriente", tipo: "ACTIVO", imputable: false },
+                { codigo: "1.1.01", nombre: "Caja en Moneda Nacional", tipo: "ACTIVO", imputable: true },
+                { codigo: "1.1.02", nombre: "Banco Cta Cte", tipo: "ACTIVO", imputable: true },
+                { codigo: "1.1.03", nombre: "IVA Crédito Fiscal", tipo: "ACTIVO", imputable: true },
+                { codigo: "1.1.04", nombre: "Deudores por Ventas", tipo: "ACTIVO", imputable: true },
+                { codigo: "1.1.05", nombre: "Percepciones / Retenciones IIBB", tipo: "ACTIVO", imputable: true },
+                { codigo: "2.0.00", nombre: "PASIVO", tipo: "PASIVO", imputable: false },
+                { codigo: "2.1.01", nombre: "Proveedores", tipo: "PASIVO", imputable: true },
+                { codigo: "2.1.02", nombre: "IVA Débito Fiscal", tipo: "PASIVO", imputable: true },
+                { codigo: "4.0.00", nombre: "INGRESOS", tipo: "INGRESO", imputable: false },
+                { codigo: "4.1.01", nombre: "Ventas Gravadas", tipo: "INGRESO", imputable: true },
+                { codigo: "5.0.00", nombre: "EGRESOS", tipo: "EGRESO", imputable: false },
+                { codigo: "5.1.01", nombre: "Compras de Bienes / Mercadería", tipo: "EGRESO", imputable: true }
+            ];
+        }
+
+        const TIPOS_COMPROBANTE_ARCA = {
+            1: "FC A", 2: "ND A", 3: "NC A", 4: "REC A", 5: "NV A",
+            6: "FC B", 7: "ND B", 8: "NC B", 9: "REC B", 10: "NV B",
+            11: "FC C", 12: "ND C", 13: "NC C", 15: "REC C", 16: "NV C",
+            17: "LSP A", 18: "LSP B", 19: "FC EXP", 20: "ND EXP", 21: "NC EXP",
+            22: "FC SIMP", 23: "COMP PESQ A", 24: "CONS PESQ A", 25: "COMP PESQ B", 26: "CONS PESQ B",
+            27: "LUCI A", 28: "LUCI B", 29: "LUCI C", 30: "COMP USADO", 32: "RECICLAJE",
+            33: "LP GRANOS", 34: "COMP A RG1415", 35: "COMP B RG1415", 36: "COMP C RG1415",
+            37: "ND EQ RG1415", 38: "NC EQ RG1415", 39: "OTR A RG1415", 40: "OTR B RG1415", 41: "OTR C RG1415",
+            43: "NC LUCI B", 44: "NC LUCI C", 45: "ND LUCI A", 46: "ND LUCI B", 47: "ND LUCI C", 48: "NC LUCI A",
+            49: "COMP CONS", 50: "REC FCE", 51: "FC M", 52: "ND M", 53: "NC M", 54: "REC M", 55: "NV M",
+            56: "COMP M RG1415", 57: "OTR M RG1415", 58: "CVLP M", 59: "LIQ M", 60: "CVLP A", 61: "CVLP B",
+            63: "LIQ A", 64: "LIQ B", 66: "DESP IMP", 68: "LIQ C", 70: "REC FCE",
+            81: "TK-FC A", 82: "TK-FC B", 83: "TK", 90: "NC OTR", 99: "OTR",
+            109: "TK C", 110: "TK NC", 111: "TK-FC C", 112: "TK NC A", 113: "TK NC B", 114: "TK NC C",
+            115: "TK ND A", 116: "TK ND B", 117: "TK ND C", 118: "TK-FC M", 119: "TK NC M", 120: "TK ND M",
+            150: "LIQ TAB A", 151: "LIQ TAB B", 157: "CVLP AV A", 158: "CVLP AV B", 159: "LIQ AV A", 160: "LIQ AV B",
+            161: "LIQ DIR AV A", 162: "LIQ DIR AV B", 163: "LIQ DIR AV C", 164: "LIQ VTA AV A", 165: "LIQ VTA AV B",
+            166: "LIQ CRI POLLO A", 167: "LIQ CRI POLLO B", 168: "LIQ CRI POLLO C", 169: "CRI POLLO A", 170: "CRI POLLO B",
+            171: "LIQ AZUCAR A", 172: "LIQ AZUCAR B", 180: "CVLP PEC A", 182: "CVLP PEC B", 183: "LIQ PEC A", 185: "LIQ PEC B",
+            186: "LIQ DIR PEC A", 188: "LIQ DIR PEC B", 189: "LIQ DIR PEC C", 190: "LIQ VTA PEC A", 191: "LIQ VTA PEC B",
+            195: "FC T", 196: "ND T", 197: "NC T",
+            201: "FCE A", 202: "ND FCE A", 203: "NC FCE A",
+            206: "FCE B", 207: "ND FCE B", 208: "NC FCE B",
+            211: "FCE C", 212: "ND FCE C", 213: "NC FCE C",
+            331: "LIQ SEC GRANOS", 332: "CERT ELEC GRANOS"
+        };
+
+        function formatearFechaAr(isoStr) {
+            if (!isoStr) return "";
+            const s = String(isoStr);
+            if (s.includes('/')) return s;
+            const p = s.split('-');
+            if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
+            return s;
+        }
+
+        let filtroMesIva = "10";
+        let filtroAnioIva = "2026";
+        let folioInicialIva = 1;
+        let libroIvaModo = "COMPRA";
+
+        let folioInicialDiario = 1;
+        let diarioFechaDesde = "2026-07-01";
+        let diarioFechaHasta = "2027-06-30";
+
+        let balanceFechaDesde = "2026-10-01";
+        let balanceFechaHasta = "2026-10-31";
+
+        let dashFechaDesde = "2026-01-01";
+        let dashFechaHasta = "2026-12-31";
+
+        let impositivoMes = "10";
+        let impositivoAnio = "2026";
+
+        let iibbMes = "10";
+        let iibbAnio = "2026";
+
+        let saldoTecnicoAnt = 0;
+        let saldoLibreDispAnt = 0;
+
+        let ordenComprobantes = { campo: 'fecha', asc: false };
+        let ordenRetenciones = { campo: 'fecha', asc: false };
+        let ordenIibbRet = { campo: 'fecha', asc: false };
+
+        let empresas = JSON.parse(localStorage.getItem('arca_empresas')) || [
+            {
+                id: 1,
+                razonSocial: "SUCESION DE BARBERO ARMANDO LUIS",
+                cuit: "20054059354",
+                condicionIva: "Responsable Inscripto",
+                iibbRegimen: "LOCAL",
+                iibbAlicuota: 3.0,
+                iibbCoeficiente: 1.0000,
+                iibbSaldoAnt: 0,
+                comprobantes: [],
+                asientosManuales: [],
+                retencionesPercepciones: [],
+                retencionesIibb: [],
+                planCuentas: obtenerPlanCuentasBase()
+            }
+        ];
+
+        let empresaActualId = parseInt(localStorage.getItem('arca_empresa_actual')) || empresas[0].id;
+        let vistaActual = 'dashboard';
+
+        function guardarEnLocalStorage() {
+            localStorage.setItem('arca_empresas', JSON.stringify(empresas));
+            localStorage.setItem('arca_empresa_actual', empresaActualId);
+            guardarEnGoogleDrive();
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar) return;
+            if (sidebar.classList.contains('w-64')) {
+                sidebar.classList.remove('w-64');
+                sidebar.classList.add('w-0');
+            } else {
+                sidebar.classList.remove('w-0');
+                sidebar.classList.add('w-64');
+            }
+        }
+
+        window.onload = function() {
+            if (window.innerWidth < 768) {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) {
+                    sidebar.classList.remove('w-64');
+                    sidebar.classList.add('w-0');
+                }
+            }
+            if (typeof google !== 'undefined' && !tokenClient) {
+                inicializarGoogleGIS();
+            }
+            actualizarSelectorEmpresas();
+            renderizarVista();
+        };
+
+        function normalizarEstructuraEmpresa(emp) {
+            if (!emp || typeof emp !== 'object') return null;
+            if (!emp.razonSocial) emp.razonSocial = "EMPRESA SIN NOMBRE";
+            if (!emp.cuit) emp.cuit = "00000000000";
+            if (!emp.condicionIva) emp.condicionIva = "Responsable Inscripto";
+            if (!Array.isArray(emp.comprobantes)) emp.comprobantes = [];
+            if (!Array.isArray(emp.asientosManuales)) emp.asientosManuales = [];
+            if (!Array.isArray(emp.retencionesPercepciones)) emp.retencionesPercepciones = [];
+            if (!Array.isArray(emp.retencionesIibb)) emp.retencionesIibb = [];
+            if (!Array.isArray(emp.planCuentas) || emp.planCuentas.length === 0) emp.planCuentas = obtenerPlanCuentasBase();
+            if (!emp.iibbRegimen) emp.iibbRegimen = "LOCAL";
+            if (typeof emp.iibbAlicuota !== 'number' || isNaN(emp.iibbAlicuota)) emp.iibbAlicuota = parseFloat(emp.iibbAlicuota) || 3.0;
+            if (typeof emp.iibbCoeficiente !== 'number' || isNaN(emp.iibbCoeficiente)) emp.iibbCoeficiente = parseFloat(emp.iibbCoeficiente) || 1.0000;
+            if (typeof emp.iibbSaldoAnt !== 'number' || isNaN(emp.iibbSaldoAnt)) emp.iibbSaldoAnt = parseFloat(emp.iibbSaldoAnt) || 0;
+
+            emp.comprobantes.forEach(c => {
+                if (!c.fecha) c.fecha = "";
+                c.neto105 = Number(c.neto105) || 0;
+                c.neto21 = Number(c.neto21) || 0;
+                c.neto27 = Number(c.neto27) || 0;
+                c.iva105 = Number(c.iva105) || 0;
+                c.iva21 = Number(c.iva21) || 0;
+                c.iva27 = Number(c.iva27) || 0;
+                c.noGravado = Number(c.noGravado) || 0;
+                c.exento = Number(c.exento) || 0;
+                c.otrosTributos = Number(c.otrosTributos) || 0;
+                c.netoTotal = Number(c.netoTotal) || 0;
+                c.totalIva = Number(c.totalIva) || 0;
+                c.total = Number(c.total) || 0;
+            });
+
+            emp.retencionesPercepciones.forEach(r => {
+                if (!r.fecha) r.fecha = "";
+                r.importe = Number(r.importe) || 0;
+            });
+
+            emp.retencionesIibb.forEach(r => {
+                if (!r.fecha) r.fecha = "";
+                r.importe = Number(r.importe) || 0;
+            });
+
+            return emp;
+        }
+
+        function obtenerEmpresaActual() { 
+            if (!Array.isArray(empresas) || empresas.length === 0) {
+                empresas = [{
+                    id: 1,
+                    razonSocial: "SUCESION DE BARBERO ARMANDO LUIS",
+                    cuit: "20054059354",
+                    condicionIva: "Responsable Inscripto",
+                    iibbRegimen: "LOCAL",
+                    iibbAlicuota: 3.0,
+                    iibbCoeficiente: 1.0000,
+                    iibbSaldoAnt: 0,
+                    comprobantes: [],
+                    asientosManuales: [],
+                    retencionesPercepciones: [],
+                    retencionesIibb: [],
+                    planCuentas: obtenerPlanCuentasBase()
+                }];
+            }
+            let emp = empresas.find(e => String(e.id) === String(empresaActualId));
+            if (!emp) {
+                emp = empresas[0];
+                empresaActualId = emp.id;
+            }
+            return normalizarEstructuraEmpresa(emp);
+        }
+
+        function actualizarSelectorEmpresas() {
+            const select = document.getElementById('selectEmpresa');
+            select.innerHTML = '';
+            empresas.forEach(emp => {
+                normalizarEstructuraEmpresa(emp);
+                const opt = document.createElement('option');
+                opt.value = emp.id;
+                opt.textContent = `${emp.razonSocial} (CUIT: ${emp.cuit})`;
+                if (String(emp.id) === String(empresaActualId)) opt.selected = true;
+                select.appendChild(opt);
+            });
+            const actual = obtenerEmpresaActual();
+            if (actual) {
+                document.getElementById('headerRazonSocial').textContent = actual.razonSocial;
+                document.getElementById('headerCuit').textContent = `CUIT: ${actual.cuit}`;
+                const iniciales = (actual.razonSocial || 'ER').split(' ').filter(Boolean).map(w=>w[0]).join('').substring(0,2).toUpperCase();
+                document.getElementById('headerInicia').textContent = iniciales;
+            }
+        }
+
+        function seleccionarEmpresa(id) {
+            empresaActualId = parseInt(id);
+            guardarEnLocalStorage();
+            actualizarSelectorEmpresas();
+            renderizarVista();
+        }
+
+        function abrirModalEmpresa() { document.getElementById('modalNuevaEmpresa').classList.remove('hidden'); }
+        function cerrarModalEmpresa() { document.getElementById('modalNuevaEmpresa').classList.add('hidden'); }
+        
+        function abrirModalCuenta(codigo = '') {
+            document.getElementById('modalNuevaCuenta').classList.remove('hidden');
+            if (codigo) {
+                const emp = obtenerEmpresaActual();
+                const cta = emp.planCuentas.find(c => c.codigo === codigo);
+                if (cta) {
+                    document.getElementById('modalCuentaTitulo').textContent = "Editar Cuenta Contable";
+                    document.getElementById('editandoCodigo').value = cta.codigo;
+                    document.getElementById('codigoCuenta').value = cta.codigo;
+                    document.getElementById('nombreCuenta').value = cta.nombre;
+                    document.getElementById('tipoCuenta').value = cta.tipo;
+                    document.getElementById('imputableCuenta').value = cta.imputable.toString();
+                }
+            } else {
+                document.getElementById('modalCuentaTitulo').textContent = "Agregar Cuenta Contable";
+                document.getElementById('editandoCodigo').value = '';
+                document.getElementById('formNuevaCuenta').reset();
+            }
+        }
+        function cerrarModalCuenta() { document.getElementById('modalNuevaCuenta').classList.add('hidden'); }
+
+        function abrirModalAsientoManual() {
+            document.getElementById('modalAsientoManual').classList.remove('hidden');
+            const cont = document.getElementById('contenedorLineasManuales');
+            cont.innerHTML = '';
+            agregarLineaAsientoManual();
+            agregarLineaAsientoManual();
+            actualizarTotalesAsientoManual();
+        }
+        function cerrarModalAsientoManual() { document.getElementById('modalAsientoManual').classList.add('hidden'); }
+
+        function agregarLineaAsientoManual(cuentaPre = '', debePre = 0, haberPre = 0) {
+            const emp = obtenerEmpresaActual();
+            const imputables = emp.planCuentas.filter(p => p.imputable);
+            const opts = imputables.map(p => `<option value="${p.codigo}" ${cuentaPre===p.codigo?'selected':''}>${p.codigo} - ${p.nombre}</option>`).join('');
+
+            const cont = document.getElementById('contenedorLineasManuales');
+            const div = document.createElement('div');
+            div.className = "flex items-center space-x-2 bg-gray-50 p-2 rounded border";
+            div.innerHTML = `
+                <select class="flex-1 border rounded p-1.5 text-xs font-semibold cta-manual">${opts}</select>
+                <input type="number" step="0.01" placeholder="Debe $" value="${debePre || ''}" oninput="actualizarTotalesAsientoManual()" class="w-28 border rounded p-1.5 text-xs text-right font-semibold debe-manual">
+                <input type="number" step="0.01" placeholder="Haber $" value="${haberPre || ''}" oninput="actualizarTotalesAsientoManual()" class="w-28 border rounded p-1.5 text-xs text-right font-semibold haber-manual">
+                <button type="button" onclick="this.parentElement.remove(); actualizarTotalesAsientoManual();" class="text-red-500 font-bold px-2">&times;</button>
+            `;
+            cont.appendChild(div);
+            actualizarTotalesAsientoManual();
+        }
+
+        function actualizarTotalesAsientoManual() {
+            const debeInputs = document.querySelectorAll('.debe-manual');
+            const haberInputs = document.querySelectorAll('.haber-manual');
+            let totDebe = 0, totHaber = 0;
+            debeInputs.forEach(i => totDebe += parseFloat(i.value) || 0);
+            haberInputs.forEach(i => totHaber += parseFloat(i.value) || 0);
+
+            const label = document.getElementById('totalesAsientoManualCheck');
+            const estado = document.getElementById('balanceEstadoCheck');
+            label.textContent = `Total Debe: $${totDebe.toLocaleString('es-AR',{minimumFractionDigits:2})} | Total Haber: $${totHaber.toLocaleString('es-AR',{minimumFractionDigits:2})}`;
+            
+            if (Math.abs(totDebe - totHaber) < 0.01 && totDebe > 0) {
+                estado.textContent = "Balanceado OK";
+                estado.className = "text-emerald-600 font-bold";
+            } else {
+                estado.textContent = "Desbalanceado";
+                estado.className = "text-red-600 font-bold";
+            }
+        }
+
+        function guardarAsientoManual(e) {
+            e.preventDefault();
+            const emp = obtenerEmpresaActual();
+            const fecha = document.getElementById('manualFecha').value;
+            const concepto = document.getElementById('manualConcepto').value.trim();
+
+            const ctas = document.querySelectorAll('.cta-manual');
+            const debeVals = document.querySelectorAll('.debe-manual');
+            const haberVals = document.querySelectorAll('.haber-manual');
+
+            let lineas = [];
+            let totDebe = 0, totHaber = 0;
+
+            for(let i=0; i<ctas.length; i++) {
+                const cuenta = ctas[i].value;
+                const debe = parseFloat(debeVals[i].value) || 0;
+                const haber = parseFloat(haberVals[i].value) || 0;
+                if (debe > 0 || haber > 0) {
+                    lineas.push({ cuenta, debe, haber });
+                    totDebe += debe;
+                    totHaber += haber;
+                }
+            }
+
+            if (Math.abs(totDebe - totHaber) > 0.01 || lineas.length === 0) {
+                alert("El asiento no está balanceado o no tiene líneas válidas.");
+                return;
+            }
+
+            emp.asientosManuales.push({ id: Date.now(), fecha, concepto, lineas });
+            guardarEnLocalStorage();
+            cerrarModalAsientoManual();
+            renderizarVista();
+        }
+
+        function eliminarAsientoManual(id) {
+            const emp = obtenerEmpresaActual();
+            emp.asientosManuales = emp.asientosManuales.filter(a => a.id !== id);
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function registrarEmpresaDesdeForm(e) {
+            e.preventDefault();
+            const razonSocial = document.getElementById('nuevaRazonSocial').value.trim();
+            const cuit = document.getElementById('nuevoCuit').value.trim();
+            const condicionIva = document.getElementById('nuevaCondicionIva').value;
+
+            const nuevaEmpresa = {
+                id: Date.now(),
+                razonSocial, cuit, condicionIva,
+                iibbRegimen: "LOCAL",
+                iibbAlicuota: 3.0,
+                iibbCoeficiente: 1.0000,
+                iibbSaldoAnt: 0,
+                comprobantes: [],
+                asientosManuales: [],
+                retencionesPercepciones: [],
+                retencionesIibb: [],
+                planCuentas: obtenerPlanCuentasBase()
+            };
+            empresas.push(nuevaEmpresa);
+            empresaActualId = nuevaEmpresa.id;
+            guardarEnLocalStorage();
+            cerrarModalEmpresa();
+            actualizarSelectorEmpresas();
+            renderizarVista();
+        }
+
+        function guardarCuentaContable(e) {
+            e.preventDefault();
+            const editando = document.getElementById('editandoCodigo').value;
+            const codigo = document.getElementById('codigoCuenta').value.trim();
+            const nombre = document.getElementById('nombreCuenta').value.trim();
+            const tipo = document.getElementById('tipoCuenta').value;
+            const imputable = document.getElementById('imputableCuenta').value === 'true';
+
+            const emp = obtenerEmpresaActual();
+            if (editando) {
+                const cta = emp.planCuentas.find(c => c.codigo === editando);
+                if (cta) { cta.codigo = codigo; cta.nombre = nombre; cta.tipo = tipo; cta.imputable = imputable; }
+            } else {
+                if (emp.planCuentas.some(c => c.codigo === codigo)) { alert("Ya existe una cuenta con ese código."); return; }
+                emp.planCuentas.push({ codigo, nombre, tipo, imputable });
+            }
+            emp.planCuentas.sort((a,b) => a.codigo.localeCompare(b.codigo));
+            guardarEnLocalStorage();
+            cerrarModalCuenta();
+            renderizarVista();
+        }
+
+        function eliminarCuenta(codigo) {
+            if (confirm(`¿Eliminar la cuenta ${codigo}?`)) {
+                const emp = obtenerEmpresaActual();
+                emp.planCuentas = emp.planCuentas.filter(c => c.codigo !== codigo);
+                guardarEnLocalStorage();
+                renderizarVista();
+            }
+        }
+
+        function importarPlanCuentas(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const lines = evt.target.result.split(/\r\n|\n/);
+                const emp = obtenerEmpresaActual();
+                let count = 0;
+                lines.forEach((line, idx) => {
+                    if (idx === 0 || !line.trim()) return;
+                    const c = line.split(';').map(s => s.replace(/"/g, '').trim());
+                    if (c.length >= 4) {
+                        const codigo = c[0];
+                        const nombre = c[1];
+                        const tipo = c[2].toUpperCase();
+                        const imputable = c[3].toUpperCase() === 'SI' || c[3].toLowerCase() === 'true';
+                        if (!emp.planCuentas.some(x => x.codigo === codigo)) {
+                            emp.planCuentas.push({ codigo, nombre, tipo, imputable });
+                            count++;
+                        }
+                    }
+                });
+                emp.planCuentas.sort((a,b) => a.codigo.localeCompare(b.codigo));
+                guardarEnLocalStorage();
+                alert(`¡Se importaron ${count} cuentas contables correctamente!`);
+                renderizarVista();
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        function cambiarVista(v) {
+            vistaActual = v;
+            if (window.innerWidth < 768) {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) {
+                    sidebar.classList.remove('w-64');
+                    sidebar.classList.add('w-0');
+                }
+            }
+            renderizarVista();
+        }
+
+        function renderizarVista() {
+            document.querySelectorAll('aside nav a').forEach(a => {
+                a.className = "flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition";
+            });
+            const navActivo = document.getElementById(`nav-${vistaActual}`);
+            if (navActivo) {
+                navActivo.className = "flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white transition";
+            }
+            const cont = document.getElementById('contenedorVistas');
+            cont.innerHTML = '';
+            try {
+                if (vistaActual === 'dashboard') renderDashboard(cont);
+                else if (vistaActual === 'importacion') renderImportacion(cont);
+                else if (vistaActual === 'comprobantes') renderComprobantes(cont);
+                else if (vistaActual === 'libro-iva') renderLibroIva(cont);
+                else if (vistaActual === 'plan-cuentas') renderPlanCuentas(cont);
+                else if (vistaActual === 'libro-diario') renderLibroDiario(cont);
+                else if (vistaActual === 'balance') renderBalance(cont);
+                else if (vistaActual === 'impositivo') renderImpositivo(cont);
+                else if (vistaActual === 'ingresos-brutos') renderIngresosBrutos(cont);
+            } catch (err) {
+                console.error("Error al renderizar vista:", err);
+                const emp = obtenerEmpresaActual();
+                cont.innerHTML = `
+                    <div class="bg-red-50 border-l-4 border-red-600 p-6 rounded-xl shadow max-w-2xl mx-auto mt-8 space-y-3">
+                        <h3 class="text-lg font-bold text-red-800">Se detectó un error en los datos guardados de "${emp ? emp.razonSocial : 'Empresa'}"</h3>
+                        <p class="text-xs font-mono bg-white p-3 rounded border text-red-700">${err.message}</p>
+                        <p class="text-xs text-gray-600">Esto suele ocurrir cuando un registro importado anteriormente quedó con un campo vacío o corrupto.</p>
+                        <div class="flex space-x-3 pt-2">
+                            <button onclick="repararEmpresaActual()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow">Reparar Registros de esta Empresa</button>
+                            <button onclick="exportarBackupJson()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-bold">Descargar Backup JSON</button>
+                        </div>
+                    </div>
+                `;
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function repararEmpresaActual() {
+            const emp = obtenerEmpresaActual();
+            emp.comprobantes = (emp.comprobantes || []).filter(c => c && typeof c === 'object');
+            emp.retencionesPercepciones = (emp.retencionesPercepciones || []).filter(r => r && typeof r === 'object');
+            emp.retencionesIibb = (emp.retencionesIibb || []).filter(r => r && typeof r === 'object');
+            emp.asientosManuales = (emp.asientosManuales || []).filter(a => a && typeof a === 'object' && Array.isArray(a.lineas));
+            normalizarEstructuraEmpresa(emp);
+            guardarEnLocalStorage();
+            renderizarVista();
+            alert("¡Datos de la empresa reparados correctamente!");
+        }
+
+        function parsearFloatAr(str) {
+            if (!str) return 0;
+            return parseFloat(str.toString().replace(/\./g, '').replace(',', '.')) || 0;
+        }
+
+        function procesarCsvArcaReal(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const tipoOp = document.querySelector('input[name="tipoOperacionImport"]:checked').value;
+            const reader = new FileReader();
+
+            reader.onload = function(evt) {
+                const lines = evt.target.result.split(/\r\n|\n/);
+                const emp = obtenerEmpresaActual();
+                let agregados = 0;
+
+                lines.forEach((line, idx) => {
+                    if (idx === 0 || !line.trim()) return;
+                    const c = line.split(';').map(s => s.replace(/"/g, '').trim());
+
+                    if (c.length >= 25) {
+                        const fecha = c[0];
+                        const tipoCodigo = parseInt(c[1]) || 1;
+                        const pv = parseInt(c[2]) || 1;
+                        const numero = parseInt(c[3]) || 1;
+                        
+                        const cuit = (tipoOp === 'COMPRA') ? (c[7] || c[6] || "") : (c[7] || "");
+                        const razonSocial = (tipoOp === 'COMPRA') ? (c[8] || c[7] || "") : (c[8] || "");
+
+                        const tcInput = parsearFloatAr(tipoOp === 'COMPRA' ? c[11] : c[9]);
+                        const tipoCambio = tcInput > 0 ? tcInput : 1;
+                        const moneda = (tipoOp === 'COMPRA' ? (c[12] || "$") : (c[10] || "$")).toUpperCase();
+                        const factorMoneda = (moneda.includes("USD") || moneda.includes("DOL")) ? tipoCambio : 1;
+
+                        const esComprobanteC = [11, 12, 13].includes(tipoCodigo);
+
+                        let neto105 = 0, iva105 = 0, neto21 = 0, iva21 = 0, neto27 = 0, iva27 = 0;
+                        let netoTotal = 0, totalIva = 0, total = 0, noGravado = 0, exento = 0, otrosTributos = 0;
+
+                        if (tipoOp === 'COMPRA') {
+                            iva105 = parsearFloatAr(c[18]) * factorMoneda; neto105 = parsearFloatAr(c[19]) * factorMoneda;
+                            iva21 = parsearFloatAr(c[20]) * factorMoneda; neto21 = parsearFloatAr(c[21]) * factorMoneda;
+                            iva27 = parsearFloatAr(c[22]) * factorMoneda; neto27 = parsearFloatAr(c[23]) * factorMoneda;
+                            netoTotal = parsearFloatAr(c[24]) * factorMoneda; noGravado = parsearFloatAr(c[25]) * factorMoneda;
+                            exento = parsearFloatAr(c[26]) * factorMoneda; otrosTributos = parsearFloatAr(c[27]) * factorMoneda;
+                            totalIva = parsearFloatAr(c[28]) * factorMoneda; total = parsearFloatAr(c[29]) * factorMoneda;
+                        } else {
+                            iva105 = parsearFloatAr(c[16]) * factorMoneda; neto105 = parsearFloatAr(c[17]) * factorMoneda;
+                            iva21 = parsearFloatAr(c[18]) * factorMoneda; neto21 = parsearFloatAr(c[19]) * factorMoneda;
+                            iva27 = parsearFloatAr(c[20]) * factorMoneda; neto27 = parsearFloatAr(c[21]) * factorMoneda;
+                            netoTotal = parsearFloatAr(c[22]) * factorMoneda; noGravado = parsearFloatAr(c[23]) * factorMoneda;
+                            exento = parsearFloatAr(c[24]) * factorMoneda; otrosTributos = parsearFloatAr(c[25]) * factorMoneda;
+                            totalIva = parsearFloatAr(c[26]) * factorMoneda; total = parsearFloatAr(c[27]) * factorMoneda;
+                        }
+
+                        if (esComprobanteC) {
+                            exento = total; netoTotal = 0; totalIva = 0;
+                            neto21 = 0; iva21 = 0; neto105 = 0; iva105 = 0; neto27 = 0; iva27 = 0;
+                        }
+
+                        emp.comprobantes.push({
+                            id: Date.now() + idx,
+                            tipoOp, fecha, tipoCodigo,
+                            tipoNombre: TIPOS_COMPROBANTE_ARCA[tipoCodigo] || `TC ${tipoCodigo}`,
+                            pv, numero, cuit, razonSocial,
+                            neto105, neto21, neto27, iva105, iva21, iva27,
+                            noGravado, exento, otrosTributos, netoTotal, totalIva, total,
+                            cuentaNeto: tipoOp === 'VENTA' ? "4.1.01" : "5.1.01",
+                            cuentaIva: tipoOp === 'VENTA' ? "2.1.02" : "1.1.03",
+                            cuentaContrapartida: tipoOp === 'VENTA' ? "1.1.04" : "2.1.01",
+                            moneda, tipoCambio
+                        });
+                        agregados++;
+                    }
+                });
+
+                guardarEnLocalStorage();
+                alert(`¡Importados ${agregados} comprobantes correctamente!`);
+                cambiarVista('comprobantes');
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        function procesarArchivoPercepciones(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const emp = obtenerEmpresaActual();
+            const extension = file.name.split('.').pop().toLowerCase();
+
+            if (extension === 'xlsx' || extension === 'xls') {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                    let agregados = 0;
+                    json.forEach((row, idx) => {
+                        let fechaRaw = row['Fecha Ret./Perc.'] || row['Fecha'] || "2026-09-01";
+                        let fecha = fechaRaw.toString().includes('/') ? fechaRaw.split('/').reverse().join('-') : fechaRaw;
+                        const importe = parseFloat(row['Importe Ret./Perc.'] || row['Importe'] || 0) || 0;
+                        const cuitAgente = row['CUIT Agente Ret./Perc.'] || row['CUIT'] || "Agente ARCA";
+                        const regimen = row['Regimen'] || "Gen.";
+                        if (importe > 0) {
+                            emp.retencionesPercepciones.push({ id: Date.now() + idx, fecha, impuesto: "IVA", tipo: "PERCEPCION", agente: `${cuitAgente} (Rég. ${regimen})`, importe });
+                            agregados++;
+                        }
+                    });
+                    guardarEnLocalStorage();
+                    alert(`¡Se importaron ${agregados} PERCEPCIONES correctamente!`);
+                    renderizarVista();
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function procesarArchivoRetenciones(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const emp = obtenerEmpresaActual();
+            const extension = file.name.split('.').pop().toLowerCase();
+
+            if (extension === 'xlsx' || extension === 'xls') {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const data = new Uint8Array(evt.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                    let agregados = 0;
+                    json.forEach((row, idx) => {
+                        let fechaRaw = row['Fecha Ret./Perc.'] || row['Fecha'] || "2026-09-01";
+                        let fecha = fechaRaw.toString().includes('/') ? fechaRaw.split('/').reverse().join('-') : fechaRaw;
+                        const importe = parseFloat(row['Importe Ret./Perc.'] || row['Importe'] || 0) || 0;
+                        const cuitAgente = row['CUIT Agente Ret./Perc.'] || row['CUIT'] || "Agente ARCA";
+                        const regimen = row['Regimen'] || "Gen.";
+                        if (importe > 0) {
+                            emp.retencionesPercepciones.push({ id: Date.now() + idx, fecha, impuesto: "IVA", tipo: "RETENCION", agente: `${cuitAgente} (Rég. ${regimen})`, importe });
+                            agregados++;
+                        }
+                    });
+                    guardarEnLocalStorage();
+                    alert(`¡Se importaron ${agregados} RETENCIONES correctamente!`);
+                    renderizarVista();
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function eliminarRetencionPercepcion(id) {
+            const emp = obtenerEmpresaActual();
+            emp.retencionesPercepciones = emp.retencionesPercepciones.filter(r => r.id !== id);
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function ordenarComprobantesPor(campo) {
+            if (ordenComprobantes.campo === campo) { ordenComprobantes.asc = !ordenComprobantes.asc; }
+            else { ordenComprobantes.campo = campo; ordenComprobantes.asc = true; }
+            renderizarVista();
+        }
+
+        function ordenarRetencionesPor(campo) {
+            if (ordenRetenciones.campo === campo) { ordenRetenciones.asc = !ordenRetenciones.asc; }
+            else { ordenRetenciones.campo = campo; ordenRetenciones.asc = true; }
+            renderizarVista();
+        }
+
+        // ==========================================
+        // VISTA: DASHBOARD GENERAL
+        // ==========================================
+        function renderDashboard(cont) {
+            const emp = obtenerEmpresaActual();
+            const compsFiltrados = emp.comprobantes.filter(c => c.fecha >= dashFechaDesde && c.fecha <= dashFechaHasta);
+            const retencionesFiltradas = (emp.retencionesPercepciones || []).filter(r => r.fecha >= dashFechaDesde && r.fecha <= dashFechaHasta);
+
+            let ventasNetas = 0, comprasNetas = 0, cantVentas = 0, cantCompras = 0, ivaDebitoFiscal = 0, ivaCreditoFiscal = 0;
+
+            compsFiltrados.forEach(c => {
+                const subtotalNeto = c.netoTotal + c.exento + c.noGravado;
+                if (c.tipoOp === 'VENTA') { ventasNetas += subtotalNeto; ivaDebitoFiscal += c.totalIva; cantVentas++; }
+                else if (c.tipoOp === 'COMPRA') { comprasNetas += subtotalNeto; ivaCreditoFiscal += c.totalIva; cantCompras++; }
+            });
+
+            let retencionesIvaPeriodo = 0, percepcionesIvaPeriodo = 0;
+            retencionesFiltradas.forEach(r => {
+                if (r.tipo === 'RETENCION') retencionesIvaPeriodo += r.importe;
+                if (r.tipo === 'PERCEPCION') percepcionesIvaPeriodo += r.importe;
+            });
+
+            const saldoTecnico = (ivaDebitoFiscal - ivaCreditoFiscal) - saldoTecnicoAnt;
+            let saldoFinal = 0, etiquetaSaldo = "";
+
+            if (saldoTecnico > 0) {
+                saldoFinal = saldoTecnico - retencionesIvaPeriodo - percepcionesIvaPeriodo - saldoLibreDispAnt;
+                etiquetaSaldo = saldoFinal >= 0 ? "IVA A PAGAR" : "SALDO DE LIBRE DISPONIBILIDAD";
+                if (saldoFinal < 0) saldoFinal = Math.abs(saldoFinal);
+            } else {
+                saldoFinal = Math.abs(saldoTecnico) + retencionesIvaPeriodo + percepcionesIvaPeriodo + saldoLibreDispAnt;
+                etiquetaSaldo = "SALDO A FAVOR / LIBRE DISPONIBILIDAD";
+            }
+
+            cont.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm">
+                        <h2 class="text-xl font-bold text-gray-800">Panel General & Liquidación de IVA</h2>
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Desde:</span>
+                            <input type="date" value="${dashFechaDesde}" onchange="dashFechaDesde=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Hasta:</span>
+                            <input type="date" value="${dashFechaHasta}" onchange="dashFechaHasta=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-xl border shadow-sm border-l-4 border-l-blue-600">
+                            <p class="text-xs font-bold text-gray-500 uppercase">VENTAS NETAS</p>
+                            <h3 class="text-2xl font-black text-gray-900 mt-2">$ ${ventasNetas.toLocaleString('es-AR', {minimumFractionDigits:2})}</h3>
+                            <p class="text-xs text-gray-400 mt-1">${cantVentas} comprobante(s) en el período</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border shadow-sm border-l-4 border-l-red-500">
+                            <p class="text-xs font-bold text-gray-500 uppercase">COMPRAS NETAS</p>
+                            <h3 class="text-2xl font-black text-gray-900 mt-2">$ ${comprasNetas.toLocaleString('es-AR', {minimumFractionDigits:2})}</h3>
+                            <p class="text-xs text-gray-400 mt-1">${cantCompras} comprobante(s) en el período</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border shadow-sm border-l-4 border-l-emerald-600">
+                            <p class="text-xs font-bold text-gray-500 uppercase">TOTAL COMPROBANTES</p>
+                            <h3 class="text-2xl font-black text-gray-900 mt-2">${compsFiltrados.length}</h3>
+                            <p class="text-xs text-gray-400 mt-1">Del ${formatearFechaAr(dashFechaDesde)} al ${formatearFechaAr(dashFechaHasta)}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border shadow-sm p-6 space-y-6">
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-gray-900 uppercase">Determinación del Impuesto al Valor Agregado (IVA)</h3>
+                                <p class="text-xs text-gray-500">Liquidación IVA mensual</p>
+                            </div>
+                            <div class="bg-blue-50 text-blue-800 text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-200">
+                                Régimen ARCA
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">IVA Débito Fiscal:</span>
+                                    <span class="font-bold text-gray-900">$ ${ivaDebitoFiscal.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">IVA Crédito Fiscal:</span>
+                                    <span class="font-bold text-red-600">- $ ${ivaCreditoFiscal.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                                <div class="flex justify-between text-sm border-b pb-2">
+                                    <span class="font-semibold text-gray-700">Saldo Técnico Anterior:</span>
+                                    <span class="font-bold text-red-600">- $ ${saldoTecnicoAnt.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                                <div class="flex justify-between text-sm pt-1">
+                                    <span class="font-bold text-gray-900 uppercase">Saldo Técnico Neto:</span>
+                                    <span class="font-black ${saldoTecnico >= 0 ? 'text-blue-900' : 'text-emerald-700'}">$ ${saldoTecnico.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="font-semibold text-gray-700">Retenciones:</span>
+                                    <span class="font-bold text-blue-700">$ ${retencionesIvaPeriodo.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="font-semibold text-gray-700">Percepciones:</span>
+                                    <span class="font-bold text-purple-700">$ ${percepcionesIvaPeriodo.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm border-b pb-2">
+                                    <span class="font-semibold text-gray-700">Saldo Libre Disp. Anterior:</span>
+                                    <span class="font-bold text-red-600">$ ${saldoLibreDispAnt.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                                <div class="flex justify-between text-sm pt-1">
+                                    <span class="font-bold uppercase text-gray-900">Origen de Datos:</span>
+                                    <span class="font-bold text-xs text-emerald-600">Sincronizado ARCA</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center shadow">
+                            <div>
+                                <p class="text-xs text-slate-400 uppercase font-semibold">Resultado de la Posición Mensual / Período</p>
+                                <h4 class="text-lg font-black tracking-wider text-emerald-400">${etiquetaSaldo}</h4>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-2xl font-black">$ ${saldoFinal.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderImportacion(cont) {
+            cont.innerHTML = `
+                <div class="space-y-6 max-w-4xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-800">Importación "Mis Comprobantes" (ARCA)</h2>
+                    <div class="bg-white p-6 rounded-xl border space-y-4">
+                        <div class="flex space-x-6">
+                            <label class="font-bold text-sm text-gray-700"><input type="radio" name="tipoOperacionImport" value="COMPRA" checked> COMPRAS (Recibidos)</label>
+                            <label class="font-bold text-sm text-gray-700"><input type="radio" name="tipoOperacionImport" value="VENTA"> VENTAS (Emitidos)</label>
+                        </div>
+                        <div class="border-2 border-dashed rounded-xl p-8 text-center bg-gray-50">
+                            <input type="file" id="fileArca" accept=".csv" class="hidden" onchange="procesarCsvArcaReal(event)">
+                            <button onclick="document.getElementById('fileArca').click()" class="bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-lg text-sm">Seleccionar CSV de ARCA</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderComprobantes(cont) {
+            const emp = obtenerEmpresaActual();
+            const cuentasImputables = emp.planCuentas.filter(p => p.imputable);
+
+            let listaComps = [...emp.comprobantes];
+            listaComps.sort((a, b) => {
+                let vA = a[ordenComprobantes.campo], vB = b[ordenComprobantes.campo];
+                if (typeof vA === 'string') { vA = vA.toLowerCase(); vB = vB.toLowerCase(); }
+                return vA < vB ? (ordenComprobantes.asc ? -1 : 1) : (vA > vB ? (ordenComprobantes.asc ? 1 : -1) : 0);
+            });
+            let arrowComp = (campo) => ordenComprobantes.campo !== campo ? '' : (ordenComprobantes.asc ? ' ▲' : ' ▼');
+
+            let filas = listaComps.map(c => {
+                const optionsCuenta = cuentasImputables.map(pc => `<option value="${pc.codigo}" ${c.cuentaNeto === pc.codigo ? 'selected' : ''}>${pc.codigo} - ${pc.nombre}</option>`).join('');
+                return `
+                    <tr class="hover:bg-gray-50 text-sm">
+                        <td class="px-3 py-3 font-bold ${c.tipoOp === 'VENTA' ? 'text-green-600' : 'text-red-600'}">${c.tipoOp}</td>
+                        <td class="px-3 py-3">${formatearFechaAr(c.fecha)}</td>
+                        <td class="px-3 py-3 font-semibold">${c.tipoNombre}</td>
+                        <td class="px-3 py-3 font-mono">${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')}</td>
+                        <td class="px-3 py-3">${c.razonSocial}<br><span class="text-xs text-gray-400">CUIT: ${c.cuit}</span></td>
+                        <td class="px-3 py-3 text-right font-semibold">$ ${c.netoTotal.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                        <td class="px-3 py-3 text-right text-gray-600">$ ${c.totalIva.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                        <td class="px-3 py-3 text-right font-bold">$ ${c.total.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                        <td class="px-3 py-3"><select onchange="actualizarCuentaComprobante(${c.id}, this.value)" class="text-xs bg-white border border-gray-300 rounded px-2 py-1 font-semibold text-blue-900">${optionsCuenta}</select></td>
+                        <td class="px-3 py-3 text-center"><button onclick="eliminarComprobante(${c.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                    </tr>
+                `;
+            }).join('');
+
+            cont.innerHTML = `
+                <div class="space-y-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Comprobantes Registrados</h2>
+                    <div class="bg-white rounded-xl border overflow-hidden">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-xs text-gray-500 uppercase select-none">
+                                <tr>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('tipoOp')">OP.${arrowComp('tipoOp')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('fecha')">FECHA${arrowComp('fecha')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('tipoNombre')">TIPO${arrowComp('tipoNombre')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('numero')">NÚMERO${arrowComp('numero')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('razonSocial')">PROVEEDOR / CLIENTE${arrowComp('razonSocial')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarComprobantesPor('netoTotal')">NETO${arrowComp('netoTotal')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarComprobantesPor('totalIva')">IVA${arrowComp('totalIva')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarComprobantesPor('total')">TOTAL${arrowComp('total')}</th>
+                                    <th class="p-3">CUENTA</th>
+                                    <th class="p-3 text-center">ACCIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">${filas}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function actualizarCuentaComprobante(id, nuevaCuenta) {
+            const emp = obtenerEmpresaActual();
+            const comp = emp.comprobantes.find(c => c.id === id);
+            if (comp) { comp.cuentaNeto = nuevaCuenta; guardarEnLocalStorage(); }
+        }
+
+        function actualizarCuentaAsiento(id, campo, nuevaCuenta) {
+            const emp = obtenerEmpresaActual();
+            const comp = emp.comprobantes.find(c => c.id === id);
+            if (comp) {
+                if (campo === 'neto') comp.cuentaNeto = nuevaCuenta;
+                else if (campo === 'iva') comp.cuentaIva = nuevaCuenta;
+                else if (campo === 'contrapartida') comp.cuentaContrapartida = nuevaCuenta;
+                guardarEnLocalStorage();
+                renderizarVista();
+            }
+        }
+
+        function eliminarComprobante(id) {
+            const emp = obtenerEmpresaActual();
+            emp.comprobantes = emp.comprobantes.filter(c => c.id !== id);
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        // ==========================================
+        // VISTA: LIBRO IVA (Formato Legal con Alícuotas)
+        // ==========================================
+        function renderLibroIva(cont) {
+            const emp = obtenerEmpresaActual();
+            const comprobantesFiltrados = emp.comprobantes.filter(c => {
+                if (c.tipoOp !== libroIvaModo) return false;
+                const partes = c.fecha.split('-');
+                if (partes.length === 3) {
+                    return (partes[1] === filtroMesIva && partes[0] === filtroAnioIva);
+                }
+                return true;
+            });
+
+            let lineasTabla = [];
+
+            comprobantesFiltrados.forEach(c => {
+                const esFacturaC = [11, 12, 13].includes(c.tipoCodigo);
+                const exentoNoGravCalculado = esFacturaC ? c.total : (c.noGravado + c.exento);
+
+                const desgloses = [];
+                if (c.neto105 > 0 || c.iva105 > 0) desgloses.push({ neto: c.neto105, tasa: '10,50%', iva: c.iva105 });
+                if (c.neto21 > 0 || c.iva21 > 0) desgloses.push({ neto: c.neto21, tasa: '21,00%', iva: c.iva21 });
+                if (c.neto27 > 0 || c.iva27 > 0) desgloses.push({ neto: c.neto27, tasa: '27,00%', iva: c.iva27 });
+
+                if (desgloses.length === 0) {
+                    desgloses.push({ neto: c.netoTotal, tasa: '0,00%', iva: 0 });
+                }
+
+                desgloses.forEach((d, idx) => {
+                    lineasTabla.push(`
+                        <tr class="text-xs border-b border-gray-100">
+                            <td class="py-2 px-2">${idx === 0 ? formatearFechaAr(c.fecha) : ''}</td>
+                            <td class="py-2 px-2 font-mono">${idx === 0 ? c.tipoNombre + ' ' + String(c.pv).padStart(4,'0') + '-' + String(c.numero).padStart(8,'0') : ''}</td>
+                            <td class="py-2 px-2">${idx === 0 ? c.razonSocial : ''}</td>
+                            <td class="py-2 px-2 font-mono">${idx === 0 ? c.cuit : ''}</td>
+                            <td class="py-2 px-2 text-right">${idx === 0 && exentoNoGravCalculado > 0 ? exentoNoGravCalculado.toLocaleString('es-AR',{minimumFractionDigits:2}) : ''}</td>
+                            <td class="py-2 px-2 text-right font-medium">${d.neto > 0 ? d.neto.toLocaleString('es-AR',{minimumFractionDigits:2}) : ''}</td>
+                            <td class="py-2 px-2 text-right font-bold text-blue-800">${d.tasa !== '0,00%' ? d.tasa : ''}</td>
+                            <td class="py-2 px-2 text-right font-medium">${d.iva > 0 ? d.iva.toLocaleString('es-AR',{minimumFractionDigits:2}) + ' Dir. Grav.' : ''}</td>
+                            <td class="py-2 px-2 text-right font-bold">${idx === 0 ? '$ ' + c.total.toLocaleString('es-AR',{minimumFractionDigits:2}) : ''}</td>
+                        </tr>
+                    `);
+                });
+            });
+
+            cont.innerHTML = `
+                <div class="space-y-6">
+                    <div class="bg-white p-4 rounded-xl border flex justify-between items-center no-print shadow-sm">
+                        <div class="flex items-center space-x-4">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Libro:</span>
+                                <select onchange="libroIvaModo=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                                    <option value="COMPRA" ${libroIvaModo==='COMPRA'?'selected':''}>IVA COMPRAS</option>
+                                    <option value="VENTA" ${libroIvaModo==='VENTA'?'selected':''}>IVA VENTAS</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Mes:</span>
+                                <select onchange="filtroMesIva=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                                    <option value="01" ${filtroMesIva==='01'?'selected':''}>Enero</option>
+                                    <option value="02" ${filtroMesIva==='02'?'selected':''}>Febrero</option>
+                                    <option value="03" ${filtroMesIva==='03'?'selected':''}>Marzo</option>
+                                    <option value="04" ${filtroMesIva==='04'?'selected':''}>Abril</option>
+                                    <option value="05" ${filtroMesIva==='05'?'selected':''}>Mayo</option>
+                                    <option value="06" ${filtroMesIva==='06'?'selected':''}>Junio</option>
+                                    <option value="07" ${filtroMesIva==='07'?'selected':''}>Julio</option>
+                                    <option value="08" ${filtroMesIva==='08'?'selected':''}>Agosto</option>
+                                    <option value="09" ${filtroMesIva==='09'?'selected':''}>Septiembre</option>
+                                    <option value="10" ${filtroMesIva==='10'?'selected':''}>Octubre</option>
+                                    <option value="11" ${filtroMesIva==='11'?'selected':''}>Noviembre</option>
+                                    <option value="12" ${filtroMesIva==='12'?'selected':''}>Diciembre</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Año:</span>
+                                <input type="number" value="${filtroAnioIva}" onchange="filtroAnioIva=this.value; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold">
+                            </div>
+                            <div class="flex items-center space-x-2 border-l pl-4">
+                                <span class="text-xs font-bold text-gray-500 uppercase">N° Hoja:</span>
+                                <input type="number" value="${folioInicialIva}" onchange="folioInicialIva=parseInt(this.value)||1; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold text-blue-600">
+                            </div>
+                        </div>
+                        <button onclick="window.print()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 shadow">
+                            <i data-lucide="printer" class="w-4 h-4"></i><span>Imprimir / PDF Legal</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-6 border-b-2 border-gray-900 flex justify-between items-start">
+                        <div>
+                            <h1 class="text-lg font-black uppercase text-gray-900">${emp.razonSocial}</h1>
+                            <p class="text-xs text-gray-600">CUIT: ${emp.cuit} — Condición: ${emp.condicionIva}</p>
+                        </div>
+                        <div class="text-right">
+                            <h2 class="text-xl font-bold text-gray-900">Libro IVA ${libroIvaModo === 'COMPRA' ? 'Compras' : 'Ventas'}</h2>
+                            <p class="text-xs text-gray-600">Período: ${filtroMesIva}/${filtroAnioIva} | Hoja Nro: ${folioInicialIva}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border p-4">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="border-b font-bold text-gray-700 bg-gray-50 uppercase">
+                                    <th class="p-2">Fecha</th>
+                                    <th class="p-2">Comprobante</th>
+                                    <th class="p-2">Razón Social</th>
+                                    <th class="p-2">C.U.I.T.</th>
+                                    <th class="p-2 text-right">No Grav/Ex/No Alcanz.</th>
+                                    <th class="p-2 text-right">Neto Grav.</th>
+                                    <th class="p-2 text-right">Alícuota</th>
+                                    <th class="p-2 text-right">${libroIvaModo==='COMPRA'?'IVA CF Computable':'IVA DF Computable'}</th>
+                                    <th class="p-2 text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>${lineasTabla.join('') || `<tr><td colspan="9" class="text-center py-6 text-gray-400">Sin comprobantes para el período.</td></tr>`}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPlanCuentas(cont) {
+            const emp = obtenerEmpresaActual();
+            cont.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-2xl font-bold text-gray-800">Plan de Cuentas</h2>
+                        <div class="flex space-x-3">
+                            <input type="file" id="filePlan" accept=".csv,.txt" class="hidden" onchange="importarPlanCuentas(event)">
+                            <button onclick="document.getElementById('filePlan').click()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow">
+                                Importar Plan (CSV)
+                            </button>
+                            <button onclick="abrirModalCuenta()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow">
+                                + Nueva Cuenta
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl border overflow-hidden">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase">
+                                <tr>
+                                    <th class="p-3">Código</th>
+                                    <th class="p-3">Nombre</th>
+                                    <th class="p-3">Tipo</th>
+                                    <th class="p-3">Imputable</th>
+                                    <th class="p-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${emp.planCuentas.map(p => `
+                                    <tr class="${!p.imputable ? 'bg-gray-100 font-bold' : ''}">
+                                        <td class="p-3 font-mono">${p.codigo}</td>
+                                        <td class="p-3">${p.nombre}</td>
+                                        <td class="p-3">${p.tipo}</td>
+                                        <td class="p-3">${p.imputable ? 'SI' : 'NO'}</td>
+                                        <td class="p-3 text-center space-x-2">
+                                            <button onclick="abrirModalCuenta('${p.codigo}')" class="text-blue-600 hover:text-blue-800"><i data-lucide="edit-3" class="w-4 h-4 inline"></i></button>
+                                            <button onclick="eliminarCuenta('${p.codigo}')" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-4 h-4 inline"></i></button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function obtenerAsientosUnificadosOrdenados() {
+            const emp = obtenerEmpresaActual();
+            let lista = [];
+
+            emp.comprobantes.forEach(c => {
+                lista.push({ tipo: 'COMPRA_VENTA', fecha: c.fecha, comp: c });
+            });
+
+            (emp.asientosManuales || []).forEach(m => {
+                lista.push({ tipo: 'MANUAL', fecha: m.fecha, manual: m });
+            });
+
+            lista.sort((a, b) => a.fecha.localeCompare(b.fecha));
+            return lista;
+        }
+
+        function exportarLibroDiarioTxt() {
+            const emp = obtenerEmpresaActual();
+            const mapaCuentas = {};
+            emp.planCuentas.forEach(p => mapaCuentas[p.codigo] = p.nombre);
+            
+            const asientosOrdenados = obtenerAsientosUnificadosOrdenados().filter(item => {
+                return item.fecha >= diarioFechaDesde && item.fecha <= diarioFechaHasta;
+            });
+
+            let txt = `================================================================================\n`;
+            txt += `LIBRO DIARIO - ${emp.razonSocial}\n`;
+            txt += `CUIT: ${emp.cuit} | Período Desde: ${formatearFechaAr(diarioFechaDesde)} Hasta: ${formatearFechaAr(diarioFechaHasta)}\n`;
+            txt += `================================================================================\n\n`;
+
+            asientosOrdenados.forEach((item, i) => {
+                const nro = i + 1;
+                if (item.tipo === 'COMPRA_VENTA') {
+                    const c = item.comp;
+                    const codigoNeto = c.cuentaNeto || (c.tipoOp === 'VENTA' ? '4.1.01' : '5.1.01');
+                    const codigoIva = c.cuentaIva || (c.tipoOp === 'VENTA' ? '2.1.02' : '1.1.03');
+                    const codigoProvCliente = c.cuentaContrapartida || (c.tipoOp === 'VENTA' ? '1.1.04' : '2.1.01');
+
+                    txt += `Asiento N° ${nro} — Fecha: ${formatearFechaAr(c.fecha)}\n`;
+                    txt += `Ref: ${c.tipoNombre} ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} - ${c.razonSocial}\n`;
+                    txt += `--------------------------------------------------------------------------------\n`;
+
+                    if (c.tipoOp === 'VENTA') {
+                        txt += `  [DEBE]  ${codigoProvCliente} - ${mapaCuentas[codigoProvCliente] || ''}: $${c.total.toFixed(2)}\n`;
+                        if (c.netoTotal > 0) txt += `  [HABER] ${codigoNeto} - ${mapaCuentas[codigoNeto] || ''}: $${c.netoTotal.toFixed(2)}\n`;
+                        if (c.totalIva > 0) txt += `  [HABER] ${codigoIva} - ${mapaCuentas[codigoIva] || ''}: $${c.totalIva.toFixed(2)}\n`;
+                    } else {
+                        if (c.netoTotal > 0) txt += `  [DEBE]  ${codigoNeto} - ${mapaCuentas[codigoNeto] || ''}: $${c.netoTotal.toFixed(2)}\n`;
+                        if (c.totalIva > 0) txt += `  [DEBE]  ${codigoIva} - ${mapaCuentas[codigoIva] || ''}: $${c.totalIva.toFixed(2)}\n`;
+                        txt += `  [HABER] ${codigoProvCliente} - ${mapaCuentas[codigoProvCliente] || ''}: $${c.total.toFixed(2)}\n`;
+                    }
+                } else {
+                    const m = item.manual;
+                    txt += `Asiento Manual N° ${nro} — Fecha: ${formatearFechaAr(m.fecha)}\n`;
+                    txt += `Concepto: ${m.concepto}\n`;
+                    txt += `--------------------------------------------------------------------------------\n`;
+                    m.lineas.forEach(l => {
+                        const de = l.debe > 0 ? `[DEBE] ` : `[HABER]`;
+                        const imp = l.debe > 0 ? l.debe : l.haber;
+                        txt += `  ${de} ${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}: $${imp.toFixed(2)}\n`;
+                    });
+                }
+                txt += `--------------------------------------------------------------------------------\n\n`;
+            });
+
+            const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Libro_Diario_${emp.cuit}.txt`;
+            a.click();
+        }
+
+        // ==========================================
+        // VISTA: LIBRO DIARIO GENERAL
+        // ==========================================
+        function renderLibroDiario(cont) {
+            const emp = obtenerEmpresaActual();
+            const cuentasImputables = emp.planCuentas.filter(p => p.imputable);
+            const mapaCuentas = {};
+            emp.planCuentas.forEach(p => mapaCuentas[p.codigo] = p.nombre);
+
+            const asientosUnificados = obtenerAsientosUnificadosOrdenados().filter(item => {
+                return item.fecha >= diarioFechaDesde && item.fecha <= diarioFechaHasta;
+            });
+
+            let totDebeAcumulado = 0, totHaberAcumulado = 0;
+
+            let htmlAsientos = asientosUnificados.map((item, i) => {
+                const nroAsiento = i + 1;
+                let filasRenglon = '';
+
+                if (item.tipo === 'COMPRA_VENTA') {
+                    const c = item.comp;
+                    const codigoNeto = c.cuentaNeto || (c.tipoOp === 'VENTA' ? '4.1.01' : '5.1.01');
+                    const codigoIva = c.cuentaIva || (c.tipoOp === 'VENTA' ? '2.1.02' : '1.1.03');
+                    const codigoProvCliente = c.cuentaContrapartida || (c.tipoOp === 'VENTA' ? '1.1.04' : '2.1.01');
+
+                    const selectNeto = `<select onchange="actualizarCuentaAsiento(${c.id}, 'neto', this.value)" class="text-xs bg-white border border-gray-300 rounded px-1.5 py-0.5 font-semibold text-blue-900 no-print">${cuentasImputables.map(pc => `<option value="${pc.codigo}" ${codigoNeto===pc.codigo?'selected':''}>${pc.codigo} - ${pc.nombre}</option>`).join('')}</select><span class="hidden print:inline font-semibold">${codigoNeto} - ${mapaCuentas[codigoNeto]||''}</span>`;
+                    const selectIva = `<select onchange="actualizarCuentaAsiento(${c.id}, 'iva', this.value)" class="text-xs bg-white border border-gray-300 rounded px-1.5 py-0.5 font-semibold text-blue-900 no-print">${cuentasImputables.map(pc => `<option value="${pc.codigo}" ${codigoIva===pc.codigo?'selected':''}>${pc.codigo} - ${pc.nombre}</option>`).join('')}</select><span class="hidden print:inline font-semibold">${codigoIva} - ${mapaCuentas[codigoIva]||''}</span>`;
+                    const selectContrapartida = `<select onchange="actualizarCuentaAsiento(${c.id}, 'contrapartida', this.value)" class="text-xs bg-white border border-gray-300 rounded px-1.5 py-0.5 font-semibold text-blue-900 no-print">${cuentasImputables.map(pc => `<option value="${pc.codigo}" ${codigoProvCliente===pc.codigo?'selected':''}>${pc.codigo} - ${pc.nombre}</option>`).join('')}</select><span class="hidden print:inline font-semibold">${codigoProvCliente} - ${mapaCuentas[codigoProvCliente]||''}</span>`;
+
+                    if (c.tipoOp === 'VENTA') {
+                        totDebeAcumulado += c.total;
+                        totHaberAcumulado += (c.netoTotal + c.totalIva + c.exento + c.noGravado);
+
+                        filasRenglon = `
+                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectContrapartida}</td><td class="py-1.5 px-3 text-right font-bold">$ ${c.total.toLocaleString('es-AR',{minimumFractionDigits:2})}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>
+                            ${c.netoTotal > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-8 text-gray-700">${selectNeto}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium">$ ${c.netoTotal.toLocaleString('es-AR',{minimumFractionDigits:2})}</td></tr>` : ''}
+                            ${c.totalIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-8 text-gray-700">${selectIva}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium">$ ${c.totalIva.toLocaleString('es-AR',{minimumFractionDigits:2})}</td></tr>` : ''}
+                        `;
+                    } else {
+                        totDebeAcumulado += (c.netoTotal + c.totalIva + c.exento + c.noGravado);
+                        totHaberAcumulado += c.total;
+
+                        filasRenglon = `
+                            ${c.netoTotal > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectNeto}</td><td class="py-1.5 px-3 text-right font-medium">$ ${c.netoTotal.toLocaleString('es-AR',{minimumFractionDigits:2})}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
+                            ${c.totalIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectIva}</td><td class="py-1.5 px-3 text-right font-medium">$ ${c.totalIva.toLocaleString('es-AR',{minimumFractionDigits:2})}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
+                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-8 text-gray-700">${selectContrapartida}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-bold">$ ${c.total.toLocaleString('es-AR',{minimumFractionDigits:2})}</td></tr>
+                        `;
+                    }
+
+                    return `
+                        <div class="bg-white border rounded-xl overflow-hidden mb-4 asiento-card">
+                            <div class="bg-gray-50 border-b px-4 py-2 flex justify-between items-center text-xs">
+                                <span class="font-bold text-gray-900">ASIENTO N° ${nroAsiento} — ${formatearFechaAr(c.fecha)}</span>
+                                <span class="text-gray-600 font-mono">${c.tipoNombre} N° ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} | ${c.razonSocial}</span>
+                            </div>
+                            <table class="w-full text-xs text-left">
+                                <thead>
+                                    <tr class="border-b bg-gray-100 text-gray-500 font-bold uppercase">
+                                        <th class="py-1.5 px-3">Cuenta Contable</th>
+                                        <th class="py-1.5 px-3 text-right w-36">Debe</th>
+                                        <th class="py-1.5 px-3 text-right w-36">Haber</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${filasRenglon}</tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    const m = item.manual;
+                    m.lineas.forEach(l => {
+                        totDebeAcumulado += l.debe;
+                        totHaberAcumulado += l.haber;
+                    });
+
+                    filasRenglon = m.lineas.map(l => `
+                        <tr class="border-b border-gray-100">
+                            <td class="py-1.5 px-3 ${l.haber > 0 ? 'pl-8 text-gray-700' : 'font-semibold'}">${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}</td>
+                            <td class="py-1.5 px-3 text-right">${l.debe > 0 ? '$ ' + l.debe.toLocaleString('es-AR',{minimumFractionDigits:2}) : '-'}</td>
+                            <td class="py-1.5 px-3 text-right">${l.haber > 0 ? '$ ' + l.haber.toLocaleString('es-AR',{minimumFractionDigits:2}) : '-'}</td>
+                        </tr>
+                    `).join('');
+
+                    return `
+                        <div class="bg-white border rounded-xl overflow-hidden mb-4 asiento-card">
+                            <div class="bg-gray-50 border-b px-4 py-2 flex justify-between items-center text-xs">
+                                <span class="font-bold text-gray-900">ASIENTO N° ${nroAsiento} — ${formatearFechaAr(m.fecha)}</span>
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-gray-600 font-medium">${m.concepto}</span>
+                                    <button onclick="eliminarAsientoManual(${m.id})" class="text-red-500 hover:text-red-700 no-print"><i data-lucide="trash-2" class="w-4 h-4 inline"></i></button>
+                                </div>
+                            </div>
+                            <table class="w-full text-xs text-left">
+                                <thead>
+                                    <tr class="border-b bg-gray-100 text-gray-500 font-bold uppercase">
+                                        <th class="py-1.5 px-3">Cuenta Contable</th>
+                                        <th class="py-1.5 px-3 text-right w-36">Debe</th>
+                                        <th class="py-1.5 px-3 text-right w-36">Haber</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${filasRenglon}</tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            cont.innerHTML = `
+                <div class="space-y-6">
+                    <div class="bg-white p-4 rounded-xl border flex justify-between items-center no-print shadow-sm">
+                        <div class="flex items-center space-x-4">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Desde:</span>
+                                <input type="date" value="${diarioFechaDesde}" onchange="diarioFechaDesde=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Hasta:</span>
+                                <input type="date" value="${diarioFechaHasta}" onchange="diarioFechaHasta=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                            </div>
+                            <div class="flex items-center space-x-2 border-l pl-4">
+                                <span class="text-xs font-bold text-gray-500 uppercase">N° Hoja:</span>
+                                <input type="number" value="${folioInicialDiario}" onchange="folioInicialDiario=parseInt(this.value)||1; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold text-blue-600">
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="abrirModalAsientoManual()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
+                                <i data-lucide="plus" class="w-4 h-4"></i><span>+ Asiento Manual</span>
+                            </button>
+                            <button onclick="exportarLibroDiarioTxt()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
+                                <i data-lucide="download" class="w-4 h-4"></i><span>Exportar TXT</span>
+                            </button>
+                            <button onclick="window.print()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow flex items-center space-x-2">
+                                <i data-lucide="printer" class="w-4 h-4"></i><span>Imprimir / PDF Legal</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 border-b-2 border-gray-900 flex justify-between items-start">
+                        <div>
+                            <h1 class="text-lg font-black uppercase text-gray-900">${emp.razonSocial}</h1>
+                            <p class="text-xs text-gray-600">CUIT: ${emp.cuit} — Condición: ${emp.condicionIva}</p>
+                        </div>
+                        <div class="text-right">
+                            <h2 class="text-xl font-bold text-gray-900">Libro Diario General</h2>
+                            <p class="text-xs text-gray-600">Período Del: ${formatearFechaAr(diarioFechaDesde)} Al: ${formatearFechaAr(diarioFechaHasta)} | Hoja Nro: ${folioInicialDiario}</p>
+                        </div>
+                    </div>
+
+                    <div>${htmlAsientos || '<div class="bg-white p-8 rounded-xl border text-center text-gray-400">Sin asientos en el rango seleccionado.</div>'}</div>
+
+                    <div class="bg-white rounded-xl border p-4">
+                        <table class="w-full text-xs font-black">
+                            <tr class="border-t-2 border-gray-900 pt-2 text-gray-900">
+                                <td class="p-2 uppercase">TOTALES GENERALES ACUMULADOS DEL PERÍODO</td>
+                                <td class="p-2 text-right text-blue-900 w-36">$ ${totDebeAcumulado.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                                <td class="p-2 text-right text-blue-900 w-36">$ ${totHaberAcumulado.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // VISTA: BALANCE DE SUMAS Y SALDOS (4 COLUMNAS)
+        // ==========================================
+        function renderBalance(cont) {
+            const emp = obtenerEmpresaActual();
+            const compsFiltrados = emp.comprobantes.filter(c => c.fecha >= balanceFechaDesde && c.fecha <= balanceFechaHasta);
+            const manualesFiltrados = (emp.asientosManuales || []).filter(m => m.fecha >= balanceFechaDesde && m.fecha <= balanceFechaHasta);
+
+            const acumulador = {};
+            emp.planCuentas.forEach(p => {
+                if (p.imputable) {
+                    acumulador[p.codigo] = { codigo: p.codigo, nombre: p.nombre, debe: 0, haber: 0 };
+                }
+            });
+
+            compsFiltrados.forEach(c => {
+                const codigoNeto = c.cuentaNeto || (c.tipoOp === 'VENTA' ? '4.1.01' : '5.1.01');
+                const cuentaIvaCodigo = c.cuentaIva || (c.tipoOp === 'VENTA' ? '2.1.02' : '1.1.03');
+                const cuentaProvCliente = c.cuentaContrapartida || (c.tipoOp === 'VENTA' ? '1.1.04' : '2.1.01');
+                const montoNetoTotal = c.netoTotal + c.exento + c.noGravado;
+
+                if (c.tipoOp === 'COMPRA') {
+                    if (acumulador[codigoNeto]) acumulador[codigoNeto].debe += montoNetoTotal;
+                    if (c.totalIva > 0 && acumulador[cuentaIvaCodigo]) acumulador[cuentaIvaCodigo].debe += c.totalIva;
+                    if (acumulador[cuentaProvCliente]) acumulador[cuentaProvCliente].haber += c.total;
+                } else {
+                    if (acumulador[cuentaProvCliente]) acumulador[cuentaProvCliente].debe += c.total;
+                    if (acumulador[codigoNeto]) acumulador[codigoNeto].haber += montoNetoTotal;
+                    if (c.totalIva > 0 && acumulador[cuentaIvaCodigo]) acumulador[cuentaIvaCodigo].haber += c.totalIva;
+                }
+            });
+
+            manualesFiltrados.forEach(m => {
+                m.lineas.forEach(l => {
+                    if (acumulador[l.cuenta]) {
+                        acumulador[l.cuenta].debe += l.debe;
+                        acumulador[l.cuenta].haber += l.haber;
+                    }
+                });
+            });
+
+            let filasBalance = '';
+            let totalDebe = 0, totalHaber = 0, totalSaldoDeudor = 0, totalSaldoAcreedor = 0;
+
+            Object.values(acumulador).forEach(acc => {
+                if (acc.debe > 0 || acc.haber > 0) {
+                    const saldo = acc.debe - acc.haber;
+                    const saldoDeudor = saldo > 0 ? saldo : 0;
+                    const saldoAcreedor = saldo < 0 ? Math.abs(saldo) : 0;
+
+                    totalDebe += acc.debe;
+                    totalHaber += acc.haber;
+                    totalSaldoDeudor += saldoDeudor;
+                    totalSaldoAcreedor += saldoAcreedor;
+
+                    filasBalance += `
+                        <tr class="text-xs border-b hover:bg-gray-50">
+                            <td class="p-3 font-mono font-bold">${acc.codigo}</td>
+                            <td class="p-3">${acc.nombre}</td>
+                            <td class="p-3 text-right">$ ${acc.debe.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                            <td class="p-3 text-right">$ ${acc.haber.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                            <td class="p-3 text-right font-medium text-blue-800">$ ${saldoDeudor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                            <td class="p-3 text-right font-medium text-emerald-800">$ ${saldoAcreedor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            cont.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm no-print">
+                        <h2 class="text-xl font-bold text-gray-800">Balance de Sumas y Saldos</h2>
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Desde:</span>
+                            <input type="date" value="${balanceFechaDesde}" onchange="balanceFechaDesde=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Hasta:</span>
+                            <input type="date" value="${balanceFechaHasta}" onchange="balanceFechaHasta=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                            <button onclick="window.print()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2">
+                                <i data-lucide="printer" class="w-4 h-4"></i><span>Imprimir / PDF</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border overflow-hidden p-4">
+                        <div class="text-center pb-4 border-b mb-4">
+                            <h1 class="text-base font-black uppercase text-gray-900">${emp.razonSocial}</h1>
+                            <p class="text-xs text-gray-500">CUIT: ${emp.cuit} — Balance de Sumas y Saldos (Del ${formatearFechaAr(balanceFechaDesde)} al ${formatearFechaAr(balanceFechaHasta)})</p>
+                        </div>
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-gray-50 font-bold uppercase text-gray-600 border-b">
+                                <tr>
+                                    <th class="p-3">Código</th>
+                                    <th class="p-3">Cuenta Contable</th>
+                                    <th class="p-3 text-right">Débitos (Sumas)</th>
+                                    <th class="p-3 text-right">Créditos (Sumas)</th>
+                                    <th class="p-3 text-right">Saldo Deudor</th>
+                                    <th class="p-3 text-right">Saldo Acreedor</th>
+                                </tr>
+                            </thead>
+                            <tbody>${filasBalance || `<tr><td colspan="6" class="text-center py-6 text-gray-400">Sin movimientos en el rango de fechas.</td></tr>`}</tbody>
+                            <tfoot class="border-t-2 border-gray-900 font-bold bg-gray-50">
+                                <tr>
+                                    <td colspan="2" class="p-3 uppercase">Totales Generales:</td>
+                                    <td class="p-3 text-right">$ ${totalDebe.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                                    <td class="p-3 text-right">$ ${totalHaber.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                                    <td class="p-3 text-right text-blue-900">$ ${totalSaldoDeudor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                                    <td class="p-3 text-right text-emerald-900">$ ${totalSaldoAcreedor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // VISTA: MÓDULO IMPOSITIVO (DETERMINACIÓN IVA)
+        // ==========================================
+        function renderImpositivo(cont) {
+            const emp = obtenerEmpresaActual();
+
+            const retencionesPercepcionesFiltradas = (emp.retencionesPercepciones || []).filter(r => {
+                if (!r.fecha) return false;
+                const partes = r.fecha.split('-');
+                return (partes.length === 3 && partes[1] === impositivoMes && partes[0] === impositivoAnio);
+            });
+
+            const compsPeriodo = emp.comprobantes.filter(c => {
+                if (!c.fecha) return false;
+                const partes = c.fecha.split('-');
+                return (partes.length === 3 && partes[1] === impositivoMes && partes[0] === impositivoAnio);
+            });
+
+            let ivaDebitoPer = 0, ivaCreditoPer = 0;
+            compsPeriodo.forEach(c => {
+                if (c.tipoOp === 'VENTA') ivaDebitoPer += c.totalIva;
+                if (c.tipoOp === 'COMPRA') ivaCreditoPer += c.totalIva;
+            });
+
+            let retIvaPer = 0, percIvaPer = 0;
+            retencionesPercepcionesFiltradas.forEach(r => {
+                if (r.tipo === 'RETENCION') retIvaPer += r.importe;
+                if (r.tipo === 'PERCEPCION') percIvaPer += r.importe;
+            });
+
+            const saldoTecnicoNeto = (ivaDebitoPer - ivaCreditoPer) - saldoTecnicoAnt;
+            let saldoFinalPer = 0, etiquetaSaldoPer = "";
+
+            if (saldoTecnicoNeto > 0) {
+                saldoFinalPer = saldoTecnicoNeto - retIvaPer - percIvaPer - saldoLibreDispAnt;
+                if (saldoFinalPer >= 0) {
+                    etiquetaSaldoPer = "IVA A PAGAR";
+                } else {
+                    etiquetaSaldoPer = "SALDO DE LIBRE DISPONIBILIDAD";
+                    saldoFinalPer = Math.abs(saldoFinalPer);
+                }
+            } else {
+                saldoFinalPer = Math.abs(saldoTecnicoNeto) + retIvaPer + percIvaPer + saldoLibreDispAnt;
+                etiquetaSaldoPer = "SALDO A FAVOR / LIBRE DISPONIBILIDAD";
+            }
+
+            let listaRet = [...(emp.retencionesPercepciones || [])];
+            listaRet.sort((a, b) => {
+                let valA = a[ordenRetenciones.campo], valB = b[ordenRetenciones.campo];
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                return valA < valB ? (ordenRetenciones.asc ? -1 : 1) : (valA > valB ? (ordenRetenciones.asc ? 1 : -1) : 0);
+            });
+
+            let arrow = (campo) => ordenRetenciones.campo !== campo ? '' : (ordenRetenciones.asc ? ' ▲' : ' ▼');
+
+            let filas = listaRet.map(r => `
+                <tr class="hover:bg-gray-50 text-sm">
+                    <td class="px-3 py-3">${formatearFechaAr(r.fecha)}</td>
+                    <td class="px-3 py-3 font-bold ${r.tipo === 'RETENCION' ? 'text-blue-700' : 'text-purple-700'}">${r.tipo}</td>
+                    <td class="px-3 py-3 font-semibold">${r.impuesto}</td>
+                    <td class="px-3 py-3">${r.agente}</td>
+                    <td class="px-3 py-3 text-right font-bold">$ ${r.importe.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    <td class="px-3 py-3 text-center">
+                        <button onclick="eliminarRetencionPercepcion(${r.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+
+            cont.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">Módulo Impositivo - IVA</h2>
+                            <p class="text-xs text-gray-500">Liquidación mensual de IVA</p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="file" id="filePerc" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoPercepciones(event)">
+                            <button onclick="document.getElementById('filePerc').click()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
+                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Importar Percepciones</span>
+                            </button>
+                            <input type="file" id="fileRet" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoRetenciones(event)">
+                            <button onclick="document.getElementById('fileRet').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
+                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Importar Retenciones</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border shadow-sm p-6 space-y-4">
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <h3 class="text-sm font-bold text-gray-900 uppercase">Determinación de IVA por Período</h3>
+                            <div class="flex items-center space-x-3">
+                                <span class="text-xs font-bold text-gray-500">Mes:</span>
+                                <select onchange="impositivoMes=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                                    <option value="01" ${impositivoMes==='01'?'selected':''}>Enero</option>
+                                    <option value="02" ${impositivoMes==='02'?'selected':''}>Febrero</option>
+                                    <option value="03" ${impositivoMes==='03'?'selected':''}>Marzo</option>
+                                    <option value="04" ${impositivoMes==='04'?'selected':''}>Abril</option>
+                                    <option value="05" ${impositivoMes==='05'?'selected':''}>Mayo</option>
+                                    <option value="06" ${impositivoMes==='06'?'selected':''}>Junio</option>
+                                    <option value="07" ${impositivoMes==='07'?'selected':''}>Julio</option>
+                                    <option value="08" ${impositivoMes==='08'?'selected':''}>Agosto</option>
+                                    <option value="09" ${impositivoMes==='09'?'selected':''}>Septiembre</option>
+                                    <option value="10" ${impositivoMes==='10'?'selected':''}>Octubre</option>
+                                    <option value="11" ${impositivoMes==='11'?'selected':''}>Noviembre</option>
+                                    <option value="12" ${impositivoMes==='12'?'selected':''}>Diciembre</option>
+                                </select>
+                                <span class="text-xs font-bold text-gray-500">Año:</span>
+                                <input type="number" value="${impositivoAnio}" onchange="impositivoAnio=this.value; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 p-4 rounded-xl border border-blue-200">
+                            <div>
+                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Saldo Técnico a Favor Período Anterior ($)</label>
+                                <input type="number" step="0.01" value="${saldoTecnicoAnt}" onchange="saldoTecnicoAnt=parseFloat(this.value)||0; renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Saldo Libre Disponibilidad Período Ant. ($)</label>
+                                <input type="number" step="0.01" value="${saldoLibreDispAnt}" onchange="saldoLibreDispAnt=parseFloat(this.value)||0; renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm bg-gray-50 p-4 rounded-xl border">
+                            <div class="space-y-2">
+                                <div class="flex justify-between"><span>IVA Débito Fiscal:</span><span class="font-bold">$ ${ivaDebitoPer.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
+                                <div class="flex justify-between"><span>IVA Crédito Fiscal:</span><span class="font-bold text-red-600">- $ ${ivaCreditoPer.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
+                                <div class="flex justify-between border-b pb-1"><span>Saldo Técnico Anterior:</span><span class="font-bold text-red-600">- $ ${saldoTecnicoAnt.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
+                                <div class="flex justify-between pt-1"><span class="font-bold">Saldo Técnico Neto:</span><span class="font-bold">$ ${saldoTecnicoNeto.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex justify-between"><span>Retenciones:</span><span class="font-bold text-blue-700">$ ${retIvaPer.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
+                                <div class="flex justify-between"><span>Percepciones:</span><span class="font-bold text-purple-700">$ ${percIvaPer.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
+                                <div class="flex justify-between border-b pb-1"><span>Saldo Libre Disp. Anterior:</span><span class="font-bold text-red-600">$ ${saldoLibreDispAnt.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
+                                <div class="flex justify-between pt-1 font-black text-blue-900"><span>${etiquetaSaldoPer}:</span><span>$ ${saldoFinalPer.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border overflow-hidden">
+                        <div class="p-4 border-b bg-gray-50 font-bold text-sm text-gray-700">Listado de Retenciones y Percepciones Registradas</div>
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-xs text-gray-500 uppercase select-none">
+                                <tr>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarRetencionesPor('fecha')">FECHA${arrow('fecha')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarRetencionesPor('tipo')">TIPO${arrow('tipo')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarRetencionesPor('impuesto')">IMPUESTO${arrow('impuesto')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarRetencionesPor('agente')">AGENTE / DESCRIPCIÓN${arrow('agente')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarRetencionesPor('importe')">IMPORTE${arrow('importe')}</th>
+                                    <th class="p-3 text-center">ACCIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">${filas || `<tr><td colspan="6" class="text-center py-6 text-gray-400">No hay retenciones o percepciones importadas.</td></tr>`}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // VISTA: INGRESOS BRUTOS (IIBB) UNIFICADO
+        // ==========================================
+        function normalizarFechaImportacion(fechaRaw) {
+            if (!fechaRaw) return "";
+            if (typeof fechaRaw === 'number' && fechaRaw > 20000) {
+                const dateObj = new Date(Math.round((fechaRaw - 25569) * 86400 * 1000));
+                const y = dateObj.getUTCFullYear();
+                const m = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+                const d = String(dateObj.getUTCDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+            const str = fechaRaw.toString().trim().split(' ')[0];
+            if (str.includes('/')) {
+                const p = str.split('/');
+                if (p.length === 3) {
+                    const anio = p[2].length === 2 ? `20${p[2]}` : p[2];
+                    return `${anio}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+                }
+            }
+            if (str.includes('-')) {
+                const p = str.split('-');
+                if (p.length === 3 && p[0].length === 2) {
+                    return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+                }
+            }
+            return str;
+        }
+
+        function parsearImporteImportacion(val) {
+            if (val === null || val === undefined || val === '') return 0;
+            if (typeof val === 'number') return isNaN(val) ? 0 : val;
+            let s = val.toString().trim().replace(/[^0-9,.-]/g, '');
+            if (!s) return 0;
+            if (s.includes(',') && s.includes('.')) {
+                if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+                    s = s.replace(/\./g, '').replace(',', '.');
+                } else {
+                    s = s.replace(/,/g, '');
+                }
+            } else if (s.includes(',')) {
+                s = s.replace(',', '.');
+            }
+            const num = parseFloat(s);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function parsearXmlSpreadsheet2003(xmlText) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+            const worksheets = xmlDoc.getElementsByTagNameNS("*", "Worksheet");
+            const result = {};
+            for (let i = 0; i < worksheets.length; i++) {
+                const ws = worksheets[i];
+                const sheetName = ws.getAttribute("ss:Name") || ws.getAttribute("Name") || `Hoja_${i+1}`;
+                const rows = ws.getElementsByTagNameNS("*", "Row");
+                if (rows.length < 2) {
+                    result[sheetName] = [];
+                    continue;
+                }
+                const headers = [];
+                const headerCells = rows[0].getElementsByTagNameNS("*", "Cell");
+                let colIdx = 0;
+                for (let c = 0; c < headerCells.length; c++) {
+                    const idxAttr = headerCells[c].getAttribute("ss:Index");
+                    if (idxAttr) colIdx = parseInt(idxAttr, 10) - 1;
+                    const dataEl = headerCells[c].getElementsByTagNameNS("*", "Data")[0];
+                    headers[colIdx] = dataEl ? dataEl.textContent.trim() : `Col_${colIdx}`;
+                    colIdx++;
+                }
+                const sheetRows = [];
+                for (let r = 1; r < rows.length; r++) {
+                    const cells = rows[r].getElementsByTagNameNS("*", "Cell");
+                    const rowObj = {};
+                    let cIdx = 0;
+                    let hasValue = false;
+                    for (let c = 0; c < cells.length; c++) {
+                        const idxAttr = cells[c].getAttribute("ss:Index");
+                        if (idxAttr) cIdx = parseInt(idxAttr, 10) - 1;
+                        const dataEl = cells[c].getElementsByTagNameNS("*", "Data")[0];
+                        const val = dataEl ? dataEl.textContent.trim() : "";
+                        if (val !== "") hasValue = true;
+                        const hName = headers[cIdx] || `Col_${cIdx}`;
+                        rowObj[hName] = val;
+                        cIdx++;
+                    }
+                    if (hasValue) sheetRows.push(rowObj);
+                }
+                result[sheetName] = sheetRows;
+            }
+            return result;
+        }
+
+        function procesarArchivoIibbUnificado(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const emp = obtenerEmpresaActual();
+            const extension = file.name.split('.').pop().toLowerCase();
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    let agregados = 0;
+                    const hojasDetectadas = [];
+
+                    if (extension === 'csv') {
+                        const lines = evt.target.result.split(/\r\n|\n/);
+                        lines.forEach((line, idx) => {
+                            if (idx === 0 || !line.trim()) return;
+                            const c = line.split(';').map(s => s.replace(/"/g, '').trim());
+                            if (c.length >= 3) {
+                                const fecha = normalizarFechaImportacion(c[0]);
+                                const agente = c[1] || "Agente / Banco IIBB";
+                                const importe = parsearImporteImportacion(c[2] || c[3] || 0);
+                                const tipo = c[4] && c[4].toUpperCase().includes('BANC') ? 'RETENCION BANCARIA' : 'RETENCION';
+                                if (importe !== 0) {
+                                    emp.retencionesIibb.push({ id: Date.now() + agregados + Math.random(), fecha, tipo, agente, importe });
+                                    agregados++;
+                                }
+                            }
+                        });
+                    } else {
+                        const buffer = evt.target.result;
+                        const textPreview = new TextDecoder("utf-8").decode(new Uint8Array(buffer.slice(0, 500)));
+                        let sheetsMap = {};
+
+                        if (textPreview.includes("<?xml") && textPreview.includes("schemas-microsoft-com:office:spreadsheet")) {
+                            const fullXml = new TextDecoder("utf-8").decode(new Uint8Array(buffer));
+                            sheetsMap = parsearXmlSpreadsheet2003(fullXml);
+                        } else {
+                            const data = new Uint8Array(buffer);
+                            const workbook = XLSX.read(data, {type: 'array'});
+                            workbook.SheetNames.forEach(sn => {
+                                sheetsMap[sn] = XLSX.utils.sheet_to_json(workbook.Sheets[sn], {defval: ""});
+                            });
+                        }
+
+                        Object.keys(sheetsMap).forEach(sheetName => {
+                            const json = sheetsMap[sheetName] || [];
+                            const sheetUpper = sheetName.toUpperCase();
+                            let countHoja = 0;
+
+                            json.forEach((row) => {
+                                let tipo = "RETENCION";
+                                if (sheetUpper.includes('DEVOLUC')) {
+                                    tipo = "DEVOLUCION BANCARIA";
+                                } else if (sheetUpper.includes('PERCEP')) {
+                                    tipo = "PERCEPCION";
+                                } else if (sheetUpper.includes('BANC')) {
+                                    tipo = "RETENCION BANCARIA";
+                                }
+
+                                let fechaRaw = row['Fecha'] ||
+                                    row['Fecha Ret./Perc.'] ||
+                                    row['Fecha Retencion'] ||
+                                    row['Fecha Retencion contrib.'] ||
+                                    row['Fecha Retencion agente'] ||
+                                    row['Fecha Percepcion contrib.'] ||
+                                    row['Fecha Percepcion Agente'] ||
+                                    row['Fecha depacho'] ||
+                                    row['Fecha despacho'] ||
+                                    "";
+
+                                if (!fechaRaw) {
+                                    for (let key in row) {
+                                        if (key.toLowerCase().includes('fecha') && row[key]) {
+                                            fechaRaw = row[key];
+                                            break;
+                                        }
+                                    }
+                                }
+                                const fecha = normalizarFechaImportacion(fechaRaw) || `${iibbAnio}-${iibbMes}-01`;
+
+                                let rawImporte = row['Importe'] ||
+                                    row['Importe Ret./Perc.'] ||
+                                    row['Importe contrib.'] ||
+                                    row['Importe percepcion agente'] ||
+                                    row['Importe retencion contrib.'] ||
+                                    row['Importe retencion agente'] ||
+                                    row['Importe devolucion contrib.'] ||
+                                    row['Importe devolucion agente'] ||
+                                    "";
+
+                                if (rawImporte === "" || rawImporte === null || rawImporte === undefined) {
+                                    for (let key in row) {
+                                        if (key.toLowerCase().includes('importe') && row[key] !== "") {
+                                            rawImporte = row[key];
+                                            break;
+                                        }
+                                    }
+                                }
+                                let importe = parsearImporteImportacion(rawImporte);
+
+                                if (importe !== 0 && tipo === "DEVOLUCION BANCARIA") {
+                                    importe = -Math.abs(importe);
+                                }
+
+                                let agente = (row['Agente'] ||
+                                    row['CUIT Agente Ret./Perc.'] ||
+                                    row['CUIT Agente'] ||
+                                    row['CUIT Banco'] ||
+                                    row['CUIT'] ||
+                                    row['Despacho'] ||
+                                    "Agente / CBU IIBB").toString().trim();
+
+                                if (row['CBU']) {
+                                    agente = `${agente} (CBU ${row['CBU']})`;
+                                } else if (row['Sucursal'] && row['Emision']) {
+                                    agente = `${agente} (Comp. ${row['Sucursal']}-${row['Emision']})`;
+                                }
+
+                                if (importe !== 0) {
+                                    emp.retencionesIibb.push({ id: Date.now() + agregados + Math.random(), fecha, tipo, agente, importe });
+                                    agregados++;
+                                    countHoja++;
+                                }
+                            });
+
+                            if (countHoja > 0) {
+                                hojasDetectadas.push(`${sheetName}: ${countHoja}`);
+                            }
+                        });
+                    }
+                    e.target.value = '';
+                    guardarEnLocalStorage();
+                    renderizarVista();
+                    const detalleHojas = hojasDetectadas.length ? `\nDetalle: ${hojasDetectadas.join(' | ')}` : '';
+                    alert(`Empresa: ${emp.razonSocial}\n¡Se importaron ${agregados} registros unificados de IIBB correctamente!${detalleHojas}`);
+                } catch (err) {
+                    console.error("Error al procesar archivo IIBB:", err);
+                    alert("Error al leer el archivo de Ingresos Brutos: " + err.message);
+                }
+            };
+            if (extension === 'csv') reader.readAsText(file, 'utf-8');
+            else reader.readAsArrayBuffer(file);
+        }
+
+        function eliminarRetencionIibb(id) {
+            const emp = obtenerEmpresaActual();
+            emp.retencionesIibb = emp.retencionesIibb.filter(r => r.id !== id);
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function ordenarIibbRetPor(campo) {
+            if (ordenIibbRet.campo === campo) { ordenIibbRet.asc = !ordenIibbRet.asc; }
+            else { ordenIibbRet.campo = campo; ordenIibbRet.asc = true; }
+            renderizarVista();
+        }
+
+        function renderIngresosBrutos(cont) {
+            const emp = obtenerEmpresaActual();
+
+            const ventasPeriodo = emp.comprobantes.filter(c => {
+                if (c.tipoOp !== 'VENTA' || !c.fecha) return false;
+                const partes = c.fecha.split('-');
+                return (partes.length === 3 && partes[1] === iibbMes && partes[0] === iibbAnio);
+            });
+
+            let baseImponibleTotalVentas = 0;
+            ventasPeriodo.forEach(c => {
+                baseImponibleTotalVentas += (c.netoTotal + c.exento + c.noGravado);
+            });
+
+            let baseImponibleJurisdiccion = baseImponibleTotalVentas;
+            if (emp.iibbRegimen === 'CONVENIO') {
+                baseImponibleJurisdiccion = baseImponibleTotalVentas * emp.iibbCoeficiente;
+            }
+
+            const impuestoDeterminado = baseImponibleJurisdiccion * (emp.iibbAlicuota / 100);
+
+            const retPercIibbPeriodo = (emp.retencionesIibb || []).filter(r => {
+                if (!r.fecha) return false;
+                const partes = r.fecha.split('-');
+                return (partes.length === 3 && partes[1] === iibbMes && partes[0] === iibbAnio);
+            });
+
+            let totalRetencionesIibb = 0;
+            let totalPercepcionesIibb = 0;
+            let totalBancariasIibb = 0;
+
+            retPercIibbPeriodo.forEach(r => {
+                if (r.tipo === 'RETENCION') totalRetencionesIibb += r.importe;
+                else if (r.tipo === 'PERCEPCION') totalPercepcionesIibb += r.importe;
+                else if (r.tipo === 'RETENCION BANCARIA' || r.tipo === 'DEVOLUCION BANCARIA') totalBancariasIibb += r.importe;
+            });
+
+            const totalDeducciones = totalRetencionesIibb + totalPercepcionesIibb + totalBancariasIibb + emp.iibbSaldoAnt;
+            const resultadoLiquidacion = impuestoDeterminado - totalDeducciones;
+
+            let etiquetaSaldoIibb = "";
+            let montoResultadoAbs = Math.abs(resultadoLiquidacion);
+
+            if (resultadoLiquidacion >= 0) {
+                etiquetaSaldoIibb = "IMPUESTO A PAGAR (IIBB)";
+            } else {
+                etiquetaSaldoIibb = "SALDO A FAVOR REGISTRADO";
+            }
+
+            let listaRetIibb = [...(emp.retencionesIibb || [])];
+            listaRetIibb.sort((a, b) => {
+                let valA = a[ordenIibbRet.campo], valB = b[ordenIibbRet.campo];
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                return valA < valB ? (ordenIibbRet.asc ? -1 : 1) : (valA > valB ? (ordenIibbRet.asc ? 1 : -1) : 0);
+            });
+            let arrowIibb = (campo) => ordenIibbRet.campo !== campo ? '' : (ordenIibbRet.asc ? ' ▲' : ' ▼');
+
+            let filasRetIibb = listaRetIibb.map(r => `
+                <tr class="hover:bg-gray-50 text-sm">
+                    <td class="px-3 py-3">${formatearFechaAr(r.fecha)}</td>
+                    <td class="px-3 py-3 font-bold ${r.tipo === 'RETENCION' ? 'text-blue-700' : (r.tipo === 'PERCEPCION' ? 'text-purple-700' : 'text-emerald-700')}">${r.tipo}</td>
+                    <td class="px-3 py-3">${r.agente}</td>
+                    <td class="px-3 py-3 text-right font-bold">$ ${r.importe.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+                    <td class="px-3 py-3 text-center">
+                        <button onclick="eliminarRetencionIibb(${r.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+
+            cont.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">Módulo Impositivo - Ingresos Brutos (IIBB)</h2>
+                            <p class="text-xs text-gray-500">Determinación de IIBB para Contribuyentes Locales y Convenio Multilateral</p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <input type="file" id="fileIibbUnico" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoIibbUnificado(event)">
+                            <button onclick="document.getElementById('fileIibbUnico').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
+                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Importar Archivo Unificado (Ret./Perc./Bancarias)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border shadow-sm p-6 space-y-6">
+                        <div class="flex justify-between items-center border-b pb-4">
+                            <div class="flex items-center space-x-4">
+                                <div>
+                                    <span class="block text-xs font-bold text-gray-500 uppercase">Régimen Contribuyente:</span>
+                                    <select onchange="obtenerEmpresaActual().iibbRegimen=this.value; guardarInmediato();" class="text-xs border border-gray-300 bg-gray-50 rounded-lg p-2 font-bold text-gray-800">
+                                        <option value="LOCAL" ${emp.iibbRegimen==='LOCAL'?'selected':''}>Local (Directo)</option>
+                                        <option value="CONVENIO" ${emp.iibbRegimen==='CONVENIO'?'selected':''}>Convenio Multilateral</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center space-x-3">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Mes:</span>
+                                <select onchange="iibbMes=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                                    <option value="01" ${iibbMes==='01'?'selected':''}>Enero</option>
+                                    <option value="02" ${iibbMes==='02'?'selected':''}>Febrero</option>
+                                    <option value="03" ${iibbMes==='03'?'selected':''}>Marzo</option>
+                                    <option value="04" ${iibbMes==='04'?'selected':''}>Abril</option>
+                                    <option value="05" ${iibbMes==='05'?'selected':''}>Mayo</option>
+                                    <option value="06" ${iibbMes==='06'?'selected':''}>Junio</option>
+                                    <option value="07" ${iibbMes==='07'?'selected':''}>Julio</option>
+                                    <option value="08" ${iibbMes==='08'?'selected':''}>Agosto</option>
+                                    <option value="09" ${iibbMes==='09'?'selected':''}>Septiembre</option>
+                                    <option value="10" ${iibbMes==='10'?'selected':''}>Octubre</option>
+                                    <option value="11" ${iibbMes==='11'?'selected':''}>Noviembre</option>
+                                    <option value="12" ${iibbMes==='12'?'selected':''}>Diciembre</option>
+                                </select>
+                                <span class="text-xs font-bold text-gray-500 uppercase">Año:</span>
+                                <input type="number" value="${iibbAnio}" onchange="iibbAnio=this.value; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-xl border">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Ventas Totales Netas (Período)</label>
+                                <div class="w-full bg-white border border-gray-300 rounded p-2 text-sm font-black text-gray-900">$ ${baseImponibleTotalVentas.toLocaleString('es-AR', {minimumFractionDigits:2})}</div>
+                            </div>
+                            ${emp.iibbRegimen === 'CONVENIO' ? `
+                            <div>
+                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Coeficiente Unificado (Jurisdicción)</label>
+                                <input type="number" step="0.0001" min="0" max="1" value="${emp.iibbCoeficiente}" onchange="obtenerEmpresaActual().iibbCoeficiente=parseFloat(this.value)||0; guardarInmediato();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white">
+                            </div>
+                            ` : ''}
+                            <div>
+                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Alícuota de la Actividad (%)</label>
+                                <input type="number" step="0.01" value="${emp.iibbAlicuota}" onchange="obtenerEmpresaActual().iibbAlicuota=parseFloat(this.value)||0; guardarInmediato();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white" placeholder="Ej: 3.5">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-2">Base Imponible e Impuesto Determinado</h4>
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">Base Imponible Total:</span>
+                                    <span class="font-bold text-gray-900">$ ${baseImponibleTotalVentas.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                                ${emp.iibbRegimen === 'CONVENIO' ? `
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">Coeficiente Aplicado:</span>
+                                    <span class="font-bold text-blue-700">${(emp.iibbCoeficiente * 100).toFixed(2)}% (${emp.iibbCoeficiente})</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">Base Imponible Jurisdiccional:</span>
+                                    <span class="font-bold text-blue-900">$ ${baseImponibleJurisdiccion.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                                ` : ''}
+                                <div class="flex justify-between text-sm border-t pt-2">
+                                    <span class="font-bold text-gray-900 uppercase">Impuesto Determinado (${emp.iibbAlicuota}%):</span>
+                                    <span class="font-black text-blue-900">$ ${impuestoDeterminado.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-2">Deducciones y Saldo Anterior</h4>
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">Retenciones IIBB:</span>
+                                    <span class="font-bold text-blue-700">$ ${totalRetencionesIibb.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">Percepciones IIBB:</span>
+                                    <span class="font-bold text-purple-700">$ ${totalPercepcionesIibb.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="font-semibold text-gray-700">Retenciones Bancarias:</span>
+                                    <span class="font-bold text-emerald-700">$ ${totalBancariasIibb.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm border-b pb-2">
+                                    <span class="font-semibold text-gray-700">Saldo a Favor Período Anterior ($):</span>
+                                    <input type="number" step="0.01" value="${emp.iibbSaldoAnt}" onchange="obtenerEmpresaActual().iibbSaldoAnt=parseFloat(this.value)||0; guardarInmediato();" class="w-32 text-right border rounded p-1 font-bold text-red-600 bg-white">
+                                </div>
+                                <div class="flex justify-between text-sm pt-1">
+                                    <span class="font-bold uppercase text-gray-900">Total Deducciones:</span>
+                                    <span class="font-bold text-emerald-700">$ ${totalDeducciones.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center shadow">
+                            <div>
+                                <p class="text-xs text-slate-400 uppercase font-semibold">Resultado Liquidación Ingresos Brutos (${emp.iibbRegimen})</p>
+                                <h4 class="text-lg font-black tracking-wider ${resultadoLiquidacion >= 0 ? 'text-amber-400' : 'text-emerald-400'}">${etiquetaSaldoIibb}</h4>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-2xl font-black">$ ${montoResultadoAbs.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border overflow-hidden">
+                        <div class="p-4 border-b bg-gray-50 font-bold text-sm text-gray-700">Listado de Retenciones, Percepciones y Retenciones Bancarias de IIBB</div>
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-xs text-gray-500 uppercase select-none">
+                                <tr>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('fecha')">FECHA${arrowIibb('fecha')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('tipo')">TIPO${arrowIibb('tipo')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('agente')">AGENTE / BANCO${arrowIibb('agente')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarIibbRetPor('importe')">IMPORTE${arrowIibb('importe')}</th>
+                                    <th class="p-3 text-center">ACCIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">${filasRetIibb || `<tr><td colspan="5" class="text-center py-6 text-gray-400">No hay registros de IIBB importados.</td></tr>`}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function guardarInmediato() {
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+    </script>
+</body>
+</html>

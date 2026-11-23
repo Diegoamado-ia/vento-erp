@@ -22,6 +22,20 @@
     <script src="https://accounts.google.com/gsi/client" async defer onload="inicializarGoogleGIS()"></script>
 
     <style>
+        .num-row {
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        @media (max-width: 640px) {
+            .mobile-compact-table th, .mobile-compact-table td {
+                padding-left: 0.45rem !important;
+                padding-right: 0.45rem !important;
+                font-size: 11px !important;
+            }
+            .mobile-kpi-val {
+                font-size: 1.05rem !important;
+            }
+        }
         @media print {
             aside, header, button, .no-print { display: none !important; }
             body { background: white !important; color: black !important; padding: 0 !important; margin: 0 !important; }
@@ -32,140 +46,156 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 font-sans antialiased">
+<body class="bg-gray-100 font-sans antialiased text-gray-800">
 
     <!-- CONTENEDOR PRINCIPAL -->
     <div class="flex h-screen overflow-hidden">
         
         <!-- SIDEBAR DE NAVEGACIÓN -->
-        <aside id="sidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-20 transition-all duration-300 overflow-hidden shrink-0">
-            <div class="p-5 border-b border-slate-800 flex items-center space-x-3 whitespace-nowrap">
-                <div class="bg-blue-600 text-white p-2 rounded-lg">
-                    <i data-lucide="calculator" class="w-6 h-6"></i>
+        <aside id="sidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-30 transition-all duration-300 overflow-hidden shrink-0">
+            <div class="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between whitespace-nowrap">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-blue-600 text-white p-2 rounded-lg">
+                        <i data-lucide="calculator" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-white text-sm sm:text-base">VENTO ERP</h1>
+                        <p class="text-[11px] text-slate-400">Gestión & Contabilidad Cloud</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 class="font-bold text-white text-base">VENTO ERP</h1>
-                    <p class="text-xs text-slate-400">Gestión & Contabilidad Cloud</p>
-                </div>
+                <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
             </div>
 
-            <nav class="flex-1 p-4 space-y-1 overflow-y-auto whitespace-nowrap">
-                <a href="#" onclick="cambiarVista('dashboard')" id="nav-dashboard" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white transition">
-                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+            <nav class="flex-1 p-3 sm:p-4 space-y-1 overflow-y-auto whitespace-nowrap">
+                <a href="#" onclick="cambiarVista('dashboard')" id="nav-dashboard" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-blue-600 text-white transition">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     <span>Dashboard General</span>
                 </a>
                 
-                <div class="pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Gestión</div>
-                <a href="#" onclick="cambiarVista('importacion')" id="nav-importacion" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                <div class="pt-4 pb-1 text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Gestión</div>
+                <a href="#" onclick="cambiarVista('importacion')" id="nav-importacion" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     <span>Mis Comprobantes ARCA</span>
                 </a>
-                <a href="#" onclick="cambiarVista('comprobantes')" id="nav-comprobantes" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="receipt" class="w-5 h-5"></i>
+                <a href="#" onclick="cambiarVista('comprobantes')" id="nav-comprobantes" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="receipt" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     <span>Gestión Comprobantes</span>
                 </a>
-                <a href="#" onclick="cambiarVista('libro-iva')" id="nav-libro-iva" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="book-open-check" class="w-5 h-5"></i>
+                <a href="#" onclick="cambiarVista('libro-iva')" id="nav-libro-iva" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="book-open-check" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     <span>Libros IVA</span>
                 </a>
 
-                <div class="pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Contabilidad</div>
-                <a href="#" onclick="cambiarVista('plan-cuentas')" id="nav-plan-cuentas" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="folder-tree" class="w-5 h-5"></i>
+                <div class="pt-4 pb-1 text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Contabilidad</div>
+                <a href="#" onclick="cambiarVista('plan-cuentas')" id="nav-plan-cuentas" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="folder-tree" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     <span>Plan de Cuentas</span>
                 </a>
-                <a href="#" onclick="cambiarVista('libro-diario')" id="nav-libro-diario" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="book" class="w-5 h-5"></i>
+                <a href="#" onclick="cambiarVista('libro-diario')" id="nav-libro-diario" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="book" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     <span>Libro Diario</span>
                 </a>
-                <a href="#" onclick="cambiarVista('balance')" id="nav-balance" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="scale" class="w-5 h-5"></i>
+                <a href="#" onclick="cambiarVista('balance')" id="nav-balance" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="scale" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     <span>Balance Sumas y Saldos</span>
                 </a>
 
                 <!-- MÓDULO IMPOSITIVO -->
-                <div class="pt-4 pb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Impositivo</div>
-                <a href="#" onclick="cambiarVista('impositivo')" id="nav-impositivo" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                <div class="pt-4 pb-1 text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider px-3">Módulo Impositivo</div>
+                <a href="#" onclick="cambiarVista('impositivo')" id="nav-impositivo" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="shield-check" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     <span>IVA</span>
                 </a>
-                <a href="#" onclick="cambiarVista('ingresos-brutos')" id="nav-ingresos-brutos" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition">
-                    <i data-lucide="landmark" class="w-5 h-5"></i>
+                <a href="#" onclick="cambiarVista('ingresos-brutos')" id="nav-ingresos-brutos" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="landmark" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     <span>Ingresos Brutos</span>
+                </a>
+                <a href="#" onclick="cambiarVista('ganancias')" id="nav-ganancias" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-800 hover:text-white transition">
+                    <i data-lucide="percent" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                    <span>Impuesto a las Ganancias</span>
                 </a>
             </nav>
 
-            <div class="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
+            <div class="p-3 sm:p-4 border-t border-slate-800 text-[11px] text-slate-500 text-center">
                 Sincronización Cloud con Google Drive
             </div>
         </aside>
 
         <!-- CONTENIDO PRINCIPAL -->
-        <main class="flex-1 flex flex-col overflow-hidden">
-            <header class="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 shadow-sm z-10 no-print">
-                <div class="flex items-center space-x-4">
+        <main class="flex-1 flex flex-col overflow-hidden min-w-0">
+            <header class="bg-white border-b border-gray-200 min-h-[3.5rem] py-2 flex flex-wrap items-center justify-between px-3 sm:px-6 gap-2 shadow-sm z-10 no-print">
+                <div class="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                     <button onclick="toggleSidebar()" title="Mostrar / Ocultar menú" class="p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition focus:outline-none shrink-0">
                         <i data-lucide="menu" class="w-5 h-5"></i>
                     </button>
-                    <span class="text-sm font-semibold text-gray-500">Empresa Activa:</span>
-                    <select id="selectEmpresa" onchange="seleccionarEmpresa(this.value)" class="bg-gray-50 border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 font-medium">
+                    <span class="hidden lg:inline text-xs font-semibold text-gray-500 whitespace-nowrap">Empresa:</span>
+                    <select id="selectEmpresa" onchange="seleccionarEmpresa(this.value)" class="bg-gray-50 border border-gray-300 text-gray-800 text-xs sm:text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 sm:p-2 font-medium truncate max-w-[170px] sm:max-w-xs md:max-w-md">
                     </select>
-                    <button onclick="abrirModalEmpresa()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
-                        <i data-lucide="plus" class="w-4 h-4"></i>
-                        <span>Nueva Empresa</span>
+                    <button onclick="abrirModalEmpresa()" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1 shrink-0">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Nueva Empresa</span>
                     </button>
                 </div>
                 
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
                     <!-- BACKUP LOCAL JSON -->
                     <input type="file" id="fileBackupJson" accept=".json" class="hidden" onchange="importarBackupJson(event)">
-                    <button onclick="exportarBackupJson()" title="Descargar copia de seguridad JSON" class="bg-slate-700 hover:bg-slate-800 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
+                    <button onclick="exportarBackupJson()" title="Descargar copia de seguridad JSON" class="bg-slate-700 hover:bg-slate-800 text-white px-2 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
                         <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                        <span>Backup</span>
+                        <span class="hidden md:inline">Backup</span>
                     </button>
-                    <button onclick="document.getElementById('fileBackupJson').click()" title="Restaurar copia de seguridad JSON" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
+                    <button onclick="document.getElementById('fileBackupJson').click()" title="Restaurar copia de seguridad JSON" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-2 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
                         <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-                        <span>Restaurar</span>
+                        <span class="hidden md:inline">Restaurar</span>
                     </button>
 
                     <!-- BOTÓN CONEXIÓN GOOGLE DRIVE -->
-                    <button id="btnGoogleAuth" onclick="conectarGoogleDrive()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition flex items-center space-x-1.5">
-                        <i data-lucide="cloud" class="w-4 h-4"></i>
-                        <span id="txtGoogleAuth">Conectar Drive</span>
+                    <button id="btnGoogleAuth" onclick="conectarGoogleDrive()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm transition flex items-center space-x-1">
+                        <i data-lucide="cloud" class="w-3.5 h-3.5"></i>
+                        <span id="txtGoogleAuth" class="hidden sm:inline">Drive</span>
                     </button>
 
-                    <div class="text-right border-l pl-3">
-                        <p class="text-sm font-bold text-gray-800" id="headerRazonSocial">CARGANDO...</p>
-                        <p class="text-xs text-gray-500" id="headerCuit">CUIT: ---</p>
+                    <div class="hidden xl:block text-right border-l pl-3">
+                        <p class="text-xs font-bold text-gray-800 truncate max-w-[180px]" id="headerRazonSocial">CARGANDO...</p>
+                        <p class="text-[11px] text-gray-500 num-row" id="headerCuit">CUIT: ---</p>
                     </div>
-                    <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold" id="headerInicia">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0" id="headerInicia">
                         ERP
                     </div>
                 </div>
             </header>
 
-            <div class="flex-1 overflow-y-auto p-6 print-area" id="contenedorVistas">
+            <div class="flex-1 overflow-y-auto p-3 sm:p-6 print-area" id="contenedorVistas">
             </div>
         </main>
     </div>
 
     <!-- MODAL NUEVA EMPRESA -->
-    <div id="modalNuevaEmpresa" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+    <div id="modalNuevaEmpresa" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-5 sm:p-6">
             <div class="flex justify-between items-center mb-4 border-b pb-3">
-                <h3 class="text-lg font-bold text-gray-800">Nueva Empresa</h3>
-                <button onclick="cerrarModalEmpresa()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+                <h3 class="text-base sm:text-lg font-bold text-gray-800">Nueva Empresa / Contribuyente</h3>
+                <button onclick="cerrarModalEmpresa()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
             </div>
             <form id="formNuevaEmpresa" onsubmit="registrarEmpresaDesdeForm(event)">
-                <div class="mb-4">
-                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Razón Social</label>
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Razón Social / Apellido y Nombre</label>
                     <input type="text" id="nuevaRazonSocial" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="SUCESION DE BARBERO ARMANDO LUIS">
                 </div>
-                <div class="mb-4">
+                <div class="mb-3">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Tipo de Sujeto (Ganancias)</label>
+                    <select id="nuevoTipoSujeto" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-semibold">
+                        <option value="PH">Persona Humana / Sucesión Indivisa (PH)</option>
+                        <option value="PJ">Persona Jurídica / Sociedad (PJ - Art. 73)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
                     <label class="block text-xs font-bold text-gray-600 uppercase mb-1">CUIT (11 dígitos sin guiones)</label>
                     <input type="text" id="nuevoCuit" required maxlength="11" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="20054059354">
                 </div>
-                <div class="mb-6">
+                <div class="mb-5">
                     <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Condición Frente al IVA</label>
                     <select id="nuevaCondicionIva" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
                         <option value="Responsable Inscripto">Responsable Inscripto</option>
@@ -182,11 +212,11 @@
     </div>
 
     <!-- MODAL AGREGAR CUENTA CONTABLE -->
-    <div id="modalNuevaCuenta" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+    <div id="modalNuevaCuenta" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-5 sm:p-6">
             <div class="flex justify-between items-center mb-4 border-b pb-3">
-                <h3 class="text-lg font-bold text-gray-800" id="modalCuentaTitulo">Agregar Cuenta Contable</h3>
-                <button onclick="cerrarModalCuenta()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+                <h3 class="text-base sm:text-lg font-bold text-gray-800" id="modalCuentaTitulo">Agregar Cuenta Contable</h3>
+                <button onclick="cerrarModalCuenta()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
             </div>
             <form id="formNuevaCuenta" onsubmit="guardarCuentaContable(event)">
                 <input type="hidden" id="editandoCodigo" value="">
@@ -223,14 +253,14 @@
     </div>
 
     <!-- MODAL NUEVO ASIENTO MANUAL -->
-    <div id="modalAsientoManual" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
+    <div id="modalAsientoManual" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl p-5 sm:p-6 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4 border-b pb-3">
-                <h3 class="text-lg font-bold text-gray-800">Registrar Asiento Manual</h3>
-                <button onclick="cerrarModalAsientoManual()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+                <h3 class="text-base sm:text-lg font-bold text-gray-800">Registrar Asiento Manual</h3>
+                <button onclick="cerrarModalAsientoManual()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
             </div>
             <form id="formAsientoManual" onsubmit="guardarAsientoManual(event)" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Fecha</label>
                         <input type="date" id="manualFecha" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" value="2026-10-31">
@@ -250,8 +280,8 @@
                     </div>
                 </div>
 
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border font-bold text-xs">
-                    <span id="totalesAsientoManualCheck">Total Debe: $0,00 | Total Haber: $0,00</span>
+                <div class="flex flex-wrap justify-between items-center bg-gray-50 p-3 rounded-lg border font-bold text-xs gap-2">
+                    <span id="totalesAsientoManualCheck" class="num-row">Total Debe: $0,00 | Total Haber: $0,00</span>
                     <span id="balanceEstadoCheck" class="text-emerald-600">Balanceado</span>
                 </div>
 
@@ -279,8 +309,8 @@
                     callback: (tokenResponse) => {
                         if (tokenResponse && tokenResponse.access_token) {
                             accessToken = tokenResponse.access_token;
-                            document.getElementById('txtGoogleAuth').textContent = "Drive Conectado ✓";
-                            document.getElementById('btnGoogleAuth').className = "bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center space-x-1.5";
+                            document.getElementById('txtGoogleAuth').textContent = "Drive ✓";
+                            document.getElementById('btnGoogleAuth').className = "bg-blue-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center space-x-1";
                             sincronizarConDrive();
                         }
                     },
@@ -432,13 +462,128 @@
             331: "LIQ SEC GRANOS", 332: "CERT ELEC GRANOS"
         };
 
+        // ==========================================
+        // PARÁMETROS OFICIALES ARCA - IMPUESTO A LAS GANANCIAS
+        // ==========================================
+        const PARAMS_GANANCIAS_ARCA = {
+            "2026": {
+                gni: 6019671.36,
+                conyuge: 5669323.06,
+                hijo: 2859060.31,
+                hijoIncapacitado: 5718120.60,
+                dedEspAutonomo: 21068849.78, // 3.5x GNI
+                dedEspEmprendedor: 24078685.46, // 4.0x GNI
+                dedEspRelDep: 28894422.56, // 4.8x GNI
+                topeSeguroVida: 753472.14,
+                topeHipotecario: 20000.00,
+                topeSepelio: 996.23,
+                escalaPH: [
+                    { desde: 0, hasta: 2336953.69, fijo: 0, alicuota: 0.05 },
+                    { desde: 2336953.69, hasta: 4673907.36, fijo: 116847.68, alicuota: 0.09 },
+                    { desde: 4673907.36, hasta: 7010861.05, fijo: 327173.52, alicuota: 0.12 },
+                    { desde: 7010861.05, hasta: 10516291.59, fijo: 607607.96, alicuota: 0.15 },
+                    { desde: 10516291.59, hasta: 21032583.18, fijo: 1133422.54, alicuota: 0.19 },
+                    { desde: 21032583.18, hasta: 31548874.77, fijo: 3131517.94, alicuota: 0.23 },
+                    { desde: 31548874.77, hasta: 47323312.16, fijo: 5550265.01, alicuota: 0.27 },
+                    { desde: 47323312.16, hasta: 70984968.25, fijo: 9809363.10, alicuota: 0.31 },
+                    { desde: 70984968.25, hasta: Infinity, fijo: 17144476.49, alicuota: 0.35 }
+                ],
+                escalaPJ: [
+                    { desde: 0, hasta: 133514185.74, fijo: 0, alicuota: 0.25 },
+                    { desde: 133514185.74, hasta: 1335141857.38, fijo: 33378546.43, alicuota: 0.30 },
+                    { desde: 1335141857.38, hasta: Infinity, fijo: 393866847.93, alicuota: 0.35 }
+                ]
+            },
+            "2025": {
+                gni: 4507505.52,
+                conyuge: 4245166.13,
+                hijo: 2140852.77,
+                hijoIncapacitado: 4281705.53,
+                dedEspAutonomo: 15776269.32,
+                dedEspEmprendedor: 18030022.08,
+                dedEspRelDep: 21636026.50,
+                topeSeguroVida: 573817.13,
+                topeHipotecario: 20000.00,
+                topeSepelio: 996.23,
+                escalaPH: [
+                    { desde: 0, hasta: 1749901.45, fijo: 0, alicuota: 0.05 },
+                    { desde: 1749901.45, hasta: 3499802.89, fijo: 87495.07, alicuota: 0.09 },
+                    { desde: 3499802.89, hasta: 5249704.34, fijo: 244986.20, alicuota: 0.12 },
+                    { desde: 5249704.34, hasta: 7874556.51, fijo: 454974.37, alicuota: 0.15 },
+                    { desde: 7874556.51, hasta: 15749113.02, fijo: 848702.20, alicuota: 0.19 },
+                    { desde: 15749113.02, hasta: 23623669.56, fijo: 2344867.94, alicuota: 0.23 },
+                    { desde: 23623669.56, hasta: 35435504.34, fijo: 4156015.94, alicuota: 0.27 },
+                    { desde: 35435504.34, hasta: 53153256.52, fijo: 7345211.33, alicuota: 0.31 },
+                    { desde: 53153256.52, hasta: Infinity, fijo: 12837714.51, alicuota: 0.35 }
+                ],
+                escalaPJ: [
+                    { desde: 0, hasta: 101679575.26, fijo: 0, alicuota: 0.25 },
+                    { desde: 101679575.26, hasta: 1016795752.62, fijo: 25419893.82, alicuota: 0.30 },
+                    { desde: 1016795752.62, hasta: Infinity, fijo: 299954747.02, alicuota: 0.35 }
+                ]
+            }
+        };
+
+        const TIPOS_DEDUCCION_GENERAL = [
+            { id: 'prepaga', label: 'Cuotas Médico-Asistenciales (Prepaga)', topeTipo: '5_GNI', desc: 'Tope: 5% de la Ganancia Neta del ejercicio' },
+            { id: 'donaciones', label: 'Donaciones Fiscos / Entidades Exentas', topeTipo: '5_GNI', desc: 'Tope: 5% de la Ganancia Neta del ejercicio' },
+            { id: 'seguro_vida', label: 'Primas Seguro de Vida / Retiro / Mixtos', topeTipo: 'SEGURO', desc: 'Tope anual ARCA ($753.472,14 en 2026)' },
+            { id: 'casas_part', label: 'Personal de Casas Particulares (Sueldos + Cargas)', topeTipo: 'GNI', desc: 'Tope: 100% Ganancia No Imponible ($6.019.671,36)' },
+            { id: 'alquiler_40', label: 'Alquiler Casa-Habitación (40% Inquilino)', topeTipo: 'GNI', desc: '40% abonado hasta tope GNI (sin inmueble propio)' },
+            { id: 'alquiler_10', label: 'Alquiler Casa-Habitación (10% Art. 85 inc. k)', topeTipo: 'SIN_TOPE', desc: '10% del monto mensual registrado en RELI' },
+            { id: 'educativos', label: 'Gastos Educativos / Herramientas (Hijos <24)', topeTipo: '40_GNI', desc: 'Tope: 40% de la Ganancia No Imponible' },
+            { id: 'honorarios_med', label: 'Honorarios Médicos y Paramédicos (40% facturado)', topeTipo: '5_GNI', desc: '40% de lo facturado, tope 5% Ganancia Neta' },
+            { id: 'hipotecarios', label: 'Intereses Préstamos Hipotecarios Casa-Habitación', topeTipo: 'HIPOTECARIO', desc: 'Tope legal fijo: $20.000,00 anuales' },
+            { id: 'sepelio', label: 'Gastos de Sepelio', topeTipo: 'SEPELIO', desc: 'Tope legal fijo: $996,23 anuales' },
+            { id: 'autonomos', label: 'Aportes Jubilatorios / Autónomos / Cajas Prof.', topeTipo: 'SIN_TOPE', desc: 'Deducible al 100% (requisito para Ded. Especial)' },
+            { id: 'indumentaria', label: 'Indumentaria y Equipamiento Uso Exclusivo Laboral', topeTipo: 'SIN_TOPE', desc: 'Deducible al 100% (Art. 85)' },
+            { id: 'otros_art85', label: 'Otras Deducciones Generales Art. 85 LIG', topeTipo: 'SIN_TOPE', desc: 'SGR, corredores, regalías, etc.' }
+        ];
+
+        function obtenerConfigGananciasDefault() {
+            return {
+                anio: "2026",
+                tipoSujeto: "PH", // PH o PJ
+                // Datos PH
+                conyuge: false,
+                hijos: 0,
+                hijosIncapacitados: 0,
+                tipoDedEspecial: "AUTONOMO", // NINGUNA, AUTONOMO, EMPRENDEDOR, REL_DEP
+                vincularComprobantes3ra: true,
+                rentas: {
+                    cat1Ingresos: 0, cat1Gastos: 0,
+                    cat2Ingresos: 0, cat2Gastos: 0,
+                    cat3IngresosManual: 0, cat3GastosManual: 0,
+                    cat4Ingresos: 0, cat4Gastos: 0
+                },
+                deduccionesGenerales: [],
+                // Datos PJ
+                vincularComprobantesPJ: true,
+                pjIngresosManual: 0,
+                pjCostosGastosManual: 0,
+                pjAjustesImpositivos: 0, // + o -
+                pjAjusteInflacion: 0, // + o -
+                pjQuebrantosAnt: 0,
+                pjDividendosDistribuidos: 0,
+                // Pagos a cuenta comunes
+                retencionesSufridas: 0,
+                percepcionesSufridas: 0,
+                anticiposIngresados: 0,
+                saldoFavorAnterior: 0
+            };
+        }
+
         function formatearFechaAr(isoStr) {
             if (!isoStr) return "";
-            const s = String(isoStr);
+            const s = String(isoStr).trim().split('T')[0].split(' ')[0];
             if (s.includes('/')) return s;
             const p = s.split('-');
-            if (p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
+            if (p.length === 3) return `${p[2].padStart(2,'0')}/${p[1].padStart(2,'0')}/${p[0]}`;
             return s;
+        }
+
+        function fmtMoneda(val) {
+            return (Number(val) || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         let filtroMesIva = "10";
@@ -483,7 +628,8 @@
                 asientosManuales: [],
                 retencionesPercepciones: [],
                 retencionesIibb: [],
-                planCuentas: obtenerPlanCuentasBase()
+                planCuentas: obtenerPlanCuentasBase(),
+                gananciasConfig: obtenerConfigGananciasDefault()
             }
         ];
 
@@ -538,6 +684,18 @@
             if (typeof emp.iibbCoeficiente !== 'number' || isNaN(emp.iibbCoeficiente)) emp.iibbCoeficiente = parseFloat(emp.iibbCoeficiente) || 1.0000;
             if (typeof emp.iibbSaldoAnt !== 'number' || isNaN(emp.iibbSaldoAnt)) emp.iibbSaldoAnt = parseFloat(emp.iibbSaldoAnt) || 0;
 
+            if (!emp.gananciasConfig || typeof emp.gananciasConfig !== 'object') {
+                emp.gananciasConfig = obtenerConfigGananciasDefault();
+                // Detectar automáticamente si el CUIT empieza con 30, 33 o 34 -> PJ
+                const prefijo = String(emp.cuit).substring(0, 2);
+                if (['30', '33', '34'].includes(prefijo)) emp.gananciasConfig.tipoSujeto = 'PJ';
+            } else {
+                const def = obtenerConfigGananciasDefault();
+                emp.gananciasConfig = { ...def, ...emp.gananciasConfig };
+                emp.gananciasConfig.rentas = { ...def.rentas, ...(emp.gananciasConfig.rentas || {}) };
+                if (!Array.isArray(emp.gananciasConfig.deduccionesGenerales)) emp.gananciasConfig.deduccionesGenerales = [];
+            }
+
             emp.comprobantes.forEach(c => {
                 if (!c.fecha) c.fecha = "";
                 c.neto105 = Number(c.neto105) || 0;
@@ -556,11 +714,13 @@
 
             emp.retencionesPercepciones.forEach(r => {
                 if (!r.fecha) r.fecha = "";
+                r.fecha = normalizarFechaImportacion(r.fecha);
                 r.importe = Number(r.importe) || 0;
             });
 
             emp.retencionesIibb.forEach(r => {
                 if (!r.fecha) r.fecha = "";
+                r.fecha = normalizarFechaImportacion(r.fecha);
                 r.importe = Number(r.importe) || 0;
             });
 
@@ -582,7 +742,8 @@
                     asientosManuales: [],
                     retencionesPercepciones: [],
                     retencionesIibb: [],
-                    planCuentas: obtenerPlanCuentasBase()
+                    planCuentas: obtenerPlanCuentasBase(),
+                    gananciasConfig: obtenerConfigGananciasDefault()
                 }];
             }
             let emp = empresas.find(e => String(e.id) === String(empresaActualId));
@@ -600,14 +761,14 @@
                 normalizarEstructuraEmpresa(emp);
                 const opt = document.createElement('option');
                 opt.value = emp.id;
-                opt.textContent = `${emp.razonSocial} (CUIT: ${emp.cuit})`;
+                opt.textContent = `${emp.razonSocial} (${emp.cuit})`;
                 if (String(emp.id) === String(empresaActualId)) opt.selected = true;
                 select.appendChild(opt);
             });
             const actual = obtenerEmpresaActual();
             if (actual) {
                 document.getElementById('headerRazonSocial').textContent = actual.razonSocial;
-                document.getElementById('headerCuit').textContent = `CUIT: ${actual.cuit}`;
+                document.getElementById('headerCuit').textContent = `CUIT: ${actual.cuit} (${actual.gananciasConfig.tipoSujeto})`;
                 const iniciales = (actual.razonSocial || 'ER').split(' ').filter(Boolean).map(w=>w[0]).join('').substring(0,2).toUpperCase();
                 document.getElementById('headerInicia').textContent = iniciales;
             }
@@ -664,9 +825,9 @@
             div.className = "flex items-center space-x-2 bg-gray-50 p-2 rounded border";
             div.innerHTML = `
                 <select class="flex-1 border rounded p-1.5 text-xs font-semibold cta-manual">${opts}</select>
-                <input type="number" step="0.01" placeholder="Debe $" value="${debePre || ''}" oninput="actualizarTotalesAsientoManual()" class="w-28 border rounded p-1.5 text-xs text-right font-semibold debe-manual">
-                <input type="number" step="0.01" placeholder="Haber $" value="${haberPre || ''}" oninput="actualizarTotalesAsientoManual()" class="w-28 border rounded p-1.5 text-xs text-right font-semibold haber-manual">
-                <button type="button" onclick="this.parentElement.remove(); actualizarTotalesAsientoManual();" class="text-red-500 font-bold px-2">&times;</button>
+                <input type="number" step="0.01" placeholder="Debe $" value="${debePre || ''}" oninput="actualizarTotalesAsientoManual()" class="w-24 sm:w-28 border rounded p-1.5 text-xs text-right font-semibold debe-manual num-row">
+                <input type="number" step="0.01" placeholder="Haber $" value="${haberPre || ''}" oninput="actualizarTotalesAsientoManual()" class="w-24 sm:w-28 border rounded p-1.5 text-xs text-right font-semibold haber-manual num-row">
+                <button type="button" onclick="this.parentElement.remove(); actualizarTotalesAsientoManual();" class="text-red-500 font-bold px-2">×</button>
             `;
             cont.appendChild(div);
             actualizarTotalesAsientoManual();
@@ -681,7 +842,7 @@
 
             const label = document.getElementById('totalesAsientoManualCheck');
             const estado = document.getElementById('balanceEstadoCheck');
-            label.textContent = `Total Debe: $${totDebe.toLocaleString('es-AR',{minimumFractionDigits:2})} | Total Haber: $${totHaber.toLocaleString('es-AR',{minimumFractionDigits:2})}`;
+            label.textContent = `Debe: $${fmtMoneda(totDebe)} | Haber: $${fmtMoneda(totHaber)}`;
             
             if (Math.abs(totDebe - totHaber) < 0.01 && totDebe > 0) {
                 estado.textContent = "Balanceado OK";
@@ -737,8 +898,12 @@
         function registrarEmpresaDesdeForm(e) {
             e.preventDefault();
             const razonSocial = document.getElementById('nuevaRazonSocial').value.trim();
+            const tipoSujeto = document.getElementById('nuevoTipoSujeto').value;
             const cuit = document.getElementById('nuevoCuit').value.trim();
             const condicionIva = document.getElementById('nuevaCondicionIva').value;
+
+            const ganConfig = obtenerConfigGananciasDefault();
+            ganConfig.tipoSujeto = tipoSujeto;
 
             const nuevaEmpresa = {
                 id: Date.now(),
@@ -751,7 +916,8 @@
                 asientosManuales: [],
                 retencionesPercepciones: [],
                 retencionesIibb: [],
-                planCuentas: obtenerPlanCuentasBase()
+                planCuentas: obtenerPlanCuentasBase(),
+                gananciasConfig: ganConfig
             };
             empresas.push(nuevaEmpresa);
             empresaActualId = nuevaEmpresa.id;
@@ -836,11 +1002,11 @@
 
         function renderizarVista() {
             document.querySelectorAll('aside nav a').forEach(a => {
-                a.className = "flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 hover:text-white transition";
+                a.className = "flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-800 hover:text-white transition";
             });
             const navActivo = document.getElementById(`nav-${vistaActual}`);
             if (navActivo) {
-                navActivo.className = "flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-blue-600 text-white transition";
+                navActivo.className = "flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-blue-600 text-white transition";
             }
             const cont = document.getElementById('contenedorVistas');
             cont.innerHTML = '';
@@ -854,6 +1020,7 @@
                 else if (vistaActual === 'balance') renderBalance(cont);
                 else if (vistaActual === 'impositivo') renderImpositivo(cont);
                 else if (vistaActual === 'ingresos-brutos') renderIngresosBrutos(cont);
+                else if (vistaActual === 'ganancias') renderGanancias(cont);
             } catch (err) {
                 console.error("Error al renderizar vista:", err);
                 const emp = obtenerEmpresaActual();
@@ -861,9 +1028,8 @@
                     <div class="bg-red-50 border-l-4 border-red-600 p-6 rounded-xl shadow max-w-2xl mx-auto mt-8 space-y-3">
                         <h3 class="text-lg font-bold text-red-800">Se detectó un error en los datos guardados de "${emp ? emp.razonSocial : 'Empresa'}"</h3>
                         <p class="text-xs font-mono bg-white p-3 rounded border text-red-700">${err.message}</p>
-                        <p class="text-xs text-gray-600">Esto suele ocurrir cuando un registro importado anteriormente quedó con un campo vacío o corrupto.</p>
                         <div class="flex space-x-3 pt-2">
-                            <button onclick="repararEmpresaActual()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow">Reparar Registros de esta Empresa</button>
+                            <button onclick="repararEmpresaActual()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow">Reparar Registros</button>
                             <button onclick="exportarBackupJson()" class="bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-bold">Descargar Backup JSON</button>
                         </div>
                     </div>
@@ -905,7 +1071,7 @@
                     const c = line.split(';').map(s => s.replace(/"/g, '').trim());
 
                     if (c.length >= 25) {
-                        const fecha = c[0];
+                        const fecha = normalizarFechaImportacion(c[0]);
                         const tipoCodigo = parseInt(c[1]) || 1;
                         const pv = parseInt(c[2]) || 1;
                         const numero = parseInt(c[3]) || 1;
@@ -982,7 +1148,7 @@
                     let agregados = 0;
                     json.forEach((row, idx) => {
                         let fechaRaw = row['Fecha Ret./Perc.'] || row['Fecha'] || "2026-09-01";
-                        let fecha = fechaRaw.toString().includes('/') ? fechaRaw.split('/').reverse().join('-') : fechaRaw;
+                        let fecha = normalizarFechaImportacion(fechaRaw);
                         const importe = parseFloat(row['Importe Ret./Perc.'] || row['Importe'] || 0) || 0;
                         const cuitAgente = row['CUIT Agente Ret./Perc.'] || row['CUIT'] || "Agente ARCA";
                         const regimen = row['Regimen'] || "Gen.";
@@ -1014,7 +1180,7 @@
                     let agregados = 0;
                     json.forEach((row, idx) => {
                         let fechaRaw = row['Fecha Ret./Perc.'] || row['Fecha'] || "2026-09-01";
-                        let fecha = fechaRaw.toString().includes('/') ? fechaRaw.split('/').reverse().join('-') : fechaRaw;
+                        let fecha = normalizarFechaImportacion(fechaRaw);
                         const importe = parseFloat(row['Importe Ret./Perc.'] || row['Importe'] || 0) || 0;
                         const cuitAgente = row['CUIT Agente Ret./Perc.'] || row['CUIT'] || "Agente ARCA";
                         const regimen = row['Regimen'] || "Gen.";
@@ -1085,93 +1251,94 @@
             }
 
             cont.innerHTML = `
-                <div class="space-y-6">
-                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm">
-                        <h2 class="text-xl font-bold text-gray-800">Panel General & Liquidación de IVA</h2>
-                        <div class="flex items-center space-x-3">
-                            <span class="text-xs font-bold text-gray-500 uppercase">Desde:</span>
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="flex flex-wrap justify-between items-center bg-white p-3 sm:p-4 rounded-xl border shadow-sm gap-3">
+                        <h2 class="text-base sm:text-xl font-bold text-gray-800">Panel General & Liquidación IVA</h2>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-[11px] font-bold text-gray-500 uppercase">Desde:</span>
                             <input type="date" value="${dashFechaDesde}" onchange="dashFechaDesde=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
-                            <span class="text-xs font-bold text-gray-500 uppercase">Hasta:</span>
+                            <span class="text-[11px] font-bold text-gray-500 uppercase">Hasta:</span>
                             <input type="date" value="${dashFechaHasta}" onchange="dashFechaHasta=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-3 gap-6">
-                        <div class="bg-white p-6 rounded-xl border shadow-sm border-l-4 border-l-blue-600">
-                            <p class="text-xs font-bold text-gray-500 uppercase">VENTAS NETAS</p>
-                            <h3 class="text-2xl font-black text-gray-900 mt-2">$ ${ventasNetas.toLocaleString('es-AR', {minimumFractionDigits:2})}</h3>
-                            <p class="text-xs text-gray-400 mt-1">${cantVentas} comprobante(s) en el período</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
+                        <div class="bg-white p-4 sm:p-6 rounded-xl border shadow-sm border-l-4 border-l-blue-600">
+                            <p class="text-[11px] font-bold text-gray-500 uppercase">VENTAS NETAS</p>
+                            <h3 class="text-lg sm:text-2xl font-black text-gray-900 mt-1 sm:mt-2 num-row mobile-kpi-val">$ ${fmtMoneda(ventasNetas)}</h3>
+                            <p class="text-[11px] text-gray-400 mt-1">${cantVentas} comprobante(s)</p>
                         </div>
-                        <div class="bg-white p-6 rounded-xl border shadow-sm border-l-4 border-l-red-500">
-                            <p class="text-xs font-bold text-gray-500 uppercase">COMPRAS NETAS</p>
-                            <h3 class="text-2xl font-black text-gray-900 mt-2">$ ${comprasNetas.toLocaleString('es-AR', {minimumFractionDigits:2})}</h3>
-                            <p class="text-xs text-gray-400 mt-1">${cantCompras} comprobante(s) en el período</p>
+                        <div class="bg-white p-4 sm:p-6 rounded-xl border shadow-sm border-l-4 border-l-red-500">
+                            <p class="text-[11px] font-bold text-gray-500 uppercase">COMPRAS NETAS</p>
+                            <h3 class="text-lg sm:text-2xl font-black text-gray-900 mt-1 sm:mt-2 num-row mobile-kpi-val">$ ${fmtMoneda(comprasNetas)}</h3>
+                            <p class="text-[11px] text-gray-400 mt-1">${cantCompras} comprobante(s)</p>
                         </div>
-                        <div class="bg-white p-6 rounded-xl border shadow-sm border-l-4 border-l-emerald-600">
-                            <p class="text-xs font-bold text-gray-500 uppercase">TOTAL COMPROBANTES</p>
-                            <h3 class="text-2xl font-black text-gray-900 mt-2">${compsFiltrados.length}</h3>
-                            <p class="text-xs text-gray-400 mt-1">Del ${formatearFechaAr(dashFechaDesde)} al ${formatearFechaAr(dashFechaHasta)}</p>
+                        <div class="bg-white p-4 sm:p-6 rounded-xl border shadow-sm border-l-4 border-l-emerald-600">
+                            <p class="text-[11px] font-bold text-gray-500 uppercase">TOTAL COMPROBANTES</p>
+                            <h3 class="text-lg sm:text-2xl font-black text-gray-900 mt-1 sm:mt-2 num-row mobile-kpi-val">${compsFiltrados.length}</h3>
+                            <p class="text-[11px] text-gray-400 mt-1 num-row">${formatearFechaAr(dashFechaDesde)} al ${formatearFechaAr(dashFechaHasta)}</p>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border shadow-sm p-6 space-y-6">
-                        <div class="flex justify-between items-center border-b pb-4">
+                    <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4 sm:space-y-6">
+                        <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
                             <div>
-                                <h3 class="text-base font-bold text-gray-900 uppercase">Determinación del Impuesto al Valor Agregado (IVA)</h3>
-                                <p class="text-xs text-gray-500">Liquidación IVA mensual</p>
+                                <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase">Determinación del Impuesto al Valor Agregado (IVA)</h3>
+                                <p class="text-xs text-gray-500">Posición consolidada en el rango seleccionado</p>
                             </div>
-                            <div class="bg-blue-50 text-blue-800 text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-200">
-                                Régimen ARCA
-                            </div>
+                            <button onclick="cambiarVista('ganancias')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow flex items-center space-x-1">
+                                <i data-lucide="percent" class="w-3.5 h-3.5"></i>
+                                <span>Ir a Ganancias (${emp.gananciasConfig.tipoSujeto})</span>
+                            </button>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
-                                <div class="flex justify-between text-sm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                            <div class="space-y-2.5 bg-gray-50 p-3.5 sm:p-4 rounded-xl border text-xs sm:text-sm">
+                                <div class="flex justify-between items-center gap-2">
                                     <span class="font-semibold text-gray-700">IVA Débito Fiscal:</span>
-                                    <span class="font-bold text-gray-900">$ ${ivaDebitoFiscal.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                    <span class="font-bold text-gray-900 num-row">$ ${fmtMoneda(ivaDebitoFiscal)}</span>
                                 </div>
-                                <div class="flex justify-between text-sm">
+                                <div class="flex justify-between items-center gap-2">
                                     <span class="font-semibold text-gray-700">IVA Crédito Fiscal:</span>
-                                    <span class="font-bold text-red-600">- $ ${ivaCreditoFiscal.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                    <span class="font-bold text-red-600 num-row">- $ ${fmtMoneda(ivaCreditoFiscal)}</span>
                                 </div>
-                                <div class="flex justify-between text-sm border-b pb-2">
+                                <div class="flex justify-between items-center gap-2 border-b pb-2">
                                     <span class="font-semibold text-gray-700">Saldo Técnico Anterior:</span>
-                                    <span class="font-bold text-red-600">- $ ${saldoTecnicoAnt.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                    <span class="font-bold text-red-600 num-row">- $ ${fmtMoneda(saldoTecnicoAnt)}</span>
                                 </div>
-                                <div class="flex justify-between text-sm pt-1">
+                                <div class="flex justify-between items-center gap-2 pt-1">
                                     <span class="font-bold text-gray-900 uppercase">Saldo Técnico Neto:</span>
-                                    <span class="font-black ${saldoTecnico >= 0 ? 'text-blue-900' : 'text-emerald-700'}">$ ${saldoTecnico.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                    <span class="font-black num-row ${saldoTecnico >= 0 ? 'text-blue-900' : 'text-emerald-700'}">$ ${fmtMoneda(saldoTecnico)}</span>
                                 </div>
                             </div>
 
-                            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
-                                <div class="flex justify-between items-center text-sm">
-                                    <span class="font-semibold text-gray-700">Retenciones:</span>
-                                    <span class="font-bold text-blue-700">$ ${retencionesIvaPeriodo.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                            <div class="space-y-2.5 bg-gray-50 p-3.5 sm:p-4 rounded-xl border text-xs sm:text-sm">
+                                <div class="flex justify-between items-center gap-2">
+                                    <span class="font-semibold text-gray-700">Retenciones IVA:</span>
+                                    <span class="font-bold text-blue-700 num-row">$ ${fmtMoneda(retencionesIvaPeriodo)}</span>
                                 </div>
-                                <div class="flex justify-between items-center text-sm">
-                                    <span class="font-semibold text-gray-700">Percepciones:</span>
-                                    <span class="font-bold text-purple-700">$ ${percepcionesIvaPeriodo.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                <div class="flex justify-between items-center gap-2">
+                                    <span class="font-semibold text-gray-700">Percepciones IVA:</span>
+                                    <span class="font-bold text-purple-700 num-row">$ ${fmtMoneda(percepcionesIvaPeriodo)}</span>
                                 </div>
-                                <div class="flex justify-between items-center text-sm border-b pb-2">
+                                <div class="flex justify-between items-center gap-2 border-b pb-2">
                                     <span class="font-semibold text-gray-700">Saldo Libre Disp. Anterior:</span>
-                                    <span class="font-bold text-red-600">$ ${saldoLibreDispAnt.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                    <span class="font-bold text-red-600 num-row">$ ${fmtMoneda(saldoLibreDispAnt)}</span>
                                 </div>
-                                <div class="flex justify-between text-sm pt-1">
+                                <div class="flex justify-between items-center gap-2 pt-1">
                                     <span class="font-bold uppercase text-gray-900">Origen de Datos:</span>
                                     <span class="font-bold text-xs text-emerald-600">Sincronizado ARCA</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center shadow">
+                        <div class="bg-slate-900 text-white p-4 rounded-xl flex flex-wrap justify-between items-center shadow gap-2">
                             <div>
-                                <p class="text-xs text-slate-400 uppercase font-semibold">Resultado de la Posición Mensual / Período</p>
-                                <h4 class="text-lg font-black tracking-wider text-emerald-400">${etiquetaSaldo}</h4>
+                                <p class="text-[11px] text-slate-400 uppercase font-semibold">Resultado de la Posición</p>
+                                <h4 class="text-sm sm:text-lg font-black tracking-wider text-emerald-400">${etiquetaSaldo}</h4>
                             </div>
                             <div class="text-right">
-                                <span class="text-2xl font-black">$ ${saldoFinal.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                <span class="text-xl sm:text-2xl font-black num-row">$ ${fmtMoneda(saldoFinal)}</span>
                             </div>
                         </div>
                     </div>
@@ -1182,9 +1349,9 @@
         function renderImportacion(cont) {
             cont.innerHTML = `
                 <div class="space-y-6 max-w-4xl mx-auto">
-                    <h2 class="text-2xl font-bold text-gray-800">Importación "Mis Comprobantes" (ARCA)</h2>
-                    <div class="bg-white p-6 rounded-xl border space-y-4">
-                        <div class="flex space-x-6">
+                    <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Importación "Mis Comprobantes" (ARCA)</h2>
+                    <div class="bg-white p-5 sm:p-6 rounded-xl border space-y-4">
+                        <div class="flex flex-wrap gap-6">
                             <label class="font-bold text-sm text-gray-700"><input type="radio" name="tipoOperacionImport" value="COMPRA" checked> COMPRAS (Recibidos)</label>
                             <label class="font-bold text-sm text-gray-700"><input type="radio" name="tipoOperacionImport" value="VENTA"> VENTAS (Emitidos)</label>
                         </div>
@@ -1212,27 +1379,27 @@
             let filas = listaComps.map(c => {
                 const optionsCuenta = cuentasImputables.map(pc => `<option value="${pc.codigo}" ${c.cuentaNeto === pc.codigo ? 'selected' : ''}>${pc.codigo} - ${pc.nombre}</option>`).join('');
                 return `
-                    <tr class="hover:bg-gray-50 text-sm">
-                        <td class="px-3 py-3 font-bold ${c.tipoOp === 'VENTA' ? 'text-green-600' : 'text-red-600'}">${c.tipoOp}</td>
-                        <td class="px-3 py-3">${formatearFechaAr(c.fecha)}</td>
-                        <td class="px-3 py-3 font-semibold">${c.tipoNombre}</td>
-                        <td class="px-3 py-3 font-mono">${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')}</td>
-                        <td class="px-3 py-3">${c.razonSocial}<br><span class="text-xs text-gray-400">CUIT: ${c.cuit}</span></td>
-                        <td class="px-3 py-3 text-right font-semibold">$ ${c.netoTotal.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                        <td class="px-3 py-3 text-right text-gray-600">$ ${c.totalIva.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                        <td class="px-3 py-3 text-right font-bold">$ ${c.total.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                        <td class="px-3 py-3"><select onchange="actualizarCuentaComprobante(${c.id}, this.value)" class="text-xs bg-white border border-gray-300 rounded px-2 py-1 font-semibold text-blue-900">${optionsCuenta}</select></td>
-                        <td class="px-3 py-3 text-center"><button onclick="eliminarComprobante(${c.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                    <tr class="hover:bg-gray-50 text-xs sm:text-sm">
+                        <td class="px-3 py-2.5 font-bold whitespace-nowrap ${c.tipoOp === 'VENTA' ? 'text-green-600' : 'text-red-600'}">${c.tipoOp}</td>
+                        <td class="px-3 py-2.5 num-row">${formatearFechaAr(c.fecha)}</td>
+                        <td class="px-3 py-2.5 font-semibold whitespace-nowrap">${c.tipoNombre}</td>
+                        <td class="px-3 py-2.5 font-mono num-row">${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')}</td>
+                        <td class="px-3 py-2.5 min-w-[160px]">${c.razonSocial}<br><span class="text-[11px] text-gray-400 num-row">CUIT: ${c.cuit}</span></td>
+                        <td class="px-3 py-2.5 text-right font-semibold num-row">$ ${fmtMoneda(c.netoTotal)}</td>
+                        <td class="px-3 py-2.5 text-right text-gray-600 num-row">$ ${fmtMoneda(c.totalIva)}</td>
+                        <td class="px-3 py-2.5 text-right font-bold num-row">$ ${fmtMoneda(c.total)}</td>
+                        <td class="px-3 py-2.5"><select onchange="actualizarCuentaComprobante(${c.id}, this.value)" class="text-xs bg-white border border-gray-300 rounded px-2 py-1 font-semibold text-blue-900 max-w-[160px]">${optionsCuenta}</select></td>
+                        <td class="px-3 py-2.5 text-center"><button onclick="eliminarComprobante(${c.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
                     </tr>
                 `;
             }).join('');
 
             cont.innerHTML = `
-                <div class="space-y-6">
-                    <h2 class="text-2xl font-bold text-gray-800">Comprobantes Registrados</h2>
-                    <div class="bg-white rounded-xl border overflow-hidden">
-                        <table class="w-full text-left">
-                            <thead class="bg-gray-50 text-xs text-gray-500 uppercase select-none">
+                <div class="space-y-4 sm:space-y-6">
+                    <h2 class="text-lg sm:text-2xl font-bold text-gray-800">Comprobantes Registrados</h2>
+                    <div class="bg-white rounded-xl border overflow-x-auto">
+                        <table class="w-full text-left mobile-compact-table">
+                            <thead class="bg-gray-50 text-[11px] text-gray-500 uppercase select-none whitespace-nowrap">
                                 <tr>
                                     <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('tipoOp')">OP.${arrowComp('tipoOp')}</th>
                                     <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('fecha')">FECHA${arrowComp('fecha')}</th>
@@ -1246,7 +1413,7 @@
                                     <th class="p-3 text-center">ACCIÓN</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y">${filas}</tbody>
+                            <tbody class="divide-y">${filas || `<tr><td colspan="10" class="text-center py-6 text-gray-400">Sin comprobantes cargados.</td></tr>`}</tbody>
                         </table>
                     </div>
                 </div>
@@ -1279,7 +1446,7 @@
         }
 
         // ==========================================
-        // VISTA: LIBRO IVA (Formato Legal con Alícuotas)
+        // VISTA: LIBRO IVA
         // ==========================================
         function renderLibroIva(cont) {
             const emp = obtenerEmpresaActual();
@@ -1310,32 +1477,32 @@
                 desgloses.forEach((d, idx) => {
                     lineasTabla.push(`
                         <tr class="text-xs border-b border-gray-100">
-                            <td class="py-2 px-2">${idx === 0 ? formatearFechaAr(c.fecha) : ''}</td>
-                            <td class="py-2 px-2 font-mono">${idx === 0 ? c.tipoNombre + ' ' + String(c.pv).padStart(4,'0') + '-' + String(c.numero).padStart(8,'0') : ''}</td>
+                            <td class="py-2 px-2 num-row">${idx === 0 ? formatearFechaAr(c.fecha) : ''}</td>
+                            <td class="py-2 px-2 font-mono num-row">${idx === 0 ? c.tipoNombre + ' ' + String(c.pv).padStart(4,'0') + '-' + String(c.numero).padStart(8,'0') : ''}</td>
                             <td class="py-2 px-2">${idx === 0 ? c.razonSocial : ''}</td>
-                            <td class="py-2 px-2 font-mono">${idx === 0 ? c.cuit : ''}</td>
-                            <td class="py-2 px-2 text-right">${idx === 0 && exentoNoGravCalculado > 0 ? exentoNoGravCalculado.toLocaleString('es-AR',{minimumFractionDigits:2}) : ''}</td>
-                            <td class="py-2 px-2 text-right font-medium">${d.neto > 0 ? d.neto.toLocaleString('es-AR',{minimumFractionDigits:2}) : ''}</td>
-                            <td class="py-2 px-2 text-right font-bold text-blue-800">${d.tasa !== '0,00%' ? d.tasa : ''}</td>
-                            <td class="py-2 px-2 text-right font-medium">${d.iva > 0 ? d.iva.toLocaleString('es-AR',{minimumFractionDigits:2}) + ' Dir. Grav.' : ''}</td>
-                            <td class="py-2 px-2 text-right font-bold">${idx === 0 ? '$ ' + c.total.toLocaleString('es-AR',{minimumFractionDigits:2}) : ''}</td>
+                            <td class="py-2 px-2 font-mono num-row">${idx === 0 ? c.cuit : ''}</td>
+                            <td class="py-2 px-2 text-right num-row">${idx === 0 && exentoNoGravCalculado > 0 ? fmtMoneda(exentoNoGravCalculado) : ''}</td>
+                            <td class="py-2 px-2 text-right font-medium num-row">${d.neto > 0 ? fmtMoneda(d.neto) : ''}</td>
+                            <td class="py-2 px-2 text-right font-bold text-blue-800 num-row">${d.tasa !== '0,00%' ? d.tasa : ''}</td>
+                            <td class="py-2 px-2 text-right font-medium num-row">${d.iva > 0 ? fmtMoneda(d.iva) : ''}</td>
+                            <td class="py-2 px-2 text-right font-bold num-row">${idx === 0 ? '$ ' + fmtMoneda(c.total) : ''}</td>
                         </tr>
                     `);
                 });
             });
 
             cont.innerHTML = `
-                <div class="space-y-6">
-                    <div class="bg-white p-4 rounded-xl border flex justify-between items-center no-print shadow-sm">
-                        <div class="flex items-center space-x-4">
-                            <div class="flex items-center space-x-2">
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="bg-white p-3 sm:p-4 rounded-xl border flex flex-wrap justify-between items-center no-print shadow-sm gap-3">
+                        <div class="flex flex-wrap items-center gap-2 sm:gap-4">
+                            <div class="flex items-center space-x-1.5">
                                 <span class="text-xs font-bold text-gray-500 uppercase">Libro:</span>
                                 <select onchange="libroIvaModo=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                                     <option value="COMPRA" ${libroIvaModo==='COMPRA'?'selected':''}>IVA COMPRAS</option>
                                     <option value="VENTA" ${libroIvaModo==='VENTA'?'selected':''}>IVA VENTAS</option>
                                 </select>
                             </div>
-                            <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-1.5">
                                 <span class="text-xs font-bold text-gray-500 uppercase">Mes:</span>
                                 <select onchange="filtroMesIva=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                                     <option value="01" ${filtroMesIva==='01'?'selected':''}>Enero</option>
@@ -1352,43 +1519,43 @@
                                     <option value="12" ${filtroMesIva==='12'?'selected':''}>Diciembre</option>
                                 </select>
                             </div>
-                            <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-1.5">
                                 <span class="text-xs font-bold text-gray-500 uppercase">Año:</span>
                                 <input type="number" value="${filtroAnioIva}" onchange="filtroAnioIva=this.value; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold">
                             </div>
-                            <div class="flex items-center space-x-2 border-l pl-4">
-                                <span class="text-xs font-bold text-gray-500 uppercase">N° Hoja:</span>
-                                <input type="number" value="${folioInicialIva}" onchange="folioInicialIva=parseInt(this.value)||1; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold text-blue-600">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Hoja:</span>
+                                <input type="number" value="${folioInicialIva}" onchange="folioInicialIva=parseInt(this.value)||1; renderizarVista();" class="w-16 text-xs border rounded p-1.5 font-bold text-blue-600">
                             </div>
                         </div>
-                        <button onclick="window.print()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2 shadow">
-                            <i data-lucide="printer" class="w-4 h-4"></i><span>Imprimir / PDF Legal</span>
+                        <button onclick="window.print()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center space-x-2 shadow">
+                            <i data-lucide="printer" class="w-4 h-4"></i><span>Imprimir / PDF</span>
                         </button>
                     </div>
 
-                    <div class="bg-white p-6 border-b-2 border-gray-900 flex justify-between items-start">
+                    <div class="bg-white p-4 sm:p-6 border-b-2 border-gray-900 flex flex-wrap justify-between items-start gap-2">
                         <div>
-                            <h1 class="text-lg font-black uppercase text-gray-900">${emp.razonSocial}</h1>
+                            <h1 class="text-base sm:text-lg font-black uppercase text-gray-900">${emp.razonSocial}</h1>
                             <p class="text-xs text-gray-600">CUIT: ${emp.cuit} — Condición: ${emp.condicionIva}</p>
                         </div>
-                        <div class="text-right">
-                            <h2 class="text-xl font-bold text-gray-900">Libro IVA ${libroIvaModo === 'COMPRA' ? 'Compras' : 'Ventas'}</h2>
-                            <p class="text-xs text-gray-600">Período: ${filtroMesIva}/${filtroAnioIva} | Hoja Nro: ${folioInicialIva}</p>
+                        <div class="text-left sm:text-right">
+                            <h2 class="text-lg sm:text-xl font-bold text-gray-900">Libro IVA ${libroIvaModo === 'COMPRA' ? 'Compras' : 'Ventas'}</h2>
+                            <p class="text-xs text-gray-600 num-row">Período: ${filtroMesIva}/${filtroAnioIva} | Hoja Nro: ${folioInicialIva}</p>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border p-4">
-                        <table class="w-full text-left text-xs border-collapse">
+                    <div class="bg-white rounded-xl border p-3 sm:p-4 overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse mobile-compact-table">
                             <thead>
-                                <tr class="border-b font-bold text-gray-700 bg-gray-50 uppercase">
+                                <tr class="border-b font-bold text-gray-700 bg-gray-50 uppercase whitespace-nowrap">
                                     <th class="p-2">Fecha</th>
                                     <th class="p-2">Comprobante</th>
                                     <th class="p-2">Razón Social</th>
                                     <th class="p-2">C.U.I.T.</th>
-                                    <th class="p-2 text-right">No Grav/Ex/No Alcanz.</th>
+                                    <th class="p-2 text-right">No Grav/Ex.</th>
                                     <th class="p-2 text-right">Neto Grav.</th>
-                                    <th class="p-2 text-right">Alícuota</th>
-                                    <th class="p-2 text-right">${libroIvaModo==='COMPRA'?'IVA CF Computable':'IVA DF Computable'}</th>
+                                    <th class="p-2 text-right">Alíc.</th>
+                                    <th class="p-2 text-right">${libroIvaModo==='COMPRA'?'IVA CF':'IVA DF'}</th>
                                     <th class="p-2 text-right">Total</th>
                                 </tr>
                             </thead>
@@ -1402,22 +1569,22 @@
         function renderPlanCuentas(cont) {
             const emp = obtenerEmpresaActual();
             cont.innerHTML = `
-                <div class="space-y-6">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-2xl font-bold text-gray-800">Plan de Cuentas</h2>
-                        <div class="flex space-x-3">
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="flex flex-wrap justify-between items-center gap-3">
+                        <h2 class="text-lg sm:text-2xl font-bold text-gray-800">Plan de Cuentas</h2>
+                        <div class="flex flex-wrap gap-2">
                             <input type="file" id="filePlan" accept=".csv,.txt" class="hidden" onchange="importarPlanCuentas(event)">
-                            <button onclick="document.getElementById('filePlan').click()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow">
+                            <button onclick="document.getElementById('filePlan').click()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold shadow">
                                 Importar Plan (CSV)
                             </button>
-                            <button onclick="abrirModalCuenta()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow">
+                            <button onclick="abrirModalCuenta()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold shadow">
                                 + Nueva Cuenta
                             </button>
                         </div>
                     </div>
-                    <div class="bg-white rounded-xl border overflow-hidden">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase">
+                    <div class="bg-white rounded-xl border overflow-x-auto">
+                        <table class="w-full text-left text-xs sm:text-sm mobile-compact-table">
+                            <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase whitespace-nowrap">
                                 <tr>
                                     <th class="p-3">Código</th>
                                     <th class="p-3">Nombre</th>
@@ -1429,11 +1596,11 @@
                             <tbody>
                                 ${emp.planCuentas.map(p => `
                                     <tr class="${!p.imputable ? 'bg-gray-100 font-bold' : ''}">
-                                        <td class="p-3 font-mono">${p.codigo}</td>
+                                        <td class="p-3 font-mono num-row">${p.codigo}</td>
                                         <td class="p-3">${p.nombre}</td>
-                                        <td class="p-3">${p.tipo}</td>
+                                        <td class="p-3 whitespace-nowrap">${p.tipo}</td>
                                         <td class="p-3">${p.imputable ? 'SI' : 'NO'}</td>
-                                        <td class="p-3 text-center space-x-2">
+                                        <td class="p-3 text-center space-x-2 whitespace-nowrap">
                                             <button onclick="abrirModalCuenta('${p.codigo}')" class="text-blue-600 hover:text-blue-800"><i data-lucide="edit-3" class="w-4 h-4 inline"></i></button>
                                             <button onclick="eliminarCuenta('${p.codigo}')" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-4 h-4 inline"></i></button>
                                         </td>
@@ -1553,33 +1720,33 @@
                         totHaberAcumulado += (c.netoTotal + c.totalIva + c.exento + c.noGravado);
 
                         filasRenglon = `
-                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectContrapartida}</td><td class="py-1.5 px-3 text-right font-bold">$ ${c.total.toLocaleString('es-AR',{minimumFractionDigits:2})}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>
-                            ${c.netoTotal > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-8 text-gray-700">${selectNeto}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium">$ ${c.netoTotal.toLocaleString('es-AR',{minimumFractionDigits:2})}</td></tr>` : ''}
-                            ${c.totalIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-8 text-gray-700">${selectIva}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium">$ ${c.totalIva.toLocaleString('es-AR',{minimumFractionDigits:2})}</td></tr>` : ''}
+                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectContrapartida}</td><td class="py-1.5 px-3 text-right font-bold num-row">$ ${fmtMoneda(c.total)}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>
+                            ${c.netoTotal > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-6 sm:pl-8 text-gray-700">${selectNeto}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(c.netoTotal)}</td></tr>` : ''}
+                            ${c.totalIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-6 sm:pl-8 text-gray-700">${selectIva}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(c.totalIva)}</td></tr>` : ''}
                         `;
                     } else {
                         totDebeAcumulado += (c.netoTotal + c.totalIva + c.exento + c.noGravado);
                         totHaberAcumulado += c.total;
 
                         filasRenglon = `
-                            ${c.netoTotal > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectNeto}</td><td class="py-1.5 px-3 text-right font-medium">$ ${c.netoTotal.toLocaleString('es-AR',{minimumFractionDigits:2})}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
-                            ${c.totalIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectIva}</td><td class="py-1.5 px-3 text-right font-medium">$ ${c.totalIva.toLocaleString('es-AR',{minimumFractionDigits:2})}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
-                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-8 text-gray-700">${selectContrapartida}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-bold">$ ${c.total.toLocaleString('es-AR',{minimumFractionDigits:2})}</td></tr>
+                            ${c.netoTotal > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectNeto}</td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(c.netoTotal)}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
+                            ${c.totalIva > 0 ? `<tr class="border-b border-gray-100"><td class="py-1.5 px-3 font-semibold">${selectIva}</td><td class="py-1.5 px-3 text-right font-medium num-row">$ ${fmtMoneda(c.totalIva)}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td></tr>` : ''}
+                            <tr class="border-b border-gray-100"><td class="py-1.5 px-3 pl-6 sm:pl-8 text-gray-700">${selectContrapartida}</td><td class="py-1.5 px-3 text-right text-gray-400">-</td><td class="py-1.5 px-3 text-right font-bold num-row">$ ${fmtMoneda(c.total)}</td></tr>
                         `;
                     }
 
                     return `
-                        <div class="bg-white border rounded-xl overflow-hidden mb-4 asiento-card">
-                            <div class="bg-gray-50 border-b px-4 py-2 flex justify-between items-center text-xs">
-                                <span class="font-bold text-gray-900">ASIENTO N° ${nroAsiento} — ${formatearFechaAr(c.fecha)}</span>
-                                <span class="text-gray-600 font-mono">${c.tipoNombre} N° ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} | ${c.razonSocial}</span>
+                        <div class="bg-white border rounded-xl overflow-x-auto mb-3 sm:mb-4 asiento-card">
+                            <div class="bg-gray-50 border-b px-3 sm:px-4 py-2 flex flex-wrap justify-between items-center text-xs gap-1">
+                                <span class="font-bold text-gray-900 num-row">ASIENTO N° ${nroAsiento} — ${formatearFechaAr(c.fecha)}</span>
+                                <span class="text-gray-600 font-mono text-[11px]">${c.tipoNombre} ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} | ${c.razonSocial}</span>
                             </div>
-                            <table class="w-full text-xs text-left">
+                            <table class="w-full text-xs text-left mobile-compact-table">
                                 <thead>
-                                    <tr class="border-b bg-gray-100 text-gray-500 font-bold uppercase">
+                                    <tr class="border-b bg-gray-100 text-gray-500 font-bold uppercase whitespace-nowrap">
                                         <th class="py-1.5 px-3">Cuenta Contable</th>
-                                        <th class="py-1.5 px-3 text-right w-36">Debe</th>
-                                        <th class="py-1.5 px-3 text-right w-36">Haber</th>
+                                        <th class="py-1.5 px-3 text-right w-28 sm:w-36">Debe</th>
+                                        <th class="py-1.5 px-3 text-right w-28 sm:w-36">Haber</th>
                                     </tr>
                                 </thead>
                                 <tbody>${filasRenglon}</tbody>
@@ -1595,27 +1762,27 @@
 
                     filasRenglon = m.lineas.map(l => `
                         <tr class="border-b border-gray-100">
-                            <td class="py-1.5 px-3 ${l.haber > 0 ? 'pl-8 text-gray-700' : 'font-semibold'}">${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}</td>
-                            <td class="py-1.5 px-3 text-right">${l.debe > 0 ? '$ ' + l.debe.toLocaleString('es-AR',{minimumFractionDigits:2}) : '-'}</td>
-                            <td class="py-1.5 px-3 text-right">${l.haber > 0 ? '$ ' + l.haber.toLocaleString('es-AR',{minimumFractionDigits:2}) : '-'}</td>
+                            <td class="py-1.5 px-3 ${l.haber > 0 ? 'pl-6 sm:pl-8 text-gray-700' : 'font-semibold'}">${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}</td>
+                            <td class="py-1.5 px-3 text-right num-row">${l.debe > 0 ? '$ ' + fmtMoneda(l.debe) : '-'}</td>
+                            <td class="py-1.5 px-3 text-right num-row">${l.haber > 0 ? '$ ' + fmtMoneda(l.haber) : '-'}</td>
                         </tr>
                     `).join('');
 
                     return `
-                        <div class="bg-white border rounded-xl overflow-hidden mb-4 asiento-card">
-                            <div class="bg-gray-50 border-b px-4 py-2 flex justify-between items-center text-xs">
-                                <span class="font-bold text-gray-900">ASIENTO N° ${nroAsiento} — ${formatearFechaAr(m.fecha)}</span>
-                                <div class="flex items-center space-x-3">
+                        <div class="bg-white border rounded-xl overflow-x-auto mb-3 sm:mb-4 asiento-card">
+                            <div class="bg-gray-50 border-b px-3 sm:px-4 py-2 flex flex-wrap justify-between items-center text-xs gap-1">
+                                <span class="font-bold text-gray-900 num-row">ASIENTO N° ${nroAsiento} — ${formatearFechaAr(m.fecha)}</span>
+                                <div class="flex items-center space-x-2">
                                     <span class="text-gray-600 font-medium">${m.concepto}</span>
                                     <button onclick="eliminarAsientoManual(${m.id})" class="text-red-500 hover:text-red-700 no-print"><i data-lucide="trash-2" class="w-4 h-4 inline"></i></button>
                                 </div>
                             </div>
-                            <table class="w-full text-xs text-left">
+                            <table class="w-full text-xs text-left mobile-compact-table">
                                 <thead>
-                                    <tr class="border-b bg-gray-100 text-gray-500 font-bold uppercase">
+                                    <tr class="border-b bg-gray-100 text-gray-500 font-bold uppercase whitespace-nowrap">
                                         <th class="py-1.5 px-3">Cuenta Contable</th>
-                                        <th class="py-1.5 px-3 text-right w-36">Debe</th>
-                                        <th class="py-1.5 px-3 text-right w-36">Haber</th>
+                                        <th class="py-1.5 px-3 text-right w-28 sm:w-36">Debe</th>
+                                        <th class="py-1.5 px-3 text-right w-28 sm:w-36">Haber</th>
                                     </tr>
                                 </thead>
                                 <tbody>${filasRenglon}</tbody>
@@ -1626,54 +1793,54 @@
             }).join('');
 
             cont.innerHTML = `
-                <div class="space-y-6">
-                    <div class="bg-white p-4 rounded-xl border flex justify-between items-center no-print shadow-sm">
-                        <div class="flex items-center space-x-4">
-                            <div class="flex items-center space-x-2">
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="bg-white p-3 sm:p-4 rounded-xl border flex flex-wrap justify-between items-center no-print shadow-sm gap-3">
+                        <div class="flex flex-wrap items-center gap-2 sm:gap-4">
+                            <div class="flex items-center space-x-1.5">
                                 <span class="text-xs font-bold text-gray-500 uppercase">Desde:</span>
                                 <input type="date" value="${diarioFechaDesde}" onchange="diarioFechaDesde=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                             </div>
-                            <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-1.5">
                                 <span class="text-xs font-bold text-gray-500 uppercase">Hasta:</span>
                                 <input type="date" value="${diarioFechaHasta}" onchange="diarioFechaHasta=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                             </div>
-                            <div class="flex items-center space-x-2 border-l pl-4">
-                                <span class="text-xs font-bold text-gray-500 uppercase">N° Hoja:</span>
-                                <input type="number" value="${folioInicialDiario}" onchange="folioInicialDiario=parseInt(this.value)||1; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold text-blue-600">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Hoja:</span>
+                                <input type="number" value="${folioInicialDiario}" onchange="folioInicialDiario=parseInt(this.value)||1; renderizarVista();" class="w-16 text-xs border rounded p-1.5 font-bold text-blue-600">
                             </div>
                         </div>
-                        <div class="flex space-x-2">
-                            <button onclick="abrirModalAsientoManual()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
-                                <i data-lucide="plus" class="w-4 h-4"></i><span>+ Asiento Manual</span>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="abrirModalAsientoManual()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i><span>Asiento Manual</span>
                             </button>
-                            <button onclick="exportarLibroDiarioTxt()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
-                                <i data-lucide="download" class="w-4 h-4"></i><span>Exportar TXT</span>
+                            <button onclick="exportarLibroDiarioTxt()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
+                                <i data-lucide="download" class="w-3.5 h-3.5"></i><span>TXT</span>
                             </button>
-                            <button onclick="window.print()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow flex items-center space-x-2">
-                                <i data-lucide="printer" class="w-4 h-4"></i><span>Imprimir / PDF Legal</span>
+                            <button onclick="window.print()" class="bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
+                                <i data-lucide="printer" class="w-3.5 h-3.5"></i><span>PDF</span>
                             </button>
                         </div>
                     </div>
 
-                    <div class="bg-white p-6 border-b-2 border-gray-900 flex justify-between items-start">
+                    <div class="bg-white p-4 sm:p-6 border-b-2 border-gray-900 flex flex-wrap justify-between items-start gap-2">
                         <div>
-                            <h1 class="text-lg font-black uppercase text-gray-900">${emp.razonSocial}</h1>
+                            <h1 class="text-base sm:text-lg font-black uppercase text-gray-900">${emp.razonSocial}</h1>
                             <p class="text-xs text-gray-600">CUIT: ${emp.cuit} — Condición: ${emp.condicionIva}</p>
                         </div>
-                        <div class="text-right">
-                            <h2 class="text-xl font-bold text-gray-900">Libro Diario General</h2>
-                            <p class="text-xs text-gray-600">Período Del: ${formatearFechaAr(diarioFechaDesde)} Al: ${formatearFechaAr(diarioFechaHasta)} | Hoja Nro: ${folioInicialDiario}</p>
+                        <div class="text-left sm:text-right">
+                            <h2 class="text-lg sm:text-xl font-bold text-gray-900">Libro Diario General</h2>
+                            <p class="text-xs text-gray-600 num-row">Del ${formatearFechaAr(diarioFechaDesde)} al ${formatearFechaAr(diarioFechaHasta)} | Hoja: ${folioInicialDiario}</p>
                         </div>
                     </div>
 
                     <div>${htmlAsientos || '<div class="bg-white p-8 rounded-xl border text-center text-gray-400">Sin asientos en el rango seleccionado.</div>'}</div>
 
-                    <div class="bg-white rounded-xl border p-4">
-                        <table class="w-full text-xs font-black">
+                    <div class="bg-white rounded-xl border p-3 sm:p-4 overflow-x-auto">
+                        <table class="w-full text-xs font-black mobile-compact-table">
                             <tr class="border-t-2 border-gray-900 pt-2 text-gray-900">
-                                <td class="p-2 uppercase">TOTALES GENERALES ACUMULADOS DEL PERÍODO</td>
-                                <td class="p-2 text-right text-blue-900 w-36">$ ${totDebeAcumulado.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                                <td class="p-2 text-right text-blue-900 w-36">$ ${totHaberAcumulado.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                                <td class="p-2 uppercase">TOTALES GENERALES DEL PERÍODO</td>
+                                <td class="p-2 text-right text-blue-900 w-28 sm:w-36 num-row">$ ${fmtMoneda(totDebeAcumulado)}</td>
+                                <td class="p-2 text-right text-blue-900 w-28 sm:w-36 num-row">$ ${fmtMoneda(totHaberAcumulado)}</td>
                             </tr>
                         </table>
                     </div>
@@ -1738,56 +1905,56 @@
 
                     filasBalance += `
                         <tr class="text-xs border-b hover:bg-gray-50">
-                            <td class="p-3 font-mono font-bold">${acc.codigo}</td>
-                            <td class="p-3">${acc.nombre}</td>
-                            <td class="p-3 text-right">$ ${acc.debe.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                            <td class="p-3 text-right">$ ${acc.haber.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                            <td class="p-3 text-right font-medium text-blue-800">$ ${saldoDeudor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                            <td class="p-3 text-right font-medium text-emerald-800">$ ${saldoAcreedor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                            <td class="p-2.5 font-mono font-bold num-row">${acc.codigo}</td>
+                            <td class="p-2.5">${acc.nombre}</td>
+                            <td class="p-2.5 text-right num-row">$ ${fmtMoneda(acc.debe)}</td>
+                            <td class="p-2.5 text-right num-row">$ ${fmtMoneda(acc.haber)}</td>
+                            <td class="p-2.5 text-right font-medium text-blue-800 num-row">$ ${fmtMoneda(saldoDeudor)}</td>
+                            <td class="p-2.5 text-right font-medium text-emerald-800 num-row">$ ${fmtMoneda(saldoAcreedor)}</td>
                         </tr>
                     `;
                 }
             });
 
             cont.innerHTML = `
-                <div class="space-y-6">
-                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm no-print">
-                        <h2 class="text-xl font-bold text-gray-800">Balance de Sumas y Saldos</h2>
-                        <div class="flex items-center space-x-3">
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="flex flex-wrap justify-between items-center bg-white p-3 sm:p-4 rounded-xl border shadow-sm no-print gap-3">
+                        <h2 class="text-lg sm:text-xl font-bold text-gray-800">Balance de Sumas y Saldos</h2>
+                        <div class="flex flex-wrap items-center gap-2">
                             <span class="text-xs font-bold text-gray-500 uppercase">Desde:</span>
                             <input type="date" value="${balanceFechaDesde}" onchange="balanceFechaDesde=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                             <span class="text-xs font-bold text-gray-500 uppercase">Hasta:</span>
                             <input type="date" value="${balanceFechaHasta}" onchange="balanceFechaHasta=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
-                            <button onclick="window.print()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center space-x-2">
-                                <i data-lucide="printer" class="w-4 h-4"></i><span>Imprimir / PDF</span>
+                            <button onclick="window.print()" class="bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center space-x-1.5">
+                                <i data-lucide="printer" class="w-4 h-4"></i><span>PDF</span>
                             </button>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border overflow-hidden p-4">
-                        <div class="text-center pb-4 border-b mb-4">
-                            <h1 class="text-base font-black uppercase text-gray-900">${emp.razonSocial}</h1>
-                            <p class="text-xs text-gray-500">CUIT: ${emp.cuit} — Balance de Sumas y Saldos (Del ${formatearFechaAr(balanceFechaDesde)} al ${formatearFechaAr(balanceFechaHasta)})</p>
+                    <div class="bg-white rounded-xl border overflow-x-auto p-3 sm:p-4">
+                        <div class="text-center pb-3 border-b mb-3">
+                            <h1 class="text-sm sm:text-base font-black uppercase text-gray-900">${emp.razonSocial}</h1>
+                            <p class="text-xs text-gray-500 num-row">CUIT: ${emp.cuit} — Balance de Sumas y Saldos (${formatearFechaAr(balanceFechaDesde)} al ${formatearFechaAr(balanceFechaHasta)})</p>
                         </div>
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-gray-50 font-bold uppercase text-gray-600 border-b">
+                        <table class="w-full text-left text-xs mobile-compact-table">
+                            <thead class="bg-gray-50 font-bold uppercase text-gray-600 border-b whitespace-nowrap">
                                 <tr>
-                                    <th class="p-3">Código</th>
-                                    <th class="p-3">Cuenta Contable</th>
-                                    <th class="p-3 text-right">Débitos (Sumas)</th>
-                                    <th class="p-3 text-right">Créditos (Sumas)</th>
-                                    <th class="p-3 text-right">Saldo Deudor</th>
-                                    <th class="p-3 text-right">Saldo Acreedor</th>
+                                    <th class="p-2.5">Código</th>
+                                    <th class="p-2.5">Cuenta Contable</th>
+                                    <th class="p-2.5 text-right">Débitos</th>
+                                    <th class="p-2.5 text-right">Créditos</th>
+                                    <th class="p-2.5 text-right">Saldo Deudor</th>
+                                    <th class="p-2.5 text-right">Saldo Acreedor</th>
                                 </tr>
                             </thead>
                             <tbody>${filasBalance || `<tr><td colspan="6" class="text-center py-6 text-gray-400">Sin movimientos en el rango de fechas.</td></tr>`}</tbody>
                             <tfoot class="border-t-2 border-gray-900 font-bold bg-gray-50">
                                 <tr>
-                                    <td colspan="2" class="p-3 uppercase">Totales Generales:</td>
-                                    <td class="p-3 text-right">$ ${totalDebe.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                                    <td class="p-3 text-right">$ ${totalHaber.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                                    <td class="p-3 text-right text-blue-900">$ ${totalSaldoDeudor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
-                                    <td class="p-3 text-right text-emerald-900">$ ${totalSaldoAcreedor.toLocaleString('es-AR',{minimumFractionDigits:2})}</td>
+                                    <td colspan="2" class="p-2.5 uppercase">Totales:</td>
+                                    <td class="p-2.5 text-right num-row">$ ${fmtMoneda(totalDebe)}</td>
+                                    <td class="p-2.5 text-right num-row">$ ${fmtMoneda(totalHaber)}</td>
+                                    <td class="p-2.5 text-right text-blue-900 num-row">$ ${fmtMoneda(totalSaldoDeudor)}</td>
+                                    <td class="p-2.5 text-right text-emerald-900 num-row">$ ${fmtMoneda(totalSaldoAcreedor)}</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -1853,41 +2020,41 @@
             let arrow = (campo) => ordenRetenciones.campo !== campo ? '' : (ordenRetenciones.asc ? ' ▲' : ' ▼');
 
             let filas = listaRet.map(r => `
-                <tr class="hover:bg-gray-50 text-sm">
-                    <td class="px-3 py-3">${formatearFechaAr(r.fecha)}</td>
-                    <td class="px-3 py-3 font-bold ${r.tipo === 'RETENCION' ? 'text-blue-700' : 'text-purple-700'}">${r.tipo}</td>
-                    <td class="px-3 py-3 font-semibold">${r.impuesto}</td>
-                    <td class="px-3 py-3">${r.agente}</td>
-                    <td class="px-3 py-3 text-right font-bold">$ ${r.importe.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                    <td class="px-3 py-3 text-center">
+                <tr class="hover:bg-gray-50 text-xs sm:text-sm">
+                    <td class="px-3 py-2.5 num-row">${formatearFechaAr(r.fecha)}</td>
+                    <td class="px-3 py-2.5 font-bold whitespace-nowrap ${r.tipo === 'RETENCION' ? 'text-blue-700' : 'text-purple-700'}">${r.tipo}</td>
+                    <td class="px-3 py-2.5 font-semibold">${r.impuesto}</td>
+                    <td class="px-3 py-2.5">${r.agente}</td>
+                    <td class="px-3 py-2.5 text-right font-bold num-row">$ ${fmtMoneda(r.importe)}</td>
+                    <td class="px-3 py-2.5 text-center">
                         <button onclick="eliminarRetencionPercepcion(${r.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </td>
                 </tr>
             `).join('');
 
             cont.innerHTML = `
-                <div class="space-y-6">
-                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm">
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="flex flex-wrap justify-between items-center bg-white p-3 sm:p-4 rounded-xl border shadow-sm gap-3">
                         <div>
-                            <h2 class="text-xl font-bold text-gray-800">Módulo Impositivo - IVA</h2>
+                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">Módulo Impositivo - IVA</h2>
                             <p class="text-xs text-gray-500">Liquidación mensual de IVA</p>
                         </div>
-                        <div class="flex items-center space-x-3">
+                        <div class="flex flex-wrap gap-2">
                             <input type="file" id="filePerc" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoPercepciones(event)">
                             <button onclick="document.getElementById('filePerc').click()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
-                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Importar Percepciones</span>
+                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Percepciones</span>
                             </button>
                             <input type="file" id="fileRet" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoRetenciones(event)">
                             <button onclick="document.getElementById('fileRet').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
-                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Importar Retenciones</span>
+                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Retenciones</span>
                             </button>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border shadow-sm p-6 space-y-4">
-                        <div class="flex justify-between items-center border-b pb-3">
+                    <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
+                        <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
                             <h3 class="text-sm font-bold text-gray-900 uppercase">Determinación de IVA por Período</h3>
-                            <div class="flex items-center space-x-3">
+                            <div class="flex items-center space-x-2">
                                 <span class="text-xs font-bold text-gray-500">Mes:</span>
                                 <select onchange="impositivoMes=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                                     <option value="01" ${impositivoMes==='01'?'selected':''}>Enero</option>
@@ -1908,37 +2075,37 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 p-4 rounded-xl border border-blue-200">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 p-3.5 sm:p-4 rounded-xl border border-blue-200">
                             <div>
                                 <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Saldo Técnico a Favor Período Anterior ($)</label>
-                                <input type="number" step="0.01" value="${saldoTecnicoAnt}" onchange="saldoTecnicoAnt=parseFloat(this.value)||0; renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white">
+                                <input type="number" step="0.01" value="${saldoTecnicoAnt}" onchange="saldoTecnicoAnt=parseFloat(this.value)||0; renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white num-row">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Saldo Libre Disponibilidad Período Ant. ($)</label>
-                                <input type="number" step="0.01" value="${saldoLibreDispAnt}" onchange="saldoLibreDispAnt=parseFloat(this.value)||0; renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white">
+                                <input type="number" step="0.01" value="${saldoLibreDispAnt}" onchange="saldoLibreDispAnt=parseFloat(this.value)||0; renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white num-row">
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm bg-gray-50 p-4 rounded-xl border">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm bg-gray-50 p-3.5 sm:p-4 rounded-xl border">
                             <div class="space-y-2">
-                                <div class="flex justify-between"><span>IVA Débito Fiscal:</span><span class="font-bold">$ ${ivaDebitoPer.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
-                                <div class="flex justify-between"><span>IVA Crédito Fiscal:</span><span class="font-bold text-red-600">- $ ${ivaCreditoPer.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
-                                <div class="flex justify-between border-b pb-1"><span>Saldo Técnico Anterior:</span><span class="font-bold text-red-600">- $ ${saldoTecnicoAnt.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
-                                <div class="flex justify-between pt-1"><span class="font-bold">Saldo Técnico Neto:</span><span class="font-bold">$ ${saldoTecnicoNeto.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
+                                <div class="flex justify-between gap-2"><span>IVA Débito Fiscal:</span><span class="font-bold num-row">$ ${fmtMoneda(ivaDebitoPer)}</span></div>
+                                <div class="flex justify-between gap-2"><span>IVA Crédito Fiscal:</span><span class="font-bold text-red-600 num-row">- $ ${fmtMoneda(ivaCreditoPer)}</span></div>
+                                <div class="flex justify-between gap-2 border-b pb-1"><span>Saldo Técnico Anterior:</span><span class="font-bold text-red-600 num-row">- $ ${fmtMoneda(saldoTecnicoAnt)}</span></div>
+                                <div class="flex justify-between gap-2 pt-1"><span class="font-bold">Saldo Técnico Neto:</span><span class="font-bold num-row">$ ${fmtMoneda(saldoTecnicoNeto)}</span></div>
                             </div>
                             <div class="space-y-2">
-                                <div class="flex justify-between"><span>Retenciones:</span><span class="font-bold text-blue-700">$ ${retIvaPer.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
-                                <div class="flex justify-between"><span>Percepciones:</span><span class="font-bold text-purple-700">$ ${percIvaPer.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
-                                <div class="flex justify-between border-b pb-1"><span>Saldo Libre Disp. Anterior:</span><span class="font-bold text-red-600">$ ${saldoLibreDispAnt.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
-                                <div class="flex justify-between pt-1 font-black text-blue-900"><span>${etiquetaSaldoPer}:</span><span>$ ${saldoFinalPer.toLocaleString('es-AR',{minimumFractionDigits:2})}</span></div>
+                                <div class="flex justify-between gap-2"><span>Retenciones:</span><span class="font-bold text-blue-700 num-row">$ ${fmtMoneda(retIvaPer)}</span></div>
+                                <div class="flex justify-between gap-2"><span>Percepciones:</span><span class="font-bold text-purple-700 num-row">$ ${fmtMoneda(percIvaPer)}</span></div>
+                                <div class="flex justify-between gap-2 border-b pb-1"><span>Saldo Libre Disp. Anterior:</span><span class="font-bold text-red-600 num-row">$ ${fmtMoneda(saldoLibreDispAnt)}</span></div>
+                                <div class="flex justify-between gap-2 pt-1 font-black text-blue-900"><span>${etiquetaSaldoPer}:</span><span class="num-row">$ ${fmtMoneda(saldoFinalPer)}</span></div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border overflow-hidden">
-                        <div class="p-4 border-b bg-gray-50 font-bold text-sm text-gray-700">Listado de Retenciones y Percepciones Registradas</div>
-                        <table class="w-full text-left">
-                            <thead class="bg-gray-50 text-xs text-gray-500 uppercase select-none">
+                    <div class="bg-white rounded-xl border overflow-x-auto">
+                        <div class="p-3 sm:p-4 border-b bg-gray-50 font-bold text-xs sm:text-sm text-gray-700">Listado de Retenciones y Percepciones Registradas</div>
+                        <table class="w-full text-left mobile-compact-table">
+                            <thead class="bg-gray-50 text-[11px] text-gray-500 uppercase select-none whitespace-nowrap">
                                 <tr>
                                     <th class="p-3 cursor-pointer" onclick="ordenarRetencionesPor('fecha')">FECHA${arrow('fecha')}</th>
                                     <th class="p-3 cursor-pointer" onclick="ordenarRetencionesPor('tipo')">TIPO${arrow('tipo')}</th>
@@ -1967,12 +2134,16 @@
                 const d = String(dateObj.getUTCDate()).padStart(2, '0');
                 return `${y}-${m}-${d}`;
             }
-            const str = fechaRaw.toString().trim().split(' ')[0];
+            const str = fechaRaw.toString().trim().split('T')[0].split(' ')[0];
             if (str.includes('/')) {
                 const p = str.split('/');
                 if (p.length === 3) {
-                    const anio = p[2].length === 2 ? `20${p[2]}` : p[2];
-                    return `${anio}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+                    // Detectar si viene como 13T00:00:00/10/2026
+                    const dia = p[0].split('T')[0];
+                    const mes = p[1].split('T')[0];
+                    const anioRaw = p[2].split('T')[0];
+                    const anio = anioRaw.length === 2 ? `20${anioRaw}` : anioRaw;
+                    return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
                 }
             }
             if (str.includes('-')) {
@@ -2245,14 +2416,8 @@
             const totalDeducciones = totalRetencionesIibb + totalPercepcionesIibb + totalBancariasIibb + emp.iibbSaldoAnt;
             const resultadoLiquidacion = impuestoDeterminado - totalDeducciones;
 
-            let etiquetaSaldoIibb = "";
+            let etiquetaSaldoIibb = resultadoLiquidacion >= 0 ? "IMPUESTO A PAGAR (IIBB)" : "SALDO A FAVOR REGISTRADO";
             let montoResultadoAbs = Math.abs(resultadoLiquidacion);
-
-            if (resultadoLiquidacion >= 0) {
-                etiquetaSaldoIibb = "IMPUESTO A PAGAR (IIBB)";
-            } else {
-                etiquetaSaldoIibb = "SALDO A FAVOR REGISTRADO";
-            }
 
             let listaRetIibb = [...(emp.retencionesIibb || [])];
             listaRetIibb.sort((a, b) => {
@@ -2264,45 +2429,43 @@
             let arrowIibb = (campo) => ordenIibbRet.campo !== campo ? '' : (ordenIibbRet.asc ? ' ▲' : ' ▼');
 
             let filasRetIibb = listaRetIibb.map(r => `
-                <tr class="hover:bg-gray-50 text-sm">
-                    <td class="px-3 py-3">${formatearFechaAr(r.fecha)}</td>
-                    <td class="px-3 py-3 font-bold ${r.tipo === 'RETENCION' ? 'text-blue-700' : (r.tipo === 'PERCEPCION' ? 'text-purple-700' : 'text-emerald-700')}">${r.tipo}</td>
-                    <td class="px-3 py-3">${r.agente}</td>
-                    <td class="px-3 py-3 text-right font-bold">$ ${r.importe.toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
-                    <td class="px-3 py-3 text-center">
+                <tr class="hover:bg-gray-50 text-xs sm:text-sm">
+                    <td class="px-3 py-2.5 num-row">${formatearFechaAr(r.fecha)}</td>
+                    <td class="px-3 py-2.5 font-bold whitespace-nowrap ${r.tipo === 'RETENCION' ? 'text-blue-700' : (r.tipo === 'PERCEPCION' ? 'text-purple-700' : 'text-emerald-700')}">${r.tipo}</td>
+                    <td class="px-3 py-2.5">${r.agente}</td>
+                    <td class="px-3 py-2.5 text-right font-bold num-row">$ ${fmtMoneda(r.importe)}</td>
+                    <td class="px-3 py-2.5 text-center">
                         <button onclick="eliminarRetencionIibb(${r.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </td>
                 </tr>
             `).join('');
 
             cont.innerHTML = `
-                <div class="space-y-6">
-                    <div class="flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm">
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="flex flex-wrap justify-between items-center bg-white p-3 sm:p-4 rounded-xl border shadow-sm gap-3">
                         <div>
-                            <h2 class="text-xl font-bold text-gray-800">Módulo Impositivo - Ingresos Brutos (IIBB)</h2>
-                            <p class="text-xs text-gray-500">Determinación de IIBB para Contribuyentes Locales y Convenio Multilateral</p>
+                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">Módulo Impositivo - Ingresos Brutos (IIBB)</h2>
+                            <p class="text-xs text-gray-500">Determinación de IIBB Locales y Convenio Multilateral</p>
                         </div>
-                        <div class="flex items-center space-x-3">
+                        <div>
                             <input type="file" id="fileIibbUnico" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoIibbUnificado(event)">
-                            <button onclick="document.getElementById('fileIibbUnico').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
-                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Importar Archivo Unificado (Ret./Perc./Bancarias)</span>
+                            <button onclick="document.getElementById('fileIibbUnico').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
+                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Importar Unificado (Ret./Perc./Banc.)</span>
                             </button>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border shadow-sm p-6 space-y-6">
-                        <div class="flex justify-between items-center border-b pb-4">
-                            <div class="flex items-center space-x-4">
-                                <div>
-                                    <span class="block text-xs font-bold text-gray-500 uppercase">Régimen Contribuyente:</span>
-                                    <select onchange="obtenerEmpresaActual().iibbRegimen=this.value; guardarInmediato();" class="text-xs border border-gray-300 bg-gray-50 rounded-lg p-2 font-bold text-gray-800">
-                                        <option value="LOCAL" ${emp.iibbRegimen==='LOCAL'?'selected':''}>Local (Directo)</option>
-                                        <option value="CONVENIO" ${emp.iibbRegimen==='CONVENIO'?'selected':''}>Convenio Multilateral</option>
-                                    </select>
-                                </div>
+                    <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-5">
+                        <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-3">
+                            <div>
+                                <span class="block text-[11px] font-bold text-gray-500 uppercase">Régimen Contribuyente:</span>
+                                <select onchange="obtenerEmpresaActual().iibbRegimen=this.value; guardarInmediato();" class="text-xs border border-gray-300 bg-gray-50 rounded-lg p-1.5 font-bold text-gray-800 mt-1">
+                                    <option value="LOCAL" ${emp.iibbRegimen==='LOCAL'?'selected':''}>Local (Directo)</option>
+                                    <option value="CONVENIO" ${emp.iibbRegimen==='CONVENIO'?'selected':''}>Convenio Multilateral</option>
+                                </select>
                             </div>
 
-                            <div class="flex items-center space-x-3">
+                            <div class="flex items-center space-x-2">
                                 <span class="text-xs font-bold text-gray-500 uppercase">Mes:</span>
                                 <select onchange="iibbMes=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                                     <option value="01" ${iibbMes==='01'?'selected':''}>Enero</option>
@@ -2323,86 +2486,82 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-xl border">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-3.5 sm:p-4 rounded-xl border">
                             <div>
                                 <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Ventas Totales Netas (Período)</label>
-                                <div class="w-full bg-white border border-gray-300 rounded p-2 text-sm font-black text-gray-900">$ ${baseImponibleTotalVentas.toLocaleString('es-AR', {minimumFractionDigits:2})}</div>
+                                <div class="w-full bg-white border border-gray-300 rounded p-2 text-sm font-black text-gray-900 num-row">$ ${fmtMoneda(baseImponibleTotalVentas)}</div>
                             </div>
                             ${emp.iibbRegimen === 'CONVENIO' ? `
                             <div>
-                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Coeficiente Unificado (Jurisdicción)</label>
-                                <input type="number" step="0.0001" min="0" max="1" value="${emp.iibbCoeficiente}" onchange="obtenerEmpresaActual().iibbCoeficiente=parseFloat(this.value)||0; guardarInmediato();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white">
+                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Coeficiente Unificado</label>
+                                <input type="number" step="0.0001" min="0" max="1" value="${emp.iibbCoeficiente}" onchange="obtenerEmpresaActual().iibbCoeficiente=parseFloat(this.value)||0; guardarInmediato();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white num-row">
                             </div>
                             ` : ''}
                             <div>
-                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Alícuota de la Actividad (%)</label>
-                                <input type="number" step="0.01" value="${emp.iibbAlicuota}" onchange="obtenerEmpresaActual().iibbAlicuota=parseFloat(this.value)||0; guardarInmediato();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white" placeholder="Ej: 3.5">
+                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Alícuota Actividad (%)</label>
+                                <input type="number" step="0.01" value="${emp.iibbAlicuota}" onchange="obtenerEmpresaActual().iibbAlicuota=parseFloat(this.value)||0; guardarInmediato();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white num-row">
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
-                                <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-2">Base Imponible e Impuesto Determinado</h4>
-                                <div class="flex justify-between text-sm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 text-xs sm:text-sm">
+                            <div class="space-y-2.5 bg-gray-50 p-3.5 sm:p-4 rounded-xl border">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-2">Base Imponible e Impuesto</h4>
+                                <div class="flex justify-between gap-2">
                                     <span class="font-semibold text-gray-700">Base Imponible Total:</span>
-                                    <span class="font-bold text-gray-900">$ ${baseImponibleTotalVentas.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                    <span class="font-bold text-gray-900 num-row">$ ${fmtMoneda(baseImponibleTotalVentas)}</span>
                                 </div>
                                 ${emp.iibbRegimen === 'CONVENIO' ? `
-                                <div class="flex justify-between text-sm">
-                                    <span class="font-semibold text-gray-700">Coeficiente Aplicado:</span>
-                                    <span class="font-bold text-blue-700">${(emp.iibbCoeficiente * 100).toFixed(2)}% (${emp.iibbCoeficiente})</span>
-                                </div>
-                                <div class="flex justify-between text-sm">
-                                    <span class="font-semibold text-gray-700">Base Imponible Jurisdiccional:</span>
-                                    <span class="font-bold text-blue-900">$ ${baseImponibleJurisdiccion.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                <div class="flex justify-between gap-2">
+                                    <span class="font-semibold text-gray-700">Base Jurisdiccional (${(emp.iibbCoeficiente * 100).toFixed(2)}%):</span>
+                                    <span class="font-bold text-blue-900 num-row">$ ${fmtMoneda(baseImponibleJurisdiccion)}</span>
                                 </div>
                                 ` : ''}
-                                <div class="flex justify-between text-sm border-t pt-2">
+                                <div class="flex justify-between gap-2 border-t pt-2">
                                     <span class="font-bold text-gray-900 uppercase">Impuesto Determinado (${emp.iibbAlicuota}%):</span>
-                                    <span class="font-black text-blue-900">$ ${impuestoDeterminado.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                    <span class="font-black text-blue-900 num-row">$ ${fmtMoneda(impuestoDeterminado)}</span>
                                 </div>
                             </div>
 
-                            <div class="space-y-3 bg-gray-50 p-4 rounded-xl border">
+                            <div class="space-y-2.5 bg-gray-50 p-3.5 sm:p-4 rounded-xl border">
                                 <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-2">Deducciones y Saldo Anterior</h4>
-                                <div class="flex justify-between text-sm">
+                                <div class="flex justify-between gap-2">
                                     <span class="font-semibold text-gray-700">Retenciones IIBB:</span>
-                                    <span class="font-bold text-blue-700">$ ${totalRetencionesIibb.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                    <span class="font-bold text-blue-700 num-row">$ ${fmtMoneda(totalRetencionesIibb)}</span>
                                 </div>
-                                <div class="flex justify-between text-sm">
+                                <div class="flex justify-between gap-2">
                                     <span class="font-semibold text-gray-700">Percepciones IIBB:</span>
-                                    <span class="font-bold text-purple-700">$ ${totalPercepcionesIibb.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                    <span class="font-bold text-purple-700 num-row">$ ${fmtMoneda(totalPercepcionesIibb)}</span>
                                 </div>
-                                <div class="flex justify-between text-sm">
+                                <div class="flex justify-between gap-2">
                                     <span class="font-semibold text-gray-700">Retenciones Bancarias:</span>
-                                    <span class="font-bold text-emerald-700">$ ${totalBancariasIibb.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                    <span class="font-bold text-emerald-700 num-row">$ ${fmtMoneda(totalBancariasIibb)}</span>
                                 </div>
-                                <div class="flex justify-between items-center text-sm border-b pb-2">
-                                    <span class="font-semibold text-gray-700">Saldo a Favor Período Anterior ($):</span>
-                                    <input type="number" step="0.01" value="${emp.iibbSaldoAnt}" onchange="obtenerEmpresaActual().iibbSaldoAnt=parseFloat(this.value)||0; guardarInmediato();" class="w-32 text-right border rounded p-1 font-bold text-red-600 bg-white">
+                                <div class="flex justify-between items-center gap-2 border-b pb-2">
+                                    <span class="font-semibold text-gray-700">Saldo a Favor Ant. ($):</span>
+                                    <input type="number" step="0.01" value="${emp.iibbSaldoAnt}" onchange="obtenerEmpresaActual().iibbSaldoAnt=parseFloat(this.value)||0; guardarInmediato();" class="w-28 text-right border rounded p-1 font-bold text-red-600 bg-white num-row">
                                 </div>
-                                <div class="flex justify-between text-sm pt-1">
+                                <div class="flex justify-between gap-2 pt-1">
                                     <span class="font-bold uppercase text-gray-900">Total Deducciones:</span>
-                                    <span class="font-bold text-emerald-700">$ ${totalDeducciones.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                    <span class="font-bold text-emerald-700 num-row">$ ${fmtMoneda(totalDeducciones)}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center shadow">
+                        <div class="bg-slate-900 text-white p-4 rounded-xl flex flex-wrap justify-between items-center shadow gap-2">
                             <div>
-                                <p class="text-xs text-slate-400 uppercase font-semibold">Resultado Liquidación Ingresos Brutos (${emp.iibbRegimen})</p>
-                                <h4 class="text-lg font-black tracking-wider ${resultadoLiquidacion >= 0 ? 'text-amber-400' : 'text-emerald-400'}">${etiquetaSaldoIibb}</h4>
+                                <p class="text-[11px] text-slate-400 uppercase font-semibold">Resultado Liquidación IIBB (${emp.iibbRegimen})</p>
+                                <h4 class="text-sm sm:text-lg font-black tracking-wider ${resultadoLiquidacion >= 0 ? 'text-amber-400' : 'text-emerald-400'}">${etiquetaSaldoIibb}</h4>
                             </div>
                             <div class="text-right">
-                                <span class="text-2xl font-black">$ ${montoResultadoAbs.toLocaleString('es-AR', {minimumFractionDigits:2})}</span>
+                                <span class="text-xl sm:text-2xl font-black num-row">$ ${fmtMoneda(montoResultadoAbs)}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border overflow-hidden">
-                        <div class="p-4 border-b bg-gray-50 font-bold text-sm text-gray-700">Listado de Retenciones, Percepciones y Retenciones Bancarias de IIBB</div>
-                        <table class="w-full text-left">
-                            <thead class="bg-gray-50 text-xs text-gray-500 uppercase select-none">
+                    <div class="bg-white rounded-xl border overflow-x-auto">
+                        <div class="p-3 sm:p-4 border-b bg-gray-50 font-bold text-xs sm:text-sm text-gray-700">Listado de Retenciones, Percepciones y Bancarias de IIBB</div>
+                        <table class="w-full text-left mobile-compact-table">
+                            <thead class="bg-gray-50 text-[11px] text-gray-500 uppercase select-none whitespace-nowrap">
                                 <tr>
                                     <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('fecha')">FECHA${arrowIibb('fecha')}</th>
                                     <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('tipo')">TIPO${arrowIibb('tipo')}</th>
@@ -2416,6 +2575,639 @@
                     </div>
                 </div>
             `;
+        }
+
+        // ==========================================
+        // VISTA: MÓDULO IMPUESTO A LAS GANANCIAS (PH Y PJ)
+        // ==========================================
+        function calcularEscalaProgresiva(baseImponible, tablaTramos) {
+            if (baseImponible <= 0) return { impuesto: 0, tramo: tablaTramos[0], excedente: 0 };
+            for (let i = 0; i < tablaTramos.length; i++) {
+                const t = tablaTramos[i];
+                if (baseImponible > t.desde && baseImponible <= t.hasta) {
+                    const excedente = baseImponible - t.desde;
+                    const impuesto = t.fijo + (excedente * t.alicuota);
+                    return { impuesto, tramo: t, excedente };
+                }
+            }
+            const ultimo = tablaTramos[tablaTramos.length - 1];
+            const excedente = baseImponible - ultimo.desde;
+            return { impuesto: ultimo.fijo + (excedente * ultimo.alicuota), tramo: ultimo, excedente };
+        }
+
+        function actualizarGananciasField(path, val, isBool = false) {
+            const emp = obtenerEmpresaActual();
+            const cfg = emp.gananciasConfig;
+            const parsedVal = isBool ? Boolean(val) : (typeof val === 'string' && isNaN(Number(val)) ? val : (parseFloat(val) || 0));
+
+            if (path.startsWith('rentas.')) {
+                const key = path.split('.')[1];
+                cfg.rentas[key] = parsedVal;
+            } else {
+                cfg[path] = parsedVal;
+            }
+            if (path === 'tipoSujeto') actualizarSelectorEmpresas();
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function agregarDeduccionGeneralGanancias(e) {
+            e.preventDefault();
+            const emp = obtenerEmpresaActual();
+            const tipoId = document.getElementById('ganDedTipo').value;
+            const descripcion = document.getElementById('ganDedDesc').value.trim();
+            const importe = parseFloat(document.getElementById('ganDedMonto').value) || 0;
+
+            if (importe <= 0) {
+                alert("Ingresá un importe mayor a cero.");
+                return;
+            }
+            const meta = TIPOS_DEDUCCION_GENERAL.find(t => t.id === tipoId) || TIPOS_DEDUCCION_GENERAL[0];
+            emp.gananciasConfig.deduccionesGenerales.push({
+                id: Date.now(),
+                tipoId,
+                tipoLabel: meta.label,
+                descripcion: descripcion || meta.label,
+                importe
+            });
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function eliminarDeduccionGeneralGanancias(id) {
+            const emp = obtenerEmpresaActual();
+            emp.gananciasConfig.deduccionesGenerales = emp.gananciasConfig.deduccionesGenerales.filter(d => d.id !== id);
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function renderGanancias(cont) {
+            const emp = obtenerEmpresaActual();
+            const cfg = emp.gananciasConfig;
+            const anio = cfg.anio || "2026";
+            const params = PARAMS_GANANCIAS_ARCA[anio] || PARAMS_GANANCIAS_ARCA["2026"];
+
+            // Comprobantes del año seleccionado
+            const compsAnio = emp.comprobantes.filter(c => c.fecha && c.fecha.startsWith(anio));
+            let ventasAnioComps = 0, comprasAnioComps = 0;
+            compsAnio.forEach(c => {
+                const sub = c.netoTotal + c.exento + c.noGravado;
+                if (c.tipoOp === 'VENTA') ventasAnioComps += sub;
+                else if (c.tipoOp === 'COMPRA') comprasAnioComps += sub;
+            });
+
+            // Pagos a cuenta comunes
+            const totalPagosCuenta = (Number(cfg.retencionesSufridas) || 0) +
+                                     (Number(cfg.percepcionesSufridas) || 0) +
+                                     (Number(cfg.anticiposIngresados) || 0) +
+                                     (Number(cfg.saldoFavorAnterior) || 0);
+
+            if (cfg.tipoSujeto === 'PH') {
+                // ==========================================
+                // CÁLCULO PERSONA HUMANA (PH)
+                // ==========================================
+                const r = cfg.rentas;
+                const netoCat1 = (Number(r.cat1Ingresos) || 0) - (Number(r.cat1Gastos) || 0);
+                const netoCat2 = (Number(r.cat2Ingresos) || 0) - (Number(r.cat2Gastos) || 0);
+
+                const ingCat3 = (cfg.vincularComprobantes3ra ? ventasAnioComps : 0) + (Number(r.cat3IngresosManual) || 0);
+                const gasCat3 = (cfg.vincularComprobantes3ra ? comprasAnioComps : 0) + (Number(r.cat3GastosManual) || 0);
+                const netoCat3 = ingCat3 - gasCat3;
+
+                const netoCat4 = (Number(r.cat4Ingresos) || 0) - (Number(r.cat4Gastos) || 0);
+
+                const gananciaNetaAntesDed = netoCat1 + netoCat2 + netoCat3 + netoCat4;
+
+                // Deducciones Generales con validación de topes legales (Art. 85 LIG)
+                let totalDedGeneralesDeclaradas = 0;
+                let totalDedGeneralesComputables = 0;
+
+                const baseTope5Porc = Math.max(0, gananciaNetaAntesDed);
+                const filasDedGen = cfg.deduccionesGenerales.map(d => {
+                    const meta = TIPOS_DEDUCCION_GENERAL.find(t => t.id === d.tipoId) || { topeTipo: 'SIN_TOPE' };
+                    let topeAplicable = Infinity;
+                    if (meta.topeTipo === '5_GNI') topeAplicable = baseTope5Porc * 0.05;
+                    else if (meta.topeTipo === 'SEGURO') topeAplicable = params.topeSeguroVida;
+                    else if (meta.topeTipo === 'GNI') topeAplicable = params.gni;
+                    else if (meta.topeTipo === '40_GNI') topeAplicable = params.gni * 0.40;
+                    else if (meta.topeTipo === 'HIPOTECARIO') topeAplicable = params.topeHipotecario;
+                    else if (meta.topeTipo === 'SEPELIO') topeAplicable = params.topeSepelio;
+
+                    const computable = Math.min(d.importe, topeAplicable);
+                    const excedido = d.importe > topeAplicable;
+                    totalDedGeneralesDeclaradas += d.importe;
+                    totalDedGeneralesComputables += computable;
+
+                    return `
+                        <tr class="border-b hover:bg-gray-50 text-xs">
+                            <td class="p-2.5 font-semibold text-gray-800">${d.tipoLabel}<br><span class="text-[11px] text-gray-400 font-normal">${d.descripcion}</span></td>
+                            <td class="p-2.5 text-right num-row">$ ${fmtMoneda(d.importe)}</td>
+                            <td class="p-2.5 text-right font-bold num-row ${excedido ? 'text-amber-700' : 'text-emerald-700'}">$ ${fmtMoneda(computable)} ${excedido ? '<span class="block text-[10px] font-normal">(Topeado)</span>' : ''}</td>
+                            <td class="p-2.5 text-center">
+                                <button onclick="eliminarDeduccionGeneralGanancias(${d.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                const gananciaNetaEjercicio = gananciaNetaAntesDed - totalDedGeneralesComputables;
+
+                // Deducciones Personales Art. 30 LIG (solo computables hasta el límite de la ganancia neta)
+                const dedGni = params.gni;
+                const dedConyuge = cfg.conyuge ? params.conyuge : 0;
+                const dedHijos = (parseInt(cfg.hijos) || 0) * params.hijo;
+                const dedHijosInc = (parseInt(cfg.hijosIncapacitados) || 0) * params.hijoIncapacitado;
+
+                let dedEspecialBase = 0;
+                // La deducción especial requiere rentas de 3° (trabajando personalmente) o 4° categoría
+                const tieneRentaTrabajo = (netoCat3 > 0 || netoCat4 > 0);
+                if (cfg.tipoDedEspecial === 'AUTONOMO') dedEspecialBase = params.dedEspAutonomo;
+                else if (cfg.tipoDedEspecial === 'EMPRENDEDOR') dedEspecialBase = params.dedEspEmprendedor;
+                else if (cfg.tipoDedEspecial === 'REL_DEP') dedEspecialBase = params.dedEspRelDep;
+
+                // Suma doceava parte (SAC) solo si es Relación de Dependencia / Jubilado
+                const doceavaParte = cfg.tipoDedEspecial === 'REL_DEP'
+                    ? (dedGni + dedConyuge + dedHijos + dedHijosInc + dedEspecialBase) / 12
+                    : 0;
+
+                const totalDedPersonalesTeoricas = dedGni + dedConyuge + dedHijos + dedHijosInc + dedEspecialBase + doceavaParte;
+                // Las deducciones personales no pueden generar quebranto (Art. 30)
+                const totalDedPersonalesComputables = gananciaNetaEjercicio > 0
+                    ? Math.min(gananciaNetaEjercicio, totalDedPersonalesTeoricas)
+                    : 0;
+
+                const gananciaNetaSujetaImpuesto = Math.max(0, gananciaNetaEjercicio - totalDedPersonalesComputables);
+
+                const resEscala = calcularEscalaProgresiva(gananciaNetaSujetaImpuesto, params.escalaPH);
+                const impuestoDeterminado = resEscala.impuesto;
+                const alicuotaEfectiva = gananciaNetaEjercicio > 0 ? (impuestoDeterminado / gananciaNetaEjercicio) * 100 : 0;
+
+                const saldoFinal = impuestoDeterminado - totalPagosCuenta;
+
+                cont.innerHTML = `
+                    <div class="space-y-4 sm:space-y-6">
+                        <!-- ENCABEZADO Y SELECTOR PH / PJ -->
+                        <div class="bg-white p-3.5 sm:p-5 rounded-xl border shadow-sm flex flex-wrap justify-between items-center gap-3">
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <h2 class="text-lg sm:text-xl font-bold text-gray-900">Estimación Impuesto a las Ganancias</h2>
+                                    <span class="bg-blue-100 text-blue-800 text-[11px] font-black px-2.5 py-0.5 rounded-full">ARCA ${anio}</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-0.5">Ley de Impuesto a las Ganancias (t.o. 2019 y modif. Ley 27.743) — Tablas Oficiales ARCA</p>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase">Tipo Sujeto</label>
+                                    <select onchange="actualizarGananciasField('tipoSujeto', this.value)" class="text-xs border-2 border-blue-600 bg-blue-50 text-blue-900 rounded-lg p-1.5 font-bold">
+                                        <option value="PH" selected>Persona Humana (PH)</option>
+                                        <option value="PJ">Persona Jurídica (PJ - Sociedades)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase">Período Fiscal</label>
+                                    <select onchange="actualizarGananciasField('anio', this.value)" class="text-xs border rounded-lg p-1.5 font-bold bg-gray-50">
+                                        <option value="2026" ${anio==='2026'?'selected':''}>2026 (Vigente ARCA)</option>
+                                        <option value="2025" ${anio==='2025'?'selected':''}>2025 (Anual ARCA)</option>
+                                    </select>
+                                </div>
+                                <button onclick="window.print()" class="bg-gray-900 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1 mt-3 sm:mt-4 no-print">
+                                    <i data-lucide="printer" class="w-3.5 h-3.5"></i><span>PDF</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 1. RENTAS POR CATEGORÍA (1°, 2°, 3° Y 4°) -->
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
+                            <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
+                                <div>
+                                    <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase">1. Determinación de Rentas por Categoría</h3>
+                                    <p class="text-xs text-gray-500">Ingresos gravados menos gastos necesarios para obtener, mantener y conservar la fuente</p>
+                                </div>
+                                <label class="flex items-center space-x-2 text-xs font-bold text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 cursor-pointer">
+                                    <input type="checkbox" ${cfg.vincularComprobantes3ra ? 'checked' : ''} onchange="actualizarGananciasField('vincularComprobantes3ra', this.checked, true)">
+                                    <span>Sumar Comprobantes ${anio} en 3° Cat.</span>
+                                </label>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs mobile-compact-table">
+                                    <thead class="bg-gray-50 text-gray-600 uppercase font-bold border-b whitespace-nowrap">
+                                        <tr>
+                                            <th class="p-2.5">Categoría de Renta (LIG)</th>
+                                            <th class="p-2.5 text-right">Ingresos Gravados ($)</th>
+                                            <th class="p-2.5 text-right">Gastos Deducibles ($)</th>
+                                            <th class="p-2.5 text-right">Resultado Neto ($)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y">
+                                        <tr>
+                                            <td class="p-2.5 font-bold text-gray-800">1° Categoría <span class="block text-[11px] font-normal text-gray-500">Renta del Suelo (Alquileres inmuebles urbanos/rurales)</span></td>
+                                            <td class="p-2.5 text-right"><input type="number" step="0.01" value="${r.cat1Ingresos}" onchange="actualizarGananciasField('rentas.cat1Ingresos', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold num-row"></td>
+                                            <td class="p-2.5 text-right"><input type="number" step="0.01" value="${r.cat1Gastos}" onchange="actualizarGananciasField('rentas.cat1Gastos', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold num-row"></td>
+                                            <td class="p-2.5 text-right font-bold num-row ${netoCat1 >= 0 ? 'text-gray-900' : 'text-red-600'}">$ ${fmtMoneda(netoCat1)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-2.5 font-bold text-gray-800">2° Categoría <span class="block text-[11px] font-normal text-gray-500">Renta de Capitales (Intereses, regalías, rentas vitalicias)</span></td>
+                                            <td class="p-2.5 text-right"><input type="number" step="0.01" value="${r.cat2Ingresos}" onchange="actualizarGananciasField('rentas.cat2Ingresos', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold num-row"></td>
+                                            <td class="p-2.5 text-right"><input type="number" step="0.01" value="${r.cat2Gastos}" onchange="actualizarGananciasField('rentas.cat2Gastos', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold num-row"></td>
+                                            <td class="p-2.5 text-right font-bold num-row ${netoCat2 >= 0 ? 'text-gray-900' : 'text-red-600'}">$ ${fmtMoneda(netoCat2)}</td>
+                                        </tr>
+                                        <tr class="bg-blue-50/30">
+                                            <td class="p-2.5 font-bold text-blue-900">
+                                                3° Categoría <span class="block text-[11px] font-normal text-gray-600">Beneficios Empresariales / Explotación Unipersonal</span>
+                                                ${cfg.vincularComprobantes3ra ? `<span class="text-[10px] text-emerald-700 font-semibold num-row">Comprobantes ${anio}: Vtas $${fmtMoneda(ventasAnioComps)} | Cpras $${fmtMoneda(comprasAnioComps)}</span>` : ''}
+                                            </td>
+                                            <td class="p-2.5 text-right">
+                                                <input type="number" step="0.01" value="${r.cat3IngresosManual}" onchange="actualizarGananciasField('rentas.cat3IngresosManual', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold bg-white num-row" title="Ingresos adicionales manuales">
+                                                ${cfg.vincularComprobantes3ra ? `<span class="block text-[10px] text-gray-500 num-row">Total: $${fmtMoneda(ingCat3)}</span>` : ''}
+                                            </td>
+                                            <td class="p-2.5 text-right">
+                                                <input type="number" step="0.01" value="${r.cat3GastosManual}" onchange="actualizarGananciasField('rentas.cat3GastosManual', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold bg-white num-row" title="Gastos adicionales manuales">
+                                                ${cfg.vincularComprobantes3ra ? `<span class="block text-[10px] text-gray-500 num-row">Total: $${fmtMoneda(gasCat3)}</span>` : ''}
+                                            </td>
+                                            <td class="p-2.5 text-right font-bold num-row ${netoCat3 >= 0 ? 'text-blue-900' : 'text-red-600'}">$ ${fmtMoneda(netoCat3)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-2.5 font-bold text-gray-800">4° Categoría <span class="block text-[11px] font-normal text-gray-500">Trabajo Personal (Honorarios prof., sueldos, jubilaciones)</span></td>
+                                            <td class="p-2.5 text-right"><input type="number" step="0.01" value="${r.cat4Ingresos}" onchange="actualizarGananciasField('rentas.cat4Ingresos', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold num-row"></td>
+                                            <td class="p-2.5 text-right"><input type="number" step="0.01" value="${r.cat4Gastos}" onchange="actualizarGananciasField('rentas.cat4Gastos', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold num-row"></td>
+                                            <td class="p-2.5 text-right font-bold num-row ${netoCat4 >= 0 ? 'text-gray-900' : 'text-red-600'}">$ ${fmtMoneda(netoCat4)}</td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot class="bg-gray-100 font-black border-t-2 border-gray-800">
+                                        <tr>
+                                            <td colspan="3" class="p-2.5 uppercase text-gray-800">Ganancia Neta de las 4 Categorías (Antes de Ded. Generales):</td>
+                                            <td class="p-2.5 text-right text-blue-900 num-row">$ ${fmtMoneda(gananciaNetaAntesDed)}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 2. DEDUCCIONES GENERALES (ART. 85 LIG) -->
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
+                            <div class="border-b pb-3">
+                                <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase">2. Deducciones Generales (Art. 85 LIG)</h3>
+                                <p class="text-xs text-gray-500">Cargá tus deducciones del período; el sistema aplica automáticamente los topes vigentes de ARCA ${anio} y las guarda en tu perfil</p>
+                            </div>
+
+                            <form onsubmit="agregarDeduccionGeneralGanancias(event)" class="grid grid-cols-1 md:grid-cols-12 gap-2.5 bg-gray-50 p-3 rounded-xl border no-print">
+                                <div class="md:col-span-5">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Concepto Deducible ARCA</label>
+                                    <select id="ganDedTipo" class="w-full border rounded-lg p-2 text-xs font-semibold bg-white">
+                                        ${TIPOS_DEDUCCION_GENERAL.map(t => `<option value="${t.id}">${t.label}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="md:col-span-4">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Detalle / Comprobante</label>
+                                    <input type="text" id="ganDedDesc" placeholder="Ej: OSDE Plan 310 / Autónomos Cat. II" class="w-full border rounded-lg p-2 text-xs bg-white">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Importe Anual ($)</label>
+                                    <input type="number" step="0.01" id="ganDedMonto" required placeholder="0.00" class="w-full border rounded-lg p-2 text-xs font-bold text-right bg-white num-row">
+                                </div>
+                                <div class="md:col-span-1 flex items-end">
+                                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-2 rounded-lg text-xs shadow flex items-center justify-center">
+                                        <i data-lucide="plus" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs mobile-compact-table">
+                                    <thead class="bg-gray-50 text-gray-500 uppercase font-bold border-b whitespace-nowrap">
+                                        <tr>
+                                            <th class="p-2.5">Concepto / Detalle</th>
+                                            <th class="p-2.5 text-right">Importe Cargado</th>
+                                            <th class="p-2.5 text-right">Importe Computable (c/ Tope)</th>
+                                            <th class="p-2.5 text-center">Quitar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${filasDedGen || `<tr><td colspan="4" class="text-center py-4 text-gray-400">No hay deducciones generales cargadas para este contribuyente.</td></tr>`}
+                                    </tbody>
+                                    <tfoot class="bg-gray-50 font-bold border-t">
+                                        <tr>
+                                            <td class="p-2.5 uppercase">Total Deducciones Generales Computables:</td>
+                                            <td class="p-2.5 text-right text-gray-500 num-row">$ ${fmtMoneda(totalDedGeneralesDeclaradas)}</td>
+                                            <td class="p-2.5 text-right text-emerald-700 num-row">- $ ${fmtMoneda(totalDedGeneralesComputables)}</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 3. DEDUCCIONES PERSONALES ART. 30 LIG (ARCA) -->
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
+                            <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
+                                <div>
+                                    <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase">3. Deducciones Personales (Art. 30 LIG - Tabla ARCA ${anio})</h3>
+                                    <p class="text-xs text-gray-500">Importes anuales oficiales actualizados por IPC según normativa ARCA</p>
+                                </div>
+                                ${!tieneRentaTrabajo && cfg.tipoDedEspecial !== 'NINGUNA' ? `
+                                <span class="text-[11px] bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg font-semibold">
+                                    Nota: Deducción Especial requiere rentas de 3° (trabajo personal) o 4° Cat.
+                                </span>` : ''}
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-blue-50/60 p-3.5 rounded-xl border border-blue-200 text-xs">
+                                <div>
+                                    <label class="block font-bold text-blue-900 uppercase mb-1">Cónyuge / Unión Conv.</label>
+                                    <select onchange="actualizarGananciasField('conyuge', this.value === 'true', true)" class="w-full border rounded p-2 font-bold bg-white">
+                                        <option value="false" ${!cfg.conyuge?'selected':''}>No deduce ($0,00)</option>
+                                        <option value="true" ${cfg.conyuge?'selected':''}>Sí ($ ${fmtMoneda(params.conyuge)})</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-blue-900 uppercase mb-1">Hijos Menores 18 años</label>
+                                    <input type="number" min="0" max="15" value="${cfg.hijos}" onchange="actualizarGananciasField('hijos', this.value)" class="w-full border rounded p-2 font-bold bg-white num-row">
+                                    <span class="text-[10px] text-gray-500 num-row">$ ${fmtMoneda(params.hijo)} c/u</span>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-blue-900 uppercase mb-1">Hijos Incapacitados</label>
+                                    <input type="number" min="0" max="15" value="${cfg.hijosIncapacitados}" onchange="actualizarGananciasField('hijosIncapacitados', this.value)" class="w-full border rounded p-2 font-bold bg-white num-row">
+                                    <span class="text-[10px] text-gray-500 num-row">$ ${fmtMoneda(params.hijoIncapacitado)} c/u</span>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-blue-900 uppercase mb-1">Deducción Especial (Art. 30 c)</label>
+                                    <select onchange="actualizarGananciasField('tipoDedEspecial', this.value)" class="w-full border rounded p-2 font-bold bg-white">
+                                        <option value="AUTONOMO" ${cfg.tipoDedEspecial==='AUTONOMO'?'selected':''}>Autónomo ($ ${fmtMoneda(params.dedEspAutonomo)})</option>
+                                        <option value="EMPRENDEDOR" ${cfg.tipoDedEspecial==='EMPRENDEDOR'?'selected':''}>Nuevo Prof./Emp. ($ ${fmtMoneda(params.dedEspEmprendedor)})</option>
+                                        <option value="REL_DEP" ${cfg.tipoDedEspecial==='REL_DEP'?'selected':''}>Rel. Dep. / Jub. ($ ${fmtMoneda(params.dedEspRelDep)})</option>
+                                        <option value="NINGUNA" ${cfg.tipoDedEspecial==='NINGUNA'?'selected':''}>Sin Deducción Especial ($0,00)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-gray-50 p-3.5 rounded-xl border">
+                                <div class="space-y-1.5">
+                                    <div class="flex justify-between"><span>Ganancia No Imponible (Art. 30 a):</span><span class="font-bold num-row">$ ${fmtMoneda(dedGni)}</span></div>
+                                    <div class="flex justify-between"><span>Cargas de Familia (Art. 30 b):</span><span class="font-bold num-row">$ ${fmtMoneda(dedConyuge + dedHijos + dedHijosInc)}</span></div>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <div class="flex justify-between"><span>Deducción Especial + 12ava parte:</span><span class="font-bold num-row">$ ${fmtMoneda(dedEspecialBase + doceavaParte)}</span></div>
+                                    <div class="flex justify-between border-t pt-1 font-black text-blue-900"><span>Total Deducciones Personales Art. 30:</span><span class="num-row">$ ${fmtMoneda(totalDedPersonalesTeoricas)}</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. DETERMINACIÓN DEL IMPUESTO (ART. 94) Y SALDO A PAGAR -->
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-5">
+                            <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase border-b pb-3">4. Liquidación del Impuesto (Escala Art. 94 LIG) y Pagos a Cuenta</h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 text-xs sm:text-sm">
+                                <div class="space-y-2.5 bg-gray-50 p-4 rounded-xl border">
+                                    <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-1.5">Base Imponible y Escala Progresiva</h4>
+                                    <div class="flex justify-between gap-2"><span>Ganancia Neta del Ejercicio:</span><span class="font-bold num-row">$ ${fmtMoneda(gananciaNetaEjercicio)}</span></div>
+                                    <div class="flex justify-between gap-2"><span>(-) Deducciones Personales Computables:</span><span class="font-bold text-emerald-700 num-row">- $ ${fmtMoneda(totalDedPersonalesComputables)}</span></div>
+                                    <div class="flex justify-between gap-2 border-t pt-2 font-bold text-gray-900"><span>Ganancia Neta Sujeta a Impuesto:</span><span class="num-row">$ ${fmtMoneda(gananciaNetaSujetaImpuesto)}</span></div>
+                                    <div class="flex justify-between gap-2 text-xs text-gray-600">
+                                        <span>Tramo Escala Art. 94 (${(resEscala.tramo.alicuota * 100).toFixed(0)}% s/ excedente):</span>
+                                        <span class="num-row">Fijo $${fmtMoneda(resEscala.tramo.fijo)} + ${(resEscala.tramo.alicuota * 100).toFixed(0)}%</span>
+                                    </div>
+                                    <div class="flex justify-between gap-2 border-t pt-2 font-black text-blue-900 text-sm sm:text-base">
+                                        <span>IMPUESTO DETERMINADO (${alicuotaEfectiva.toFixed(2)}% ef.):</span>
+                                        <span class="num-row">$ ${fmtMoneda(impuestoDeterminado)}</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2.5 bg-gray-50 p-4 rounded-xl border">
+                                    <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-1.5">Pagos a Cuenta, Retenciones y Anticipos</h4>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Retenciones Ganancias Sufridas:</span>
+                                        <input type="number" step="0.01" value="${cfg.retencionesSufridas}" onchange="actualizarGananciasField('retencionesSufridas', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Percepciones Ganancias Sufridas:</span>
+                                        <input type="number" step="0.01" value="${cfg.percepcionesSufridas}" onchange="actualizarGananciasField('percepcionesSufridas', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Anticipos Ingresados Período:</span>
+                                        <input type="number" step="0.01" value="${cfg.anticiposIngresados}" onchange="actualizarGananciasField('anticiposIngresados', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Saldo a Favor Período Anterior:</span>
+                                        <input type="number" step="0.01" value="${cfg.saldoFavorAnterior}" onchange="actualizarGananciasField('saldoFavorAnterior', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between gap-2 border-t pt-2 font-bold text-emerald-700">
+                                        <span>Total Pagos a Cuenta:</span>
+                                        <span class="num-row">- $ ${fmtMoneda(totalPagosCuenta)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-900 text-white p-4 sm:p-5 rounded-xl flex flex-wrap justify-between items-center shadow gap-2">
+                                <div>
+                                    <p class="text-[11px] text-slate-400 uppercase font-semibold">Declaración Jurada Anual ${anio} — Persona Humana</p>
+                                    <h4 class="text-sm sm:text-lg font-black tracking-wider ${saldoFinal >= 0 ? 'text-amber-400' : 'text-emerald-400'}">
+                                        ${saldoFinal >= 0 ? 'SALDO A PAGAR GANANCIAS' : 'SALDO A FAVOR DE LIBRE DISPONIBILIDAD'}
+                                    </h4>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xl sm:text-3xl font-black num-row">$ ${fmtMoneda(Math.abs(saldoFinal))}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // ==========================================
+                // CÁLCULO PERSONA JURÍDICA (PJ - ART. 73 LIG)
+                // ==========================================
+                const ingTotales = (cfg.vincularComprobantesPJ ? ventasAnioComps : 0) + (Number(cfg.pjIngresosManual) || 0);
+                const gasTotales = (cfg.vincularComprobantesPJ ? comprasAnioComps : 0) + (Number(cfg.pjCostosGastosManual) || 0);
+                const resultadoContable = ingTotales - gasTotales;
+
+                const ajustesImp = Number(cfg.pjAjustesImpositivos) || 0;
+                const ajusteInflacion = Number(cfg.pjAjusteInflacion) || 0;
+                const quebrantos = Math.max(0, Number(cfg.pjQuebrantosAnt) || 0);
+
+                const gananciaNetaAntesQueb = resultadoContable + ajustesImp + ajusteInflacion;
+                const quebrantosComputables = gananciaNetaAntesQueb > 0 ? Math.min(gananciaNetaAntesQueb, quebrantos) : 0;
+                const gananciaNetaImponible = Math.max(0, gananciaNetaAntesQueb - quebrantosComputables);
+
+                const resEscalaPJ = calcularEscalaProgresiva(gananciaNetaImponible, params.escalaPJ);
+                const impuestoDeterminadoPJ = resEscalaPJ.impuesto;
+                const alicuotaEfectivaPJ = gananciaNetaImponible > 0 ? (impuestoDeterminadoPJ / gananciaNetaImponible) * 100 : 0;
+
+                const dividendos = Math.max(0, Number(cfg.pjDividendosDistribuidos) || 0);
+                const impuestoDividendos7 = dividendos * 0.07; // Art. 97 LIG (7%)
+
+                const saldoFinalPJ = impuestoDeterminadoPJ - totalPagosCuenta;
+
+                cont.innerHTML = `
+                    <div class="space-y-4 sm:space-y-6">
+                        <!-- ENCABEZADO Y SELECTOR PH / PJ -->
+                        <div class="bg-white p-3.5 sm:p-5 rounded-xl border shadow-sm flex flex-wrap justify-between items-center gap-3">
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <h2 class="text-lg sm:text-xl font-bold text-gray-900">Estimación Impuesto a las Ganancias</h2>
+                                    <span class="bg-purple-100 text-purple-900 text-[11px] font-black px-2.5 py-0.5 rounded-full">Sociedades ${anio}</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-0.5">Sociedades de Capital (Art. 73 LIG) — Escala Progresiva 25% / 30% / 35% ARCA</p>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase">Tipo Sujeto</label>
+                                    <select onchange="actualizarGananciasField('tipoSujeto', this.value)" class="text-xs border-2 border-purple-600 bg-purple-50 text-purple-900 rounded-lg p-1.5 font-bold">
+                                        <option value="PH">Persona Humana (PH)</option>
+                                        <option value="PJ" selected>Persona Jurídica (PJ - Sociedades)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase">Inicio Ejercicio</label>
+                                    <select onchange="actualizarGananciasField('anio', this.value)" class="text-xs border rounded-lg p-1.5 font-bold bg-gray-50">
+                                        <option value="2026" ${anio==='2026'?'selected':''}>Iniciado en 2026</option>
+                                        <option value="2025" ${anio==='2025'?'selected':''}>Iniciado en 2025</option>
+                                    </select>
+                                </div>
+                                <button onclick="window.print()" class="bg-gray-900 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1 mt-3 sm:mt-4 no-print">
+                                    <i data-lucide="printer" class="w-3.5 h-3.5"></i><span>PDF</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 1. RESULTADO CONTABLE Y AJUSTES IMPOSITIVOS -->
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
+                            <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
+                                <div>
+                                    <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase">1. Determinación de la Ganancia Neta Imponible (Sociedad)</h3>
+                                    <p class="text-xs text-gray-500">Partiendo del resultado contable más ajustes impositivos y Ajuste por Inflación (Título VI LIG)</p>
+                                </div>
+                                <label class="flex items-center space-x-2 text-xs font-bold text-purple-900 bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-200 cursor-pointer">
+                                    <input type="checkbox" ${cfg.vincularComprobantesPJ ? 'checked' : ''} onchange="actualizarGananciasField('vincularComprobantesPJ', this.checked, true)">
+                                    <span>Vincular Comprobantes ${anio}</span>
+                                </label>
+                            </div>
+
+                            ${cfg.vincularComprobantesPJ ? `
+                            <div class="bg-gray-50 p-3 rounded-lg border text-xs flex flex-wrap justify-between gap-2">
+                                <span class="font-semibold text-gray-700">Comprobantes Registrados en ${anio}:</span>
+                                <span class="font-bold text-blue-900 num-row">Ventas Netas: $ ${fmtMoneda(ventasAnioComps)} | Compras/Gastos Netos: $ ${fmtMoneda(comprasAnioComps)}</span>
+                            </div>` : ''}
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                                <div class="bg-gray-50 p-3 rounded-xl border">
+                                    <label class="block font-bold text-gray-700 uppercase mb-1">Otros Ingresos / Ajuste Contable ($)</label>
+                                    <input type="number" step="0.01" value="${cfg.pjIngresosManual}" onchange="actualizarGananciasField('pjIngresosManual', this.value)" class="w-full border rounded p-2 font-bold bg-white num-row">
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded-xl border">
+                                    <label class="block font-bold text-gray-700 uppercase mb-1">Otros Costos / Gastos Contables ($)</label>
+                                    <input type="number" step="0.01" value="${cfg.pjCostosGastosManual}" onchange="actualizarGananciasField('pjCostosGastosManual', this.value)" class="w-full border rounded p-2 font-bold bg-white num-row">
+                                </div>
+                                <div class="bg-blue-50 p-3 rounded-xl border border-blue-200">
+                                    <label class="block font-bold text-blue-900 uppercase mb-1">Resultado Contable Antes Imp.</label>
+                                    <div class="p-2 bg-white border rounded font-black text-sm num-row ${resultadoContable >= 0 ? 'text-blue-900' : 'text-red-600'}">$ ${fmtMoneda(resultadoContable)}</div>
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded-xl border">
+                                    <label class="block font-bold text-gray-700 uppercase mb-1">Ajustes Impositivos Netos (+/- $)</label>
+                                    <input type="number" step="0.01" value="${cfg.pjAjustesImpositivos}" onchange="actualizarGananciasField('pjAjustesImpositivos', this.value)" class="w-full border rounded p-2 font-bold bg-white num-row" placeholder="+ Gastos no ded. / - Exentos">
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded-xl border">
+                                    <label class="block font-bold text-gray-700 uppercase mb-1">Ajuste por Inflación Impositivo (+/- $)</label>
+                                    <input type="number" step="0.01" value="${cfg.pjAjusteInflacion}" onchange="actualizarGananciasField('pjAjusteInflacion', this.value)" class="w-full border rounded p-2 font-bold bg-white num-row" placeholder="+ Ganancia / - Pérdida">
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded-xl border">
+                                    <label class="block font-bold text-gray-700 uppercase mb-1">Quebrantos Ejercicios Anteriores ($)</label>
+                                    <input type="number" step="0.01" min="0" value="${cfg.pjQuebrantosAnt}" onchange="actualizarGananciasField('pjQuebrantosAnt', this.value)" class="w-full border rounded p-2 font-bold bg-white num-row">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. ESCALA PROGRESIVA ART. 73 LIG Y DIVIDENDOS -->
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-5">
+                            <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase border-b pb-3">2. Escala Sociedades (Art. 73 LIG) y Pagos a Cuenta</h3>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs mobile-compact-table border rounded-lg">
+                                    <thead class="bg-purple-900 text-white uppercase whitespace-nowrap">
+                                        <tr>
+                                            <th class="p-2.5">Tramo Ganancia Neta Imponible (${anio})</th>
+                                            <th class="p-2.5 text-right">Impuesto Fijo</th>
+                                            <th class="p-2.5 text-right">Alícuota</th>
+                                            <th class="p-2.5 text-center">Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y">
+                                        ${params.escalaPJ.map((t, idx) => {
+                                            const activo = gananciaNetaImponible > 0 && resEscalaPJ.tramo === t;
+                                            return `
+                                                <tr class="${activo ? 'bg-purple-50 font-bold text-purple-950' : 'text-gray-600'}">
+                                                    <td class="p-2.5 num-row">$ ${fmtMoneda(t.desde)} a ${t.hasta === Infinity ? 'en adelante' : '$ ' + fmtMoneda(t.hasta)}</td>
+                                                    <td class="p-2.5 text-right num-row">$ ${fmtMoneda(t.fijo)}</td>
+                                                    <td class="p-2.5 text-right num-row">${(t.alicuota * 100).toFixed(0)}%</td>
+                                                    <td class="p-2.5 text-center">${activo ? '<span class="bg-purple-700 text-white px-2 py-0.5 rounded text-[10px]">APLICADO</span>' : '-'}</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 text-xs sm:text-sm">
+                                <div class="space-y-2.5 bg-gray-50 p-4 rounded-xl border">
+                                    <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-1.5">Resumen Determinación Sociedad</h4>
+                                    <div class="flex justify-between gap-2"><span>Ganancia Neta Imponible:</span><span class="font-bold num-row">$ ${fmtMoneda(gananciaNetaImponible)}</span></div>
+                                    <div class="flex justify-between gap-2"><span>Alícuota Marginal / Efectiva:</span><span class="font-bold text-purple-800 num-row">${(resEscalaPJ.tramo.alicuota * 100).toFixed(0)}% / ${alicuotaEfectivaPJ.toFixed(2)}%</span></div>
+                                    <div class="flex justify-between gap-2 border-t pt-2 font-black text-purple-950 text-sm sm:text-base">
+                                        <span>IMPUESTO DETERMINADO SOCIEDAD:</span>
+                                        <span class="num-row">$ ${fmtMoneda(impuestoDeterminadoPJ)}</span>
+                                    </div>
+                                    <div class="border-t pt-2 space-y-1.5">
+                                        <div class="flex justify-between items-center gap-2 text-xs">
+                                            <span class="font-semibold text-gray-700">Dividendos Distribuidos (opcional):</span>
+                                            <input type="number" step="0.01" min="0" value="${cfg.pjDividendosDistribuidos}" onchange="actualizarGananciasField('pjDividendosDistribuidos', this.value)" class="w-28 text-right border rounded p-1 font-bold bg-white num-row">
+                                        </div>
+                                        <div class="flex justify-between gap-2 text-xs text-gray-600">
+                                            <span>Retención Dividendos Art. 97 LIG (7%):</span>
+                                            <span class="font-bold num-row">$ ${fmtMoneda(impuestoDividendos7)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2.5 bg-gray-50 p-4 rounded-xl border">
+                                    <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-1.5">Pagos a Cuenta, Retenciones y Anticipos</h4>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Retenciones Ganancias Sufridas:</span>
+                                        <input type="number" step="0.01" value="${cfg.retencionesSufridas}" onchange="actualizarGananciasField('retencionesSufridas', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Percepciones Ganancias Sufridas:</span>
+                                        <input type="number" step="0.01" value="${cfg.percepcionesSufridas}" onchange="actualizarGananciasField('percepcionesSufridas', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Anticipos Ingresados (RG 5685):</span>
+                                        <input type="number" step="0.01" value="${cfg.anticiposIngresados}" onchange="actualizarGananciasField('anticiposIngresados', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Saldo a Favor Período Anterior:</span>
+                                        <input type="number" step="0.01" value="${cfg.saldoFavorAnterior}" onchange="actualizarGananciasField('saldoFavorAnterior', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between gap-2 border-t pt-2 font-bold text-emerald-700">
+                                        <span>Total Pagos a Cuenta:</span>
+                                        <span class="num-row">- $ ${fmtMoneda(totalPagosCuenta)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-900 text-white p-4 sm:p-5 rounded-xl flex flex-wrap justify-between items-center shadow gap-2">
+                                <div>
+                                    <p class="text-[11px] text-slate-400 uppercase font-semibold">Declaración Jurada Sociedades (Ejercicio ${anio})</p>
+                                    <h4 class="text-sm sm:text-lg font-black tracking-wider ${saldoFinalPJ >= 0 ? 'text-amber-400' : 'text-emerald-400'}">
+                                        ${saldoFinalPJ >= 0 ? 'SALDO A PAGAR GANANCIAS PJ' : 'SALDO A FAVOR DE LIBRE DISPONIBILIDAD'}
+                                    </h4>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xl sm:text-3xl font-black num-row">$ ${fmtMoneda(Math.abs(saldoFinalPJ))}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         function guardarInmediato() {
