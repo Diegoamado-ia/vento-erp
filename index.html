@@ -140,7 +140,6 @@
                 </div>
                 
                 <div class="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
-                    <!-- BACKUP LOCAL JSON -->
                     <input type="file" id="fileBackupJson" accept=".json" class="hidden" onchange="importarBackupJson(event)">
                     <button onclick="exportarBackupJson()" title="Descargar copia de seguridad JSON" class="bg-slate-700 hover:bg-slate-800 text-white px-2 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
                         <i data-lucide="download" class="w-3.5 h-3.5"></i>
@@ -151,7 +150,6 @@
                         <span class="hidden md:inline">Restaurar</span>
                     </button>
 
-                    <!-- BOTÓN CONEXIÓN GOOGLE DRIVE -->
                     <button id="btnGoogleAuth" onclick="conectarGoogleDrive()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-sm transition flex items-center space-x-1">
                         <i data-lucide="cloud" class="w-3.5 h-3.5"></i>
                         <span id="txtGoogleAuth" class="hidden sm:inline">Drive</span>
@@ -310,7 +308,6 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE LÓGICA GENERAL & GOOGLE DRIVE API -->
     <script>
         const CLIENT_ID = '4416279805-nrr8v0a7jtdogk05931io2mvti7s39i8.apps.googleusercontent.com';
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
@@ -318,9 +315,6 @@
         let accessToken = null;
         let driveFileId = null;
 
-        // ==========================================
-        // FORMATEO DE NÚMEROS ARGENTINO ESTRICTO (Miles con punto, decimales con coma)
-        // ==========================================
         function fmtMoneda(val, decimales = 2) {
             const num = Number(val) || 0;
             const neg = num < 0 ? '-' : '';
@@ -344,7 +338,6 @@
             } else if (s.includes(',')) {
                 s = s.replace(',', '.');
             } else if (s.includes('.')) {
-                // Si tiene punto y exactamente 3 dígitos después (ej: 1.500 o 25.000), interpretarlo como separador de miles
                 const partes = s.split('.');
                 if (partes.length > 2 || (partes.length === 2 && partes[1].length === 3 && partes[0] !== '0')) {
                     s = s.replace(/\./g, '');
@@ -521,9 +514,6 @@
             "09": "Septiembre", "10": "Octubre", "11": "Noviembre", "12": "Diciembre"
         };
 
-        // ==========================================
-        // PARÁMETROS OFICIALES ARCA - IMPUESTO A LAS GANANCIAS
-        // ==========================================
         const PARAMS_GANANCIAS_ARCA = {
             "2026": {
                 gni: 6019671.36,
@@ -602,8 +592,7 @@
         function obtenerConfigGananciasDefault() {
             return {
                 anio: "2026",
-                tipoSujeto: "PH", // PH o PJ
-                // Datos PH
+                tipoSujeto: "PH",
                 conyuge: false,
                 hijos: 0,
                 hijosIncapacitados: 0,
@@ -616,8 +605,7 @@
                     cat4Ingresos: 0, cat4Gastos: 0
                 },
                 deduccionesGenerales: [],
-                // Datos PJ (soporte ejercicio irregular, ej: cierre 06 -> 01/07 al 30/06)
-                pjMesCierre: "12", // "01" a "12"
+                pjMesCierre: "12",
                 pjAnioCierre: "2026",
                 vincularComprobantesPJ: true,
                 pjIngresosManual: 0,
@@ -626,7 +614,6 @@
                 pjAjusteInflacion: 0,
                 pjQuebrantosAnt: 0,
                 pjDividendosDistribuidos: 0,
-                // Pagos a cuenta comunes
                 retencionesSufridas: 0,
                 percepcionesSufridas: 0,
                 anticiposIngresados: 0,
@@ -634,7 +621,6 @@
             };
         }
 
-        // Calcula fechas exactas de inicio y cierre del ejercicio económico de PJ
         function calcularRangoEjercicioPJ(mesCierreStr, anioCierreStr) {
             const mesCierre = parseInt(mesCierreStr, 10) || 12;
             const anioCierre = parseInt(anioCierreStr, 10) || 2026;
@@ -1299,9 +1285,6 @@
             renderizarVista();
         }
 
-        // ==========================================
-        // VISTA: DASHBOARD GENERAL
-        // ==========================================
         function renderDashboard(cont) {
             const emp = obtenerEmpresaActual();
             const compsFiltrados = emp.comprobantes.filter(c => c.fecha >= dashFechaDesde && c.fecha <= dashFechaHasta);
@@ -1626,9 +1609,6 @@
             renderizarVista();
         }
 
-        // ==========================================
-        // VISTA: LIBRO IVA
-        // ==========================================
         function renderLibroIva(cont) {
             const emp = obtenerEmpresaActual();
             const comprobantesFiltrados = emp.comprobantes.filter(c => {
@@ -1798,12 +1778,12 @@
             const emp = obtenerEmpresaActual();
             let lista = [];
 
-            emp.comprobantes.forEach(c => {
-                lista.push({ tipo: 'COMPRA_VENTA', fecha: c.fecha, comp: c });
+            (emp.comprobantes || []).forEach(c => {
+                lista.push({ tipo: 'COMPRA_VENTA', fecha: c.fecha || '', comp: c });
             });
 
             (emp.asientosManuales || []).forEach(m => {
-                lista.push({ tipo: 'MANUAL', fecha: m.fecha, manual: m });
+                lista.push({ tipo: 'MANUAL', fecha: m.fecha || '', manual: m });
             });
 
             lista.sort((a, b) => a.fecha.localeCompare(b.fecha));
@@ -1828,10 +1808,6 @@
                 const nro = i + 1;
                 if (item.tipo === 'COMPRA_VENTA') {
                     const c = item.comp;
-                    const codigoNeto = c.cuentaNeto || (c.tipoOp === 'VENTA' ? '4.1.01' : '5.1.01');
-                    const codigoIva = c.cuentaIva || (c.tipoOp === 'VENTA' ? '2.1.02' : '1.1.03');
-                    const codigoProvCliente = c.cuentaContrapartida || (c.tipoOp === 'VENTA' ? '1.1.04' : '2.1.01');
-
                     txt += `Asiento N° ${nro} — Fecha: ${formatearFechaAr(c.fecha)}\n`;
                     txt += `Ref: ${c.tipoNombre} ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} - ${c.razonSocial}\n`;
                     txt += `--------------------------------------------------------------------------------\n`;
@@ -1850,7 +1826,7 @@
                     txt += `Asiento Manual N° ${nro} — Fecha: ${formatearFechaAr(m.fecha)}\n`;
                     txt += `Concepto: ${m.concepto}\n`;
                     txt += `--------------------------------------------------------------------------------\n`;
-                    m.lineas.forEach(l => {
+                    (m.lineas || []).forEach(l => {
                         const de = l.debe > 0 ? `[DEBE] ` : `[HABER]`;
                         const imp = l.debe > 0 ? l.debe : l.haber;
                         txt += `  ${de} ${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}: $ ${fmtMoneda(imp)}\n`;
@@ -1867,9 +1843,6 @@
             a.click();
         }
 
-        // ==========================================
-        // VISTA: LIBRO DIARIO GENERAL
-        // ==========================================
         function renderLibroDiario(cont) {
             const emp = obtenerEmpresaActual();
             const cuentasImputables = emp.planCuentas.filter(p => p.imputable);
@@ -2032,9 +2005,6 @@
             `;
         }
 
-        // ==========================================
-        // VISTA: BALANCE DE SUMAS Y SALDOS (4 COLUMNAS)
-        // ==========================================
         function renderBalance(cont) {
             const emp = obtenerEmpresaActual();
             const compsFiltrados = emp.comprobantes.filter(c => c.fecha >= balanceFechaDesde && c.fecha <= balanceFechaHasta);
@@ -2140,9 +2110,6 @@
             `;
         }
 
-        // ==========================================
-        // VISTA: MÓDULO IMPOSITIVO (DETERMINACIÓN IVA)
-        // ==========================================
         function renderImpositivo(cont) {
             const emp = obtenerEmpresaActual();
 
@@ -2299,9 +2266,6 @@
             `;
         }
 
-        // ==========================================
-        // VISTA: INGRESOS BRUTOS (IIBB) UNIFICADO
-        // ==========================================
         function normalizarFechaImportacion(fechaRaw) {
             if (!fechaRaw) return "";
             if (typeof fechaRaw === 'number' && fechaRaw > 20000) {
@@ -2753,9 +2717,6 @@
             `;
         }
 
-        // ==========================================
-        // VISTA: MÓDULO IMPUESTO A LAS GANANCIAS (PH Y PJ)
-        // ==========================================
         function calcularEscalaProgresiva(baseImponible, tablaTramos) {
             if (baseImponible <= 0) return { impuesto: 0, tramo: tablaTramos[0], excedente: 0 };
             for (let i = 0; i < tablaTramos.length; i++) {
@@ -2831,16 +2792,12 @@
             const emp = obtenerEmpresaActual();
             const cfg = emp.gananciasConfig;
 
-            // Pagos a cuenta comunes
             const totalPagosCuenta = (Number(cfg.retencionesSufridas) || 0) +
                                      (Number(cfg.percepcionesSufridas) || 0) +
                                      (Number(cfg.anticiposIngresados) || 0) +
                                      (Number(cfg.saldoFavorAnterior) || 0);
 
             if (cfg.tipoSujeto === 'PH') {
-                // ==========================================
-                // CÁLCULO PERSONA HUMANA (PH - AÑO CALENDARIO)
-                // ==========================================
                 const anio = cfg.anio || "2026";
                 const params = PARAMS_GANANCIAS_ARCA[anio] || PARAMS_GANANCIAS_ARCA["2026"];
 
@@ -2927,7 +2884,6 @@
 
                 cont.innerHTML = `
                     <div class="space-y-4 sm:space-y-6">
-                        <!-- ENCABEZADO Y SELECTOR PH / PJ -->
                         <div class="bg-white p-3.5 sm:p-5 rounded-xl border shadow-sm flex flex-wrap justify-between items-center gap-3">
                             <div>
                                 <div class="flex items-center space-x-2">
@@ -2958,7 +2914,6 @@
                             </div>
                         </div>
 
-                        <!-- 1. RENTAS POR CATEGORÍA (1°, 2°, 3° Y 4°) -->
                         <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
                             <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
                                 <div>
@@ -3026,7 +2981,6 @@
                             </div>
                         </div>
 
-                        <!-- 2. DEDUCCIONES GENERALES (ART. 85 LIG) -->
                         <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
                             <div class="border-b pb-3">
                                 <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase">2. Deducciones Generales (Art. 85 LIG)</h3>
@@ -3080,7 +3034,6 @@
                             </div>
                         </div>
 
-                        <!-- 3. DEDUCCIONES PERSONALES ART. 30 LIG (ARCA) -->
                         <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
                             <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
                                 <div>
@@ -3134,7 +3087,6 @@
                             </div>
                         </div>
 
-                        <!-- 4. DETERMINACIÓN DEL IMPUESTO (ART. 94) Y SALDO A PAGAR -->
                         <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-5">
                             <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase border-b pb-3">4. Liquidación del Impuesto (Escala Art. 94 LIG) y Pagos a Cuenta</h3>
 
@@ -3194,19 +3146,13 @@
                     </div>
                 `;
             } else {
-                // ==========================================
-                // CÁLCULO PERSONA JURÍDICA (PJ - ART. 73 LIG)
-                // CON SOPORTE PARA EJERCICIO ECONÓMICO IRREGULAR
-                // ==========================================
                 const mesCierre = cfg.pjMesCierre || "12";
                 const anioCierre = cfg.pjAnioCierre || cfg.anio || "2026";
                 const rangoEj = calcularRangoEjercicioPJ(mesCierre, anioCierre);
 
-                // Por Ley de Ganancias (Art. 73), la escala aplicable a Sociedades se determina según el año calendario en que INICIA el ejercicio fiscal
                 const anioTablaEscala = PARAMS_GANANCIAS_ARCA[rangoEj.anioInicio] ? rangoEj.anioInicio : (PARAMS_GANANCIAS_ARCA[rangoEj.anioCierre] ? rangoEj.anioCierre : "2026");
                 const params = PARAMS_GANANCIAS_ARCA[anioTablaEscala] || PARAMS_GANANCIAS_ARCA["2026"];
 
-                // Filtrar comprobantes dentro del ejercicio económico exacto (ej. 2025-07-01 al 2026-06-30)
                 const compsEjercicio = emp.comprobantes.filter(c => c.fecha && c.fecha >= rangoEj.fechaInicio && c.fecha <= rangoEj.fechaFin);
                 let ventasEjComps = 0, comprasEjComps = 0;
                 compsEjercicio.forEach(c => {
@@ -3238,7 +3184,6 @@
 
                 cont.innerHTML = `
                     <div class="space-y-4 sm:space-y-6">
-                        <!-- ENCABEZADO Y SELECTOR DE EJERCICIO ECONÓMICO PJ -->
                         <div class="bg-white p-3.5 sm:p-5 rounded-xl border shadow-sm space-y-3">
                             <div class="flex flex-wrap justify-between items-center gap-3">
                                 <div>
@@ -3281,7 +3226,6 @@
                             </div>
                         </div>
 
-                        <!-- 1. RESULTADO CONTABLE Y AJUSTES IMPOSITIVOS -->
                         <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
                             <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
                                 <div>
@@ -3328,7 +3272,6 @@
                             </div>
                         </div>
 
-                        <!-- 2. ESCALA PROGRESIVA ART. 73 LIG Y DIVIDENDOS -->
                         <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-5">
                             <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
                                 <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase">2. Escala Sociedades (Art. 73 LIG) y Pagos a Cuenta</h3>
@@ -3430,7 +3373,6 @@
             guardarEnLocalStorage();
             renderizarVista();
         }
-
     </script>
 </body>
 </html>
