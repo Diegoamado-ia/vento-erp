@@ -16,6 +16,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- SheetJS (XLSX Parser para Excel de Retenciones/Percepciones) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- jsPDF + AutoTable para exportación directa y completa a PDF -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Google Identity Services Client Library -->
@@ -466,12 +469,16 @@
             return [
                 { codigo: "1.0.00", nombre: "ACTIVO", tipo: "ACTIVO", imputable: false },
                 { codigo: "1.1.00", nombre: "Activo Corriente", tipo: "ACTIVO", imputable: false },
+                { codigo: "1101100", nombre: "Caja", tipo: "ACTIVO", imputable: true },
+                { codigo: "1101200", nombre: "Banco Santander Rio Cta. Cte.", tipo: "ACTIVO", imputable: true },
                 { codigo: "1.1.01", nombre: "Caja en Moneda Nacional", tipo: "ACTIVO", imputable: true },
                 { codigo: "1.1.02", nombre: "Banco Cta Cte", tipo: "ACTIVO", imputable: true },
                 { codigo: "1.1.03", nombre: "IVA Crédito Fiscal", tipo: "ACTIVO", imputable: true },
+                { codigo: "1102000", nombre: "Créditos por Ventas", tipo: "ACTIVO", imputable: true },
                 { codigo: "1.1.04", nombre: "Deudores por Ventas", tipo: "ACTIVO", imputable: true },
                 { codigo: "1.1.05", nombre: "Percepciones / Retenciones IIBB", tipo: "ACTIVO", imputable: true },
                 { codigo: "2.0.00", nombre: "PASIVO", tipo: "PASIVO", imputable: false },
+                { codigo: "2101001", nombre: "Proveedores", tipo: "PASIVO", imputable: true },
                 { codigo: "2.1.01", nombre: "Proveedores", tipo: "PASIVO", imputable: true },
                 { codigo: "2.1.02", nombre: "IVA Débito Fiscal", tipo: "PASIVO", imputable: true },
                 { codigo: "4.0.00", nombre: "INGRESOS", tipo: "INGRESO", imputable: false },
@@ -621,7 +628,7 @@
 
         let digitoCuitManualIva = "";
         let estadoConsultaArcaIva = {
-            estado: "IDLE", // IDLE | CONSULTING | VERIFIED | ORIENTATIVA
+            estado: "IDLE",
             fecha: "",
             detalle: "Listo para consultar o aplicar cronograma verificado."
         };
@@ -900,27 +907,31 @@
         /* =====================================================================
            RECORDATORIOS (CORREO / CALENDARIO .ICS) Y EXPORTACIÓN CSV / PDF
         ===================================================================== */
-        function generarRecordatorioCorreo(titulo, fechaIso, monto, detalle) {
-            const asunto = encodeURIComponent(`Recordatorio Vencimiento Impositivo: ${titulo} (${formatearFechaAr(fechaIso)})`);
+        function generarRecordatorioCorreo(titulo, fechaIso, monto, detalle, tipoSaldo = "") {
+            const condSaldo = (tipoSaldo || "").trim();
+            const etiquetaSaldo = condSaldo ? `${condSaldo} — ` : "";
+            const asunto = encodeURIComponent(`Recordatorio Vencimiento Impositivo: ${etiquetaSaldo}${titulo} (${formatearFechaAr(fechaIso)})`);
             const cuerpo = encodeURIComponent(
                 `Hola,\n\nTe recuerdo el próximo vencimiento impositivo en VENTO ERP:\n` +
                 `• Obligación: ${titulo}\n` +
+                `• Condición del Saldo: ${condSaldo || 'A verificar'}\n` +
                 `• Fecha de Vencimiento: ${formatearFechaAr(fechaIso)}\n` +
-                `• Importe Estimado: $ ${fmtMoneda(monto)}\n` +
+                `• Importe (${condSaldo || 'Estimado'}): $ ${fmtMoneda(monto)}\n` +
                 `• Detalle: ${detalle}\n\n` +
                 `Generado desde VENTO ERP.`
             );
             window.location.href = `mailto:?subject=${asunto}&body=${cuerpo}`;
         }
 
-        function descargarRecordatorioIcs(titulo, fechaIso, monto, descripcion) {
+        function descargarRecordatorioIcs(titulo, fechaIso, monto, descripcion, tipoSaldo = "") {
             const isoClean = (fechaIso || new Date().toISOString().slice(0, 10)).replace(/-/g, "");
             const dtObj = new Date(`${fechaIso || new Date().toISOString().slice(0, 10)}T00:00:00`);
             const nextDay = new Date(dtObj.getTime() + 86400000);
             const endClean = `${nextDay.getFullYear()}${String(nextDay.getMonth() + 1).padStart(2, "0")}${String(nextDay.getDate()).padStart(2, "0")}`;
             const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}@vento-erp`;
-            const resumen = `${titulo} - $ ${fmtMoneda(monto)}`;
-            const descEsc = `${descripcion} | Importe: $ ${fmtMoneda(monto)}`.replace(/\n/g, "\\n");
+            const condSaldo = (tipoSaldo || "").trim();
+            const resumen = `${titulo}${condSaldo ? ' [' + condSaldo + ']' : ''} - $ ${fmtMoneda(monto)}`;
+            const descEsc = `${condSaldo ? 'Condición: ' + condSaldo + ' | ' : ''}${descripcion} | Importe: $ ${fmtMoneda(monto)}`.replace(/\n/g, "\\n");
 
             const icsContent = [
                 "BEGIN:VCALENDAR",
@@ -967,10 +978,11 @@
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
 
-        function renderBarraAccionesImpositivas(titulo, fechaIso, monto, detalle, emp, filasCsv) {
+        function renderBarraAccionesImpositivas(titulo, fechaIso, monto, detalle, emp, filasCsv, tipoSaldo = "") {
             const safeTitulo = (titulo || "").replace(/'/g, "\\'");
             const safeFecha = (fechaIso || "").replace(/'/g, "\\'");
             const safeDetalle = (detalle || "").replace(/'/g, "\\'");
+            const safeTipoSaldo = (tipoSaldo || "").replace(/'/g, "\\'");
             const csvPayload = encodeURIComponent(JSON.stringify(filasCsv || []));
 
             return `
@@ -979,10 +991,10 @@
                         Acciones rápidas: Recordatorio por correo, calendario (.ics) o exportación CSV/PDF
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <button type="button" onclick="generarRecordatorioCorreo('${safeTitulo}', '${safeFecha}', ${Number(monto) || 0}, '${safeDetalle}')" class="bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 shadow-sm">
+                        <button type="button" onclick="generarRecordatorioCorreo('${safeTitulo}', '${safeFecha}', ${Number(monto) || 0}, '${safeDetalle}', '${safeTipoSaldo}')" class="bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 shadow-sm">
                             <i data-lucide="mail" class="w-3.5 h-3.5"></i><span>Recordatorio Correo</span>
                         </button>
-                        <button type="button" onclick="descargarRecordatorioIcs('${safeTitulo}', '${safeFecha}', ${Number(monto) || 0}, '${safeDetalle}')" class="bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 shadow-sm">
+                        <button type="button" onclick="descargarRecordatorioIcs('${safeTitulo}', '${safeFecha}', ${Number(monto) || 0}, '${safeDetalle}', '${safeTipoSaldo}')" class="bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 shadow-sm">
                             <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i><span>Calendario (.ics)</span>
                         </button>
                         <button type="button" onclick="exportarLiquidacionCsv('${safeTitulo}', obtenerEmpresaActual(), JSON.parse(decodeURIComponent('${csvPayload}')))" class="bg-white hover:bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 shadow-sm">
@@ -994,6 +1006,218 @@
                     </div>
                 </div>
             `;
+        }
+
+        /* =====================================================================
+           EXPORTACIÓN DIRECTA Y COMPLETA A PDF (LIBRO DIARIO Y LIBROS IVA)
+        ===================================================================== */
+        function exportarLibroDiarioPdfCompleto() {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                window.print();
+                return;
+            }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const emp = obtenerEmpresaActual();
+            const mapaCuentas = {};
+            emp.planCuentas.forEach(p => { mapaCuentas[p.codigo] = p.nombre; });
+
+            const asientosUnificados = obtenerAsientosUnificadosOrdenados().filter(item => {
+                return item.fecha >= diarioFechaDesde && item.fecha <= diarioFechaHasta;
+            });
+
+            const rows = [];
+            let totDebe = 0;
+            let totHaber = 0;
+
+            asientosUnificados.forEach((item, idx) => {
+                const nro = idx + 1;
+                if (item.tipo === 'COMPRA_VENTA') {
+                    const c = item.comp;
+                    const ref = `${c.tipoNombre} ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} - ${c.razonSocial}`;
+                    rows.push([
+                        { content: `Asiento N° ${nro} | ${formatearFechaAr(c.fecha)} | ${ref}`, colSpan: 4, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }
+                    ]);
+                    const lineas = obtenerLineasEfectivasComprobante(c);
+                    lineas.forEach(l => {
+                        const d = Number(l.debe) || 0;
+                        const h = Number(l.haber) || 0;
+                        totDebe += d;
+                        totHaber += h;
+                        rows.push([
+                            `${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}`,
+                            d !== 0 ? `$ ${fmtMoneda(d)}` : '-',
+                            h !== 0 ? `$ ${fmtMoneda(h)}` : '-',
+                            d !== 0 && h === 0 ? 'DEBE' : (h !== 0 && d === 0 ? 'HABER' : '')
+                        ]);
+                    });
+                } else {
+                    const m = item.manual;
+                    rows.push([
+                        { content: `Asiento Manual N° ${nro} | ${formatearFechaAr(m.fecha)} | ${m.concepto}`, colSpan: 4, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }
+                    ]);
+                    (m.lineas || []).forEach(l => {
+                        const d = Number(l.debe) || 0;
+                        const h = Number(l.haber) || 0;
+                        totDebe += d;
+                        totHaber += h;
+                        rows.push([
+                            `${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}`,
+                            d !== 0 ? `$ ${fmtMoneda(d)}` : '-',
+                            h !== 0 ? `$ ${fmtMoneda(h)}` : '-',
+                            d !== 0 && h === 0 ? 'DEBE' : (h !== 0 && d === 0 ? 'HABER' : '')
+                        ]);
+                    });
+                }
+            });
+
+            rows.push([
+                { content: 'TOTALES GENERALES DEL PERÍODO', styles: { fontStyle: 'bold', fillColor: [226, 232, 240], textColor: [15, 23, 42] } },
+                { content: `$ ${fmtMoneda(totDebe)}`, styles: { fontStyle: 'bold', fillColor: [226, 232, 240], textColor: [30, 58, 138], halign: 'right' } },
+                { content: `$ ${fmtMoneda(totHaber)}`, styles: { fontStyle: 'bold', fillColor: [226, 232, 240], textColor: [30, 58, 138], halign: 'right' } },
+                { content: '', styles: { fillColor: [226, 232, 240] } }
+            ]);
+
+            doc.autoTable({
+                startY: 28,
+                head: [['Cuenta Contable / Asiento', 'Debe', 'Haber', 'Tipo']],
+                body: rows,
+                theme: 'grid',
+                styles: { fontSize: 7.5, cellPadding: 1.8, textColor: [30, 41, 59] },
+                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
+                columnStyles: {
+                    0: { cellWidth: 'auto' },
+                    1: { halign: 'right', cellWidth: 32 },
+                    2: { halign: 'right', cellWidth: 32 },
+                    3: { halign: 'center', cellWidth: 18 }
+                },
+                margin: { top: 28, bottom: 14, left: 10, right: 10 },
+                didDrawPage: (data) => {
+                    const folioActual = (folioInicialDiario || 1) + data.pageNumber - 1;
+                    doc.setFontSize(11);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(`${emp.razonSocial} (CUIT: ${emp.cuit})`, 10, 11);
+                    doc.setFontSize(9);
+                    doc.setFont(undefined, 'normal');
+                    doc.text(`LIBRO DIARIO GENERAL — Del ${formatearFechaAr(diarioFechaDesde)} al ${formatearFechaAr(diarioFechaHasta)}`, 10, 17);
+                    doc.text(`Hoja N° ${folioActual} | Pág. ${data.pageNumber}`, 200, 17, { align: 'right' });
+                    doc.setDrawColor(15, 23, 42);
+                    doc.line(10, 20, 200, 20);
+
+                    doc.setFontSize(8);
+                    doc.text(`VENTO ERP — ${emp.razonSocial} — Hoja ${folioActual}`, 10, 291);
+                    doc.text(`Página ${data.pageNumber}`, 200, 291, { align: 'right' });
+                }
+            });
+
+            doc.save(`Libro_Diario_${emp.cuit}_${diarioFechaDesde}_a_${diarioFechaHasta}.pdf`);
+        }
+
+        function exportarLibroIvaPdfHorizontal() {
+            if (!window.jspdf || !window.jspdf.jsPDF) {
+                window.print();
+                return;
+            }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const emp = obtenerEmpresaActual();
+
+            const comprobantesFiltrados = emp.comprobantes.filter(c => {
+                if (c.tipoOp !== libroIvaModo) return false;
+                const partes = (c.fecha || '').split('-');
+                if (partes.length === 3) {
+                    return (partes[1] === filtroMesIva && partes[0] === filtroAnioIva);
+                }
+                return true;
+            });
+
+            const rows = [];
+            let sumExentoNoGrav = 0;
+            let sumNeto = 0;
+            let sumIva = 0;
+            let sumTotal = 0;
+
+            comprobantesFiltrados.forEach(c => {
+                const esFacturaC = [11, 12, 13].includes(c.tipoCodigo);
+                const exentoNoGravCalculado = esFacturaC ? (Number(c.total) || 0) : ((Number(c.noGravado) || 0) + (Number(c.exento) || 0));
+                sumExentoNoGrav += exentoNoGravCalculado;
+                sumTotal += Number(c.total) || 0;
+
+                const desgloses = [];
+                if (c.neto105 > 0 || c.iva105 > 0) desgloses.push({ neto: c.neto105, tasa: '10,50%', iva: c.iva105 });
+                if (c.neto21 > 0 || c.iva21 > 0) desgloses.push({ neto: c.neto21, tasa: '21,00%', iva: c.iva21 });
+                if (c.neto27 > 0 || c.iva27 > 0) desgloses.push({ neto: c.neto27, tasa: '27,00%', iva: c.iva27 });
+                if (desgloses.length === 0) {
+                    desgloses.push({ neto: c.netoTotal, tasa: '0,00%', iva: 0 });
+                }
+
+                desgloses.forEach((d, idx) => {
+                    sumNeto += Number(d.neto) || 0;
+                    sumIva += Number(d.iva) || 0;
+                    rows.push([
+                        idx === 0 ? formatearFechaAr(c.fecha) : '',
+                        idx === 0 ? `${c.tipoNombre} ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')}` : '',
+                        idx === 0 ? (c.razonSocial || '') : '',
+                        idx === 0 ? (c.cuit || '') : '',
+                        idx === 0 && exentoNoGravCalculado > 0 ? `$ ${fmtMoneda(exentoNoGravCalculado)}` : '-',
+                        d.neto > 0 ? `$ ${fmtMoneda(d.neto)}` : '-',
+                        d.tasa !== '0,00%' ? d.tasa : '-',
+                        d.iva > 0 ? `$ ${fmtMoneda(d.iva)}` : '-',
+                        idx === 0 ? `$ ${fmtMoneda(c.total)}` : '-'
+                    ]);
+                });
+            });
+
+            rows.push([
+                { content: 'TOTALES DEL PERÍODO', colSpan: 4, styles: { fontStyle: 'bold', fillColor: [226, 232, 240], textColor: [15, 23, 42] } },
+                { content: `$ ${fmtMoneda(sumExentoNoGrav)}`, styles: { fontStyle: 'bold', fillColor: [226, 232, 240], halign: 'right' } },
+                { content: `$ ${fmtMoneda(sumNeto)}`, styles: { fontStyle: 'bold', fillColor: [226, 232, 240], halign: 'right' } },
+                { content: '', styles: { fillColor: [226, 232, 240] } },
+                { content: `$ ${fmtMoneda(sumIva)}`, styles: { fontStyle: 'bold', fillColor: [226, 232, 240], halign: 'right' } },
+                { content: `$ ${fmtMoneda(sumTotal)}`, styles: { fontStyle: 'bold', fillColor: [226, 232, 240], halign: 'right' } }
+            ]);
+
+            const tituloLibro = libroIvaModo === 'COMPRA' ? 'LIBRO IVA COMPRAS' : 'LIBRO IVA VENTAS';
+            const colIvaLabel = libroIvaModo === 'COMPRA' ? 'IVA CF' : 'IVA DF';
+
+            doc.autoTable({
+                startY: 26,
+                head: [['Fecha', 'Comprobante', 'Razón Social', 'C.U.I.T.', 'No Grav/Ex.', 'Neto Grav.', 'Alíc.', colIvaLabel, 'Total']],
+                body: rows,
+                theme: 'grid',
+                styles: { fontSize: 7.5, cellPadding: 1.8, textColor: [30, 41, 59] },
+                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: 'bold' },
+                columnStyles: {
+                    0: { cellWidth: 20 },
+                    1: { cellWidth: 34 },
+                    2: { cellWidth: 'auto' },
+                    3: { cellWidth: 26 },
+                    4: { halign: 'right', cellWidth: 28 },
+                    5: { halign: 'right', cellWidth: 28 },
+                    6: { halign: 'right', cellWidth: 16 },
+                    7: { halign: 'right', cellWidth: 28 },
+                    8: { halign: 'right', cellWidth: 30 }
+                },
+                margin: { top: 26, bottom: 14, left: 10, right: 10 },
+                didDrawPage: (data) => {
+                    const folioActual = (folioInicialIva || 1) + data.pageNumber - 1;
+                    doc.setFontSize(11);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(`${emp.razonSocial} — CUIT: ${emp.cuit} (${emp.condicionIva})`, 10, 11);
+                    doc.setFontSize(9);
+                    doc.setFont(undefined, 'normal');
+                    doc.text(`${tituloLibro} — Período: ${filtroMesIva}/${filtroAnioIva}`, 10, 17);
+                    doc.text(`Hoja N° ${folioActual} | Pág. ${data.pageNumber}`, 287, 17, { align: 'right' });
+                    doc.setDrawColor(15, 23, 42);
+                    doc.line(10, 20, 287, 20);
+
+                    doc.setFontSize(8);
+                    doc.text(`VENTO ERP — ${tituloLibro} — ${emp.razonSocial}`, 10, 202);
+                    doc.text(`Hoja ${folioActual} — Página ${data.pageNumber}`, 287, 202, { align: 'right' });
+                }
+            });
+
+            doc.save(`Libro_IVA_${libroIvaModo}_${emp.cuit}_${filtroAnioIva}-${filtroMesIva}.pdf`);
         }
 
         const TIPOS_DEDUCCION_GENERAL = [
@@ -1613,7 +1837,7 @@
                             cuentaNeto: tipoOp === 'VENTA' ? "4.1.01" : "5.1.01",
                             cuentaIva: tipoOp === 'VENTA' ? "2.1.02" : "1.1.03",
                             cuentaOtrosTributos: "1.1.05",
-                            cuentaContrapartida: tipoOp === 'VENTA' ? "1.1.04" : "2.1.01",
+                            cuentaContrapartida: tipoOp === 'VENTA' ? "1102000" : "2101001",
                             moneda, tipoCambio
                         });
                         agregados++;
@@ -1769,7 +1993,8 @@
                 saldoTecnicoNeto,
                 saldoFinal,
                 aPagar,
-                etiqueta
+                etiqueta,
+                condicionCorreo: aPagar ? "SALDO A PAGAR" : "SALDO A FAVOR"
             };
         }
 
@@ -1823,7 +2048,8 @@
                 resultadoLiquidacion,
                 saldoFinal: Math.abs(resultadoLiquidacion),
                 aPagar,
-                etiqueta: aPagar ? "IIBB A PAGAR" : "SALDO A FAVOR IIBB"
+                etiqueta: aPagar ? "IIBB A PAGAR" : "SALDO A FAVOR IIBB",
+                condicionCorreo: aPagar ? "SALDO A PAGAR" : "SALDO A FAVOR"
             };
         }
 
@@ -1901,7 +2127,8 @@
                     impuestoDeterminado,
                     saldoFinal: Math.abs(saldoFinal),
                     aPagar,
-                    etiqueta: aPagar ? "GANANCIAS A PAGAR" : "SALDO A FAVOR GANANCIAS"
+                    etiqueta: aPagar ? "GANANCIAS A PAGAR" : "SALDO A FAVOR GANANCIAS",
+                    condicionCorreo: aPagar ? "SALDO A PAGAR" : "SALDO A FAVOR"
                 };
             } else {
                 const mesCierre = cfg.pjMesCierre || "12";
@@ -1938,7 +2165,8 @@
                     impuestoDeterminado: impuestoDeterminadoPJ,
                     saldoFinal: Math.abs(saldoFinalPJ),
                     aPagar,
-                    etiqueta: aPagar ? "GANANCIAS A PAGAR" : "SALDO A FAVOR GANANCIAS"
+                    etiqueta: aPagar ? "GANANCIAS A PAGAR" : "SALDO A FAVOR GANANCIAS",
+                    condicionCorreo: aPagar ? "SALDO A PAGAR" : "SALDO A FAVOR"
                 };
             }
         }
@@ -1959,18 +2187,9 @@
                 });
             });
 
-            const cuentasPorCobrar = ['1.1.04'];
-            const cuentasPorPagar = ['2.1.01'];
-            const cuentasDisponibilidades = ['1.1.01', '1.1.02'];
-
-            let cxc = 0;
-            cuentasPorCobrar.forEach(cod => { cxc += (saldosCuentas[cod] || 0); });
-
-            let cxp = 0;
-            cuentasPorPagar.forEach(cod => { cxp += Math.abs(saldosCuentas[cod] || 0); });
-
-            let disp = 0;
-            cuentasDisponibilidades.forEach(cod => { disp += (saldosCuentas[cod] || 0); });
+            const cxc = saldosCuentas['1102000'] || 0;
+            const cxp = Math.abs(saldosCuentas['2101001'] || 0);
+            const disp = (saldosCuentas['1101100'] || 0) + (saldosCuentas['1101200'] || 0);
 
             return { cxc, cxp, disp };
         }
@@ -2182,33 +2401,33 @@
                             </p>
                         </div>
 
-                        <div class="bg-white p-4 sm:p-5 rounded-xl border shadow-sm border-l-4 border-l-slate-700">
-                            <p class="text-[11px] font-bold text-gray-500 uppercase">DISPONIBILIDADES (1.1.01/02)</p>
+                        <div onclick="cambiarVista('balance')" class="cursor-pointer bg-white p-4 sm:p-5 rounded-xl border shadow-sm border-l-4 border-l-slate-700 hover:border-slate-400 transition">
+                            <p class="text-[11px] font-bold text-gray-500 uppercase">DISPONIBILIDADES (1101100 + 1101200)</p>
                             <h3 class="text-lg sm:text-xl font-black text-slate-900 mt-1 num-row mobile-kpi-val">$ ${fmtMoneda(saldosCont.disp)}</h3>
-                            <p class="text-[11px] text-gray-400 mt-1 num-row">Caja + Banco Cta. Cte. (Libro Diario)</p>
+                            <p class="text-[11px] text-gray-400 mt-1 num-row">Caja + Banco Santander Rio Cta. Cte.</p>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                         <div onclick="cambiarVista('balance')" class="cursor-pointer bg-white p-4 sm:p-5 rounded-xl border shadow-sm hover:border-blue-300 transition flex flex-col justify-between">
                             <div class="flex justify-between items-center border-b pb-2">
-                                <span class="text-xs font-bold text-gray-500 uppercase">CUENTAS A COBRAR (1.1.04)</span>
-                                <span class="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">Deudores Ventas</span>
+                                <span class="text-xs font-bold text-gray-500 uppercase">CUENTAS A COBRAR (1102000)</span>
+                                <span class="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">Créditos por Ventas</span>
                             </div>
                             <div class="py-3">
                                 <h4 class="text-xl sm:text-2xl font-black text-blue-900 num-row">$ ${fmtMoneda(saldosCont.cxc)}</h4>
-                                <p class="text-[11px] text-gray-400 mt-1">Saldo contable acumulado en comprobantes y asientos</p>
+                                <p class="text-[11px] text-gray-400 mt-1">Saldo contable de la cuenta 1102000 Créditos por Ventas</p>
                             </div>
                         </div>
 
                         <div onclick="cambiarVista('balance')" class="cursor-pointer bg-white p-4 sm:p-5 rounded-xl border shadow-sm hover:border-red-300 transition flex flex-col justify-between">
                             <div class="flex justify-between items-center border-b pb-2">
-                                <span class="text-xs font-bold text-gray-500 uppercase">CUENTAS A PAGAR (2.1.01)</span>
+                                <span class="text-xs font-bold text-gray-500 uppercase">CUENTAS A PAGAR (2101001)</span>
                                 <span class="text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded">Proveedores</span>
                             </div>
                             <div class="py-3">
                                 <h4 class="text-xl sm:text-2xl font-black text-red-700 num-row">$ ${fmtMoneda(saldosCont.cxp)}</h4>
-                                <p class="text-[11px] text-gray-400 mt-1">Pasivo comercial registrado en el sistema</p>
+                                <p class="text-[11px] text-gray-400 mt-1">Saldo contable de la cuenta 2101001 Proveedores</p>
                             </div>
                         </div>
 
@@ -2429,7 +2648,7 @@
             const codigoNeto = c.cuentaNeto || (c.tipoOp === 'VENTA' ? '4.1.01' : '5.1.01');
             const codigoIva = c.cuentaIva || (c.tipoOp === 'VENTA' ? '2.1.02' : '1.1.03');
             const codigoOtros = c.cuentaOtrosTributos || '1.1.05';
-            const codigoProvCliente = c.cuentaContrapartida || (c.tipoOp === 'VENTA' ? '1.1.04' : '2.1.01');
+            const codigoProvCliente = c.cuentaContrapartida || (c.tipoOp === 'VENTA' ? '1102000' : '2101001');
             const baseNeta = (Number(c.netoTotal) || 0) + (Number(c.exento) || 0) + (Number(c.noGravado) || 0);
             const iva = Number(c.totalIva) || 0;
             const otros = Number(c.otrosTributos) || 0;
@@ -2603,9 +2822,14 @@
                                 <input type="number" value="${folioInicialIva}" onchange="folioInicialIva=parseInt(this.value)||1; renderizarVista();" class="w-16 text-xs border rounded p-1.5 font-bold text-blue-600">
                             </div>
                         </div>
-                        <button onclick="window.print()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center space-x-2 shadow">
-                            <i data-lucide="printer" class="w-4 h-4"></i><span>Imprimir / PDF</span>
-                        </button>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="exportarLibroIvaPdfHorizontal()" class="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center space-x-2 shadow">
+                                <i data-lucide="file-down" class="w-4 h-4"></i><span>Exportar PDF (Horizontal)</span>
+                            </button>
+                            <button onclick="window.print()" class="bg-gray-100 hover:bg-gray-200 text-gray-800 border px-3 py-2 rounded-lg text-xs font-semibold flex items-center space-x-1.5">
+                                <i data-lucide="printer" class="w-4 h-4"></i><span>Imprimir</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="bg-white p-4 sm:p-6 border-b-2 border-gray-900 flex flex-wrap justify-between items-start gap-2">
@@ -2886,8 +3110,8 @@
                             <button onclick="exportarLibroDiarioTxt()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
                                 <i data-lucide="download" class="w-3.5 h-3.5"></i><span>TXT</span>
                             </button>
-                            <button onclick="window.print()" class="bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
-                                <i data-lucide="printer" class="w-3.5 h-3.5"></i><span>PDF</span>
+                            <button onclick="exportarLibroDiarioPdfCompleto()" class="bg-gray-900 hover:bg-gray-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
+                                <i data-lucide="file-down" class="w-3.5 h-3.5"></i><span>Exportar PDF</span>
                             </button>
                         </div>
                     </div>
@@ -3054,6 +3278,7 @@
 
             const filasCsvIva = [
                 { concepto: "Período", valor: `${impositivoMes}/${impositivoAnio}` },
+                { concepto: "Condición del Saldo", valor: liq.condicionCorreo },
                 { concepto: "Terminación CUIT Aplicada", valor: vtoIva.digito },
                 { concepto: "Fecha Vencimiento IVA", valor: `${vtoIva.fechaFormateada} (${vtoIva.badge})` },
                 { concepto: "IVA Débito Fiscal", valor: fmtMoneda(liq.ivaDebito) },
@@ -3085,7 +3310,7 @@
                         </div>
                     </div>
 
-                    ${renderBarraAccionesImpositivas(`IVA_${impositivoMes}_${impositivoAnio}`, vtoIva.fechaIso, liq.saldoFinal, vtoIva.motivo, emp, filasCsvIva)}
+                    ${renderBarraAccionesImpositivas(`IVA_${impositivoMes}_${impositivoAnio}`, vtoIva.fechaIso, liq.saldoFinal, `${liq.condicionCorreo} (${liq.etiqueta}) - ${vtoIva.motivo}`, emp, filasCsvIva, liq.condicionCorreo)}
 
                     <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-5 space-y-3">
                         <div class="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
@@ -3481,7 +3706,9 @@
             const totalDeducciones = totalRetencionesIibb + totalPercepcionesIibb + totalBancariasIibb + emp.iibbSaldoAnt;
             const resultadoLiquidacion = impuestoDeterminado - totalDeducciones;
 
-            let etiquetaSaldoIibb = resultadoLiquidacion >= 0 ? "IMPUESTO A PAGAR (IIBB)" : "SALDO A FAVOR REGISTRADO";
+            const aPagarIibb = resultadoLiquidacion >= 0;
+            const condicionCorreoIibb = aPagarIibb ? "SALDO A PAGAR" : "SALDO A FAVOR";
+            let etiquetaSaldoIibb = aPagarIibb ? "IMPUESTO A PAGAR (IIBB)" : "SALDO A FAVOR REGISTRADO";
             let montoResultadoAbs = Math.abs(resultadoLiquidacion);
 
             const vtoIibb = resolverVencimientoIibb(emp, iibbMes, iibbAnio, emp.iibbRegimen);
@@ -3495,27 +3722,36 @@
             });
             let arrowIibb = (campo) => ordenIibbRet.campo !== campo ? '' : (ordenIibbRet.asc ? ' ▲' : ' ▼');
 
-            let filasRetIibb = listaRetIibb.map(r => `
-                <tr class="hover:bg-gray-50 text-xs sm:text-sm">
-                    <td class="px-3 py-2.5 num-row">${formatearFechaAr(r.fecha)}</td>
-                    <td class="px-3 py-2.5 font-bold whitespace-nowrap ${r.tipo === 'RETENCION' ? 'text-blue-700' : (r.tipo === 'PERCEPCION' ? 'text-purple-700' : 'text-emerald-700')}">${r.tipo}</td>
-                    <td class="px-3 py-2.5">${r.agente}</td>
-                    <td class="px-3 py-2.5 text-right font-bold num-row">$ ${fmtMoneda(r.importe)}</td>
-                    <td class="px-3 py-2.5 text-center">
-                        <button onclick="eliminarRetencionIibb(${r.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                    </td>
-                </tr>
-            `).join('');
+            let filasRetIibb = listaRetIibb.map(r => {
+                let colorBadge = 'text-blue-700';
+                if (r.tipo === 'PERCEPCION') colorBadge = 'text-purple-700';
+                else if (r.tipo === 'RETENCION BANCARIA' || r.tipo === 'DEVOLUCION BANCARIA') colorBadge = 'text-teal-700';
+                return `
+                    <tr class="hover:bg-gray-50 text-xs sm:text-sm">
+                        <td class="px-3 py-2.5 num-row">${formatearFechaAr(r.fecha)}</td>
+                        <td class="px-3 py-2.5 font-bold whitespace-nowrap ${colorBadge}">${r.tipo}</td>
+                        <td class="px-3 py-2.5">${r.agente}</td>
+                        <td class="px-3 py-2.5 text-right font-bold num-row">$ ${fmtMoneda(r.importe)}</td>
+                        <td class="px-3 py-2.5 text-center">
+                            <button onclick="eliminarRetencionIibb(${r.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
 
             const filasCsvIibb = [
-                { concepto: "Régimen", valor: emp.iibbRegimen === 'CONVENIO' ? 'Convenio Multilateral' : 'Contribuyente Local (ARBA)' },
                 { concepto: "Período", valor: `${iibbMes}/${iibbAnio}` },
-                { concepto: "Terminación CUIT", valor: vtoIibb.digito },
-                { concepto: "Fecha Vencimiento", valor: `${vtoIibb.fechaFormateada} (${vtoIibb.badge})` },
-                { concepto: "Base Imponible Total", valor: fmtMoneda(baseImponibleTotalVentas) },
+                { concepto: "Condición del Saldo", valor: condicionCorreoIibb },
+                { concepto: "Régimen", valor: emp.iibbRegimen },
+                { concepto: "Fecha Vencimiento IIBB", valor: `${vtoIibb.fechaFormateada} (${vtoIibb.badge})` },
+                { concepto: "Base Imponible Ventas", valor: fmtMoneda(baseImponibleTotalVentas) },
                 { concepto: "Base Imponible Jurisdicción", valor: fmtMoneda(baseImponibleJurisdiccion) },
+                { concepto: "Alícuota (%)", valor: `${emp.iibbAlicuota}%` },
                 { concepto: "Impuesto Determinado", valor: fmtMoneda(impuestoDeterminado) },
-                { concepto: "Total Deducciones", valor: fmtMoneda(totalDeducciones) },
+                { concepto: "Retenciones IIBB", valor: fmtMoneda(totalRetencionesIibb) },
+                { concepto: "Percepciones IIBB", valor: fmtMoneda(totalPercepcionesIibb) },
+                { concepto: "Retenciones / Dev. Bancarias", valor: fmtMoneda(totalBancariasIibb) },
+                { concepto: "Saldo a Favor Anterior", valor: fmtMoneda(emp.iibbSaldoAnt) },
                 { concepto: etiquetaSaldoIibb, valor: fmtMoneda(montoResultadoAbs) }
             ];
 
@@ -3523,49 +3759,47 @@
                 <div class="space-y-4 sm:space-y-6">
                     <div class="flex flex-wrap justify-between items-center bg-white p-3 sm:p-4 rounded-xl border shadow-sm gap-3">
                         <div>
-                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">Módulo Impositivo - Ingresos Brutos (IIBB)</h2>
-                            <p class="text-xs text-gray-500">Determinación de IIBB Locales (ARBA) y Convenio Multilateral (COMARB)</p>
+                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">Módulo Impositivo - Ingresos Brutos</h2>
+                            <p class="text-xs text-gray-500">Liquidación mensual IIBB (Local / Convenio Multilateral) y retenciones</p>
                         </div>
-                        <div>
-                            <input type="file" id="fileIibbUnico" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoIibbUnificado(event)">
-                            <button onclick="document.getElementById('fileIibbUnico').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
-                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Importar Unificado (Ret./Perc./Banc.)</span>
+                        <div class="flex flex-wrap gap-2">
+                            <input type="file" id="fileIibbUnificado" accept=".csv, .xlsx, .xls, .xml" class="hidden" onchange="procesarArchivoIibbUnificado(event)">
+                            <button onclick="document.getElementById('fileIibbUnificado').click()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
+                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Retenciones y Percepciones</span>
                             </button>
                         </div>
                     </div>
 
-                    ${renderBarraAccionesImpositivas(`IIBB_${emp.iibbRegimen}_${iibbMes}_${iibbAnio}`, vtoIibb.fechaIso, montoResultadoAbs, vtoIibb.motivo, emp, filasCsvIibb)}
+                    ${renderBarraAccionesImpositivas(`IIBB_${emp.iibbRegimen}_${iibbMes}_${iibbAnio}`, vtoIibb.fechaIso, montoResultadoAbs, `${condicionCorreoIibb} (${etiquetaSaldoIibb}) - ${vtoIibb.motivo}`, emp, filasCsvIibb, condicionCorreoIibb)}
 
-                    <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-5">
-                        <div class="flex flex-wrap items-center justify-between gap-3">
-                            <div class="space-y-1">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="text-xs font-bold text-gray-700 uppercase">Vencimiento ${emp.iibbRegimen === 'CONVENIO' ? 'Convenio Multilateral' : 'ARBA Local'}:</span>
-                                    <span class="text-sm sm:text-base font-black text-gray-900 num-row">${vtoIibb.fechaFormateada}</span>
-                                    <span class="text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${vtoIibb.esOrientativa ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'}">${vtoIibb.badge}</span>
-                                    <span class="text-[11px] font-semibold text-gray-500 num-row">(CUIT term. ${vtoIibb.digito})</span>
-                                </div>
-                                <p class="text-xs text-gray-600">${vtoIibb.motivo}</p>
+                    <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+                        <div class="space-y-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-xs font-bold text-gray-700 uppercase">Vencimiento Estimado / Oficial (${emp.iibbRegimen === 'CONVENIO' ? 'COMARB' : 'ARBA'}):</span>
+                                <span class="text-sm sm:text-base font-black text-amber-800 num-row">${vtoIibb.fechaFormateada}</span>
+                                <span class="text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${vtoIibb.esOrientativa ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'}">${vtoIibb.badge}</span>
+                                <span class="text-[11px] font-semibold text-gray-500 num-row">(CUIT term. ${vtoIibb.digito})</span>
                             </div>
-                            <a href="${vtoIibb.urlPortal}" target="_blank" rel="noopener noreferrer" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center space-x-1.5 shrink-0 shadow-sm">
-                                <span>${vtoIibb.nombrePortal}</span>
-                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                            </a>
+                            <p class="text-xs text-gray-500">${vtoIibb.motivo}</p>
                         </div>
+                        <a href="${vtoIibb.urlPortal}" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-amber-700 hover:underline flex items-center space-x-1 shrink-0">
+                            <span>${vtoIibb.nombrePortal}</span>
+                            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                        </a>
                     </div>
 
                     <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-5">
                         <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-3">
-                            <div>
-                                <span class="block text-[11px] font-bold text-gray-500 uppercase">Régimen Contribuyente:</span>
-                                <select onchange="obtenerEmpresaActual().iibbRegimen=this.value; guardarInmediato();" class="text-xs border border-gray-300 bg-gray-50 rounded-lg p-1.5 font-bold text-gray-800 mt-1">
-                                    <option value="LOCAL" ${emp.iibbRegimen==='LOCAL'?'selected':''}>Contribuyente Local (ARBA)</option>
-                                    <option value="CONVENIO" ${emp.iibbRegimen==='CONVENIO'?'selected':''}>Convenio Multilateral (COMARB)</option>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Régimen:</span>
+                                <select onchange="emp.iibbRegimen=this.value; guardarEnLocalStorage(); renderizarVista();" class="text-xs border rounded p-1.5 font-bold bg-amber-50 text-amber-900">
+                                    <option value="LOCAL" ${emp.iibbRegimen==='LOCAL'?'selected':''}>Contribuyente Local (ARBA / Jurisdicción Única)</option>
+                                    <option value="CONVENIO" ${emp.iibbRegimen==='CONVENIO'?'selected':''}>Convenio Multilateral (Coeficiente Jurisdiccional)</option>
                                 </select>
                             </div>
 
                             <div class="flex items-center space-x-2">
-                                <span class="text-xs font-bold text-gray-500 uppercase">Mes:</span>
+                                <span class="text-xs font-bold text-gray-500">Mes:</span>
                                 <select onchange="iibbMes=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
                                     <option value="01" ${iibbMes==='01'?'selected':''}>Enero</option>
                                     <option value="02" ${iibbMes==='02'?'selected':''}>Febrero</option>
@@ -3580,159 +3814,139 @@
                                     <option value="11" ${iibbMes==='11'?'selected':''}>Noviembre</option>
                                     <option value="12" ${iibbMes==='12'?'selected':''}>Diciembre</option>
                                 </select>
-                                <span class="text-xs font-bold text-gray-500 uppercase">Año:</span>
+                                <span class="text-xs font-bold text-gray-500">Año:</span>
                                 <input type="number" value="${iibbAnio}" onchange="iibbAnio=this.value; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold">
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-3.5 sm:p-4 rounded-xl border">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-amber-50 p-3.5 sm:p-4 rounded-xl border border-amber-200">
                             <div>
-                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Ventas Totales Netas (Período)</label>
-                                <div class="w-full bg-white border border-gray-300 rounded p-2 text-sm font-black text-gray-900 num-row">$ ${fmtMoneda(baseImponibleTotalVentas)}</div>
+                                <label class="block text-xs font-bold text-amber-900 uppercase mb-1">Alícuota Aplicable (%)</label>
+                                <input type="text" inputmode="decimal" value="${fmtMoneda(emp.iibbAlicuota)}" onchange="emp.iibbAlicuota=parsearNumeroAr(this.value)||0; guardarEnLocalStorage(); renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-amber-900 bg-white num-row">
                             </div>
                             ${emp.iibbRegimen === 'CONVENIO' ? `
                             <div>
-                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Coeficiente Unificado</label>
-                                <input type="text" inputmode="decimal" value="${fmtMoneda(emp.iibbCoeficiente, 4)}" onchange="obtenerEmpresaActual().iibbCoeficiente=parsearNumeroAr(this.value); guardarInmediato();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white num-row">
+                                <label class="block text-xs font-bold text-amber-900 uppercase mb-1">Coeficiente Jurisdiccional (Ej: 0,4500)</label>
+                                <input type="text" inputmode="decimal" value="${fmtMoneda(emp.iibbCoeficiente, 4)}" onchange="emp.iibbCoeficiente=parsearNumeroAr(this.value)||0; guardarEnLocalStorage(); renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-amber-900 bg-white num-row">
                             </div>
-                            ` : ''}
+                            ` : `<div></div>`}
                             <div>
-                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Alícuota Actividad (%)</label>
-                                <input type="text" inputmode="decimal" value="${fmtMoneda(emp.iibbAlicuota, 2)}" onchange="obtenerEmpresaActual().iibbAlicuota=parsearNumeroAr(this.value); guardarInmediato();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white num-row">
+                                <label class="block text-xs font-bold text-amber-900 uppercase mb-1">Saldo a Favor Período Anterior ($)</label>
+                                <input type="text" inputmode="decimal" value="${fmtMoneda(emp.iibbSaldoAnt)}" onchange="emp.iibbSaldoAnt=parsearNumeroAr(this.value); guardarEnLocalStorage(); renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-amber-900 bg-white num-row">
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 text-xs sm:text-sm">
-                            <div class="space-y-2.5 bg-gray-50 p-3.5 sm:p-4 rounded-xl border">
-                                <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-2">Base Imponible e Impuesto</h4>
-                                <div class="flex justify-between gap-2">
-                                    <span class="font-semibold text-gray-700">Base Imponible Total:</span>
-                                    <span class="font-bold text-gray-900 num-row">$ ${fmtMoneda(baseImponibleTotalVentas)}</span>
-                                </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm bg-gray-50 p-3.5 sm:p-4 rounded-xl border">
+                            <div class="space-y-2">
+                                <div class="flex justify-between gap-2"><span>Base Imponible Total Ventas:</span><span class="font-bold num-row">$ ${fmtMoneda(baseImponibleTotalVentas)}</span></div>
                                 ${emp.iibbRegimen === 'CONVENIO' ? `
-                                <div class="flex justify-between gap-2">
-                                    <span class="font-semibold text-gray-700">Base Jurisdiccional (${fmtMoneda(emp.iibbCoeficiente * 100, 2)}%):</span>
-                                    <span class="font-bold text-blue-900 num-row">$ ${fmtMoneda(baseImponibleJurisdiccion)}</span>
-                                </div>
+                                <div class="flex justify-between gap-2"><span>Base Imponible Jurisdicción (Coef. ${fmtMoneda(emp.iibbCoeficiente, 4)}):</span><span class="font-bold text-blue-800 num-row">$ ${fmtMoneda(baseImponibleJurisdiccion)}</span></div>
                                 ` : ''}
-                                <div class="flex justify-between gap-2 border-t pt-2">
-                                    <span class="font-bold text-gray-900 uppercase">Impuesto Determinado (${fmtMoneda(emp.iibbAlicuota, 2)}%):</span>
-                                    <span class="font-black text-blue-900 num-row">$ ${fmtMoneda(impuestoDeterminado)}</span>
-                                </div>
+                                <div class="flex justify-between gap-2 border-b pb-1"><span>Alícuota (${fmtMoneda(emp.iibbAlicuota)}%):</span><span class="font-bold text-amber-800 num-row">$ ${fmtMoneda(impuestoDeterminado)}</span></div>
+                                <div class="flex justify-between gap-2 pt-1 font-bold"><span>Impuesto Determinado:</span><span class="num-row">$ ${fmtMoneda(impuestoDeterminado)}</span></div>
                             </div>
-
-                            <div class="space-y-2.5 bg-gray-50 p-3.5 sm:p-4 rounded-xl border">
-                                <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-2">Deducciones y Saldo Anterior</h4>
-                                <div class="flex justify-between gap-2">
-                                    <span class="font-semibold text-gray-700">Retenciones IIBB:</span>
-                                    <span class="font-bold text-blue-700 num-row">$ ${fmtMoneda(totalRetencionesIibb)}</span>
-                                </div>
-                                <div class="flex justify-between gap-2">
-                                    <span class="font-semibold text-gray-700">Percepciones IIBB:</span>
-                                    <span class="font-bold text-purple-700 num-row">$ ${fmtMoneda(totalPercepcionesIibb)}</span>
-                                </div>
-                                <div class="flex justify-between gap-2">
-                                    <span class="font-semibold text-gray-700">Retenciones Bancarias:</span>
-                                    <span class="font-bold text-emerald-700 num-row">$ ${fmtMoneda(totalBancariasIibb)}</span>
-                                </div>
-                                <div class="flex justify-between items-center gap-2 border-b pb-2">
-                                    <span class="font-semibold text-gray-700">Saldo a Favor Ant. ($):</span>
-                                    <input type="text" inputmode="decimal" value="${fmtMoneda(emp.iibbSaldoAnt)}" onchange="obtenerEmpresaActual().iibbSaldoAnt=parsearNumeroAr(this.value); guardarInmediato();" class="w-28 text-right border rounded p-1 font-bold text-red-600 bg-white num-row">
-                                </div>
-                                <div class="flex justify-between gap-2 pt-1">
-                                    <span class="font-bold uppercase text-gray-900">Total Deducciones:</span>
-                                    <span class="font-bold text-emerald-700 num-row">$ ${fmtMoneda(totalDeducciones)}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-900 text-white p-4 rounded-xl flex flex-wrap justify-between items-center shadow gap-2">
-                            <div>
-                                <p class="text-[11px] text-slate-400 uppercase font-semibold">Resultado Liquidación IIBB (${emp.iibbRegimen})</p>
-                                <h4 class="text-sm sm:text-lg font-black tracking-wider ${resultadoLiquidacion >= 0 ? 'text-amber-400' : 'text-emerald-400'}">${etiquetaSaldoIibb}</h4>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-xl sm:text-2xl font-black num-row">$ ${fmtMoneda(montoResultadoAbs)}</span>
+                            <div class="space-y-2">
+                                <div class="flex justify-between gap-2"><span>Retenciones IIBB del Período:</span><span class="font-bold text-blue-700 num-row">$ ${fmtMoneda(totalRetencionesIibb)}</span></div>
+                                <div class="flex justify-between gap-2"><span>Percepciones IIBB del Período:</span><span class="font-bold text-purple-700 num-row">$ ${fmtMoneda(totalPercepcionesIibb)}</span></div>
+                                <div class="flex justify-between gap-2"><span>Retenciones / Dev. Bancarias IIBB:</span><span class="font-bold text-teal-700 num-row">$ ${fmtMoneda(totalBancariasIibb)}</span></div>
+                                <div class="flex justify-between gap-2 border-b pb-1"><span>Saldo a Favor Período Anterior:</span><span class="font-bold text-red-600 num-row">$ ${fmtMoneda(emp.iibbSaldoAnt)}</span></div>
+                                <div class="flex justify-between gap-2 pt-1 font-black ${aPagarIibb ? 'text-amber-800' : 'text-emerald-700'}"><span>${etiquetaSaldoIibb}:</span><span class="num-row">$ ${fmtMoneda(montoResultadoAbs)}</span></div>
                             </div>
                         </div>
                     </div>
 
                     <div class="bg-white rounded-xl border overflow-x-auto">
-                        <div class="p-3 sm:p-4 border-b bg-gray-50 font-bold text-xs sm:text-sm text-gray-700">Listado de Retenciones, Percepciones y Bancarias de IIBB</div>
+                        <div class="p-3 sm:p-4 border-b bg-gray-50 font-bold text-xs sm:text-sm text-gray-700">Retenciones y Percepciones de Ingresos Brutos Registradas</div>
                         <table class="w-full text-left mobile-compact-table">
                             <thead class="bg-gray-50 text-[11px] text-gray-500 uppercase select-none whitespace-nowrap">
                                 <tr>
                                     <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('fecha')">FECHA${arrowIibb('fecha')}</th>
                                     <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('tipo')">TIPO${arrowIibb('tipo')}</th>
-                                    <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('agente')">AGENTE / BANCO${arrowIibb('agente')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('agente')">AGENTE / DESCRIPCIÓN${arrowIibb('agente')}</th>
                                     <th class="p-3 text-right cursor-pointer" onclick="ordenarIibbRetPor('importe')">IMPORTE${arrowIibb('importe')}</th>
                                     <th class="p-3 text-center">ACCIÓN</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y">${filasRetIibb || `<tr><td colspan="5" class="text-center py-6 text-gray-400">No hay registros de IIBB importados.</td></tr>`}</tbody>
+                            <tbody class="divide-y">${filasRetIibb || `<tr><td colspan="5" class="text-center py-6 text-gray-400">No hay retenciones o percepciones de IIBB cargadas.</td></tr>`}</tbody>
                         </table>
                     </div>
                 </div>
             `;
         }
 
-        function calcularEscalaProgresiva(baseImponible, tablaTramos) {
-            if (baseImponible <= 0) return { impuesto: 0, tramo: tablaTramos[0], excedente: 0 };
-            for (let i = 0; i < tablaTramos.length; i++) {
-                const t = tablaTramos[i];
-                if (baseImponible > t.desde && baseImponible <= t.hasta) {
-                    const excedente = baseImponible - t.desde;
-                    const impuesto = t.fijo + (excedente * t.alicuota);
-                    return { impuesto, tramo: t, excedente };
+        function calcularEscalaProgresiva(gananciaNetaSujeta, escala) {
+            if (!gananciaNetaSujeta || gananciaNetaSujeta <= 0) {
+                return { impuesto: 0, tramoDesc: "Sin ganancia neta sujeta a impuesto ($ 0,00)" };
+            }
+            for (const tramo of escala) {
+                if (gananciaNetaSujeta > tramo.desde && gananciaNetaSujeta <= tramo.hasta) {
+                    const excedente = gananciaNetaSujeta - tramo.desde;
+                    const impuesto = tramo.fijo + (excedente * tramo.alicuota);
+                    return {
+                        impuesto,
+                        tramoDesc: `Fijo $ ${fmtMoneda(tramo.fijo)} + ${fmtMoneda(tramo.alicuota * 100)}% s/ excedente de $ ${fmtMoneda(tramo.desde)}`
+                    };
                 }
             }
-            const ultimo = tablaTramos[tablaTramos.length - 1];
-            const excedente = baseImponible - ultimo.desde;
-            return { impuesto: ultimo.fijo + (excedente * ultimo.alicuota), tramo: ultimo, excedente };
+            const ultimo = escala[escala.length - 1];
+            const impuesto = ultimo.fijo + ((gananciaNetaSujeta - ultimo.desde) * ultimo.alicuota);
+            return {
+                impuesto,
+                tramoDesc: `Fijo $ ${fmtMoneda(ultimo.fijo)} + ${fmtMoneda(ultimo.alicuota * 100)}% s/ excedente de $ ${fmtMoneda(ultimo.desde)}`
+            };
         }
 
-        function guardarInmediato() {
+        function actualizarCampoGanancias(pathStr, rawValue, esNumero = true) {
+            const emp = obtenerEmpresaActual();
+            if (!emp.gananciasConfig) emp.gananciasConfig = obtenerConfigGananciasDefault();
+            const keys = pathStr.split('.');
+            let obj = emp.gananciasConfig;
+            for (let i = 0; i < keys.length - 1; i++) {
+                if (!obj[keys[i]]) obj[keys[i]] = {};
+                obj = obj[keys[i]];
+            }
+            obj[keys[keys.length - 1]] = esNumero ? parsearNumeroAr(rawValue) : rawValue;
             guardarEnLocalStorage();
             renderizarVista();
         }
 
         function agregarDeduccionGeneralGanancias() {
             const emp = obtenerEmpresaActual();
-            const cfg = emp.gananciasConfig;
-            cfg.deduccionesGenerales.push({
+            if (!emp.gananciasConfig) emp.gananciasConfig = obtenerConfigGananciasDefault();
+            emp.gananciasConfig.deduccionesGenerales.push({
                 id: Date.now() + Math.random(),
                 tipoId: 'prepaga',
                 detalle: '',
                 importe: 0
             });
-            guardarInmediato();
+            guardarEnLocalStorage();
+            renderizarVista();
         }
 
         function actualizarDeduccionGeneral(id, campo, valor) {
             const emp = obtenerEmpresaActual();
-            const cfg = emp.gananciasConfig;
-            const item = cfg.deduccionesGenerales.find(d => String(d.id) === String(id));
+            const item = (emp.gananciasConfig.deduccionesGenerales || []).find(d => String(d.id) === String(id));
             if (!item) return;
-            if (campo === 'tipoId') item.tipoId = valor;
-            else if (campo === 'detalle') item.detalle = valor;
-            else if (campo === 'importe') item.importe = parsearNumeroAr(valor);
-            guardarInmediato();
+            if (campo === 'importe') item.importe = parsearNumeroAr(valor);
+            else item[campo] = valor;
+            guardarEnLocalStorage();
+            renderizarVista();
         }
 
         function eliminarDeduccionGeneral(id) {
             const emp = obtenerEmpresaActual();
-            const cfg = emp.gananciasConfig;
-            cfg.deduccionesGenerales = cfg.deduccionesGenerales.filter(d => String(d.id) !== String(id));
-            guardarInmediato();
+            emp.gananciasConfig.deduccionesGenerales = (emp.gananciasConfig.deduccionesGenerales || []).filter(d => String(d.id) !== String(id));
+            guardarEnLocalStorage();
+            renderizarVista();
         }
 
         function renderGanancias(cont) {
             const emp = obtenerEmpresaActual();
-            const cfg = emp.gananciasConfig;
+            const cfg = emp.gananciasConfig || obtenerConfigGananciasDefault();
             const anio = cfg.anio || "2026";
             const params = PARAMS_GANANCIAS_ARCA[anio] || PARAMS_GANANCIAS_ARCA["2026"];
 
-            const compsAnio = (emp.comprobantes || []).filter(c => c.fecha && c.fecha.startsWith(anio));
+            const compsAnio = emp.comprobantes.filter(c => c.fecha && c.fecha.startsWith(anio));
             let ventasAnioComps = 0, comprasAnioComps = 0;
             compsAnio.forEach(c => {
                 const sub = (Number(c.netoTotal) || 0) + (Number(c.exento) || 0) + (Number(c.noGravado) || 0);
@@ -3746,7 +3960,7 @@
                                      (Number(cfg.saldoFavorAnterior) || 0);
 
             if (cfg.tipoSujeto === 'PH') {
-                const r = cfg.rentas;
+                const r = cfg.rentas || {};
                 const netoCat1 = (Number(r.cat1Ingresos) || 0) - (Number(r.cat1Gastos) || 0);
                 const netoCat2 = (Number(r.cat2Ingresos) || 0) - (Number(r.cat2Gastos) || 0);
                 const ingCat3 = (cfg.vincularComprobantes3ra ? ventasAnioComps : 0) + (Number(r.cat3IngresosManual) || 0);
@@ -3756,57 +3970,56 @@
 
                 const gananciaNetaAntesDed = netoCat1 + netoCat2 + netoCat3 + netoCat4;
                 const baseTope5Porc = Math.max(0, gananciaNetaAntesDed);
-                const tope5PorcValor = baseTope5Porc * 0.05;
 
-                let totalDedGeneralesBrutas = 0;
+                let totalDedGeneralesDeclaradas = 0;
                 let totalDedGeneralesComputables = 0;
 
-                const filasDeducciones = (cfg.deduccionesGenerales || []).map(d => {
+                const filasDeduccionesHtml = (cfg.deduccionesGenerales || []).map(d => {
                     const meta = TIPOS_DEDUCCION_GENERAL.find(t => t.id === d.tipoId) || TIPOS_DEDUCCION_GENERAL[0];
-                    const bruto = Number(d.importe) || 0;
-                    totalDedGeneralesBrutas += bruto;
+                    const impDeclarado = Number(d.importe) || 0;
+                    totalDedGeneralesDeclaradas += impDeclarado;
 
                     let topeAplicable = Infinity;
-                    let etiquetaTope = "Sin tope legal";
+                    let topeLabel = "Sin tope legal";
                     if (meta.topeTipo === '5_GNI') {
-                        topeAplicable = tope5PorcValor;
-                        etiquetaTope = `5% Gan. Neta ($ ${fmtMoneda(tope5PorcValor)})`;
+                        topeAplicable = baseTope5Porc * 0.05;
+                        topeLabel = `5% Gan. Neta ($ ${fmtMoneda(topeAplicable)})`;
                     } else if (meta.topeTipo === 'SEGURO') {
                         topeAplicable = params.topeSeguroVida;
-                        etiquetaTope = `Tope Seguro ($ ${fmtMoneda(params.topeSeguroVida)})`;
+                        topeLabel = `Tope $ ${fmtMoneda(topeAplicable)}`;
                     } else if (meta.topeTipo === 'GNI') {
                         topeAplicable = params.gni;
-                        etiquetaTope = `Tope GNI ($ ${fmtMoneda(params.gni)})`;
+                        topeLabel = `Tope GNI $ ${fmtMoneda(topeAplicable)}`;
                     } else if (meta.topeTipo === '40_GNI') {
                         topeAplicable = params.gni * 0.40;
-                        etiquetaTope = `Tope 40% GNI ($ ${fmtMoneda(params.gni * 0.40)})`;
+                        topeLabel = `Tope 40% GNI $ ${fmtMoneda(topeAplicable)}`;
                     } else if (meta.topeTipo === 'HIPOTECARIO') {
                         topeAplicable = params.topeHipotecario;
-                        etiquetaTope = `Tope $ ${fmtMoneda(params.topeHipotecario)}`;
+                        topeLabel = `Tope $ ${fmtMoneda(topeAplicable)}`;
                     } else if (meta.topeTipo === 'SEPELIO') {
                         topeAplicable = params.topeSepelio;
-                        etiquetaTope = `Tope $ ${fmtMoneda(params.topeSepelio)}`;
+                        topeLabel = `Tope $ ${fmtMoneda(topeAplicable)}`;
                     }
 
-                    const computable = Math.min(bruto, topeAplicable);
+                    const computable = Math.min(impDeclarado, topeAplicable);
                     totalDedGeneralesComputables += computable;
 
                     return `
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-gray-50 p-2.5 rounded-lg border text-xs">
-                            <div class="md:col-span-5">
+                            <div class="md:col-span-4">
                                 <select onchange="actualizarDeduccionGeneral(${d.id}, 'tipoId', this.value)" class="w-full border rounded p-1.5 font-semibold bg-white">
                                     ${TIPOS_DEDUCCION_GENERAL.map(t => `<option value="${t.id}" ${d.tipoId === t.id ? 'selected' : ''}>${t.label}</option>`).join('')}
                                 </select>
-                                <p class="text-[10px] text-gray-500 mt-0.5">${etiquetaTope}</p>
                             </div>
                             <div class="md:col-span-3">
-                                <input type="text" placeholder="Detalle / CUIT / N° Comprobante" value="${d.detalle || ''}" onchange="actualizarDeduccionGeneral(${d.id}, 'detalle', this.value)" class="w-full border rounded p-1.5 bg-white">
+                                <input type="text" placeholder="Detalle / comprobante / CUIT" value="${d.detalle || ''}" onchange="actualizarDeduccionGeneral(${d.id}, 'detalle', this.value)" class="w-full border rounded p-1.5 bg-white">
                             </div>
                             <div class="md:col-span-2">
-                                <input type="text" inputmode="decimal" placeholder="Importe $" value="${fmtMoneda(bruto)}" onchange="actualizarDeduccionGeneral(${d.id}, 'importe', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
+                                <input type="text" inputmode="decimal" placeholder="Importe $" value="${fmtMoneda(impDeclarado)}" onchange="actualizarDeduccionGeneral(${d.id}, 'importe', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
                             </div>
-                            <div class="md:col-span-1 text-right font-bold text-purple-800 num-row">
-                                $ ${fmtMoneda(computable)}
+                            <div class="md:col-span-2 text-right num-row">
+                                <span class="block text-[10px] text-gray-500">${topeLabel}</span>
+                                <span class="font-bold text-emerald-700">Comp: $ ${fmtMoneda(computable)}</span>
                             </div>
                             <div class="md:col-span-1 text-center">
                                 <button type="button" onclick="eliminarDeduccionGeneral(${d.id})" class="text-red-500 hover:text-red-700 font-bold px-2">×</button>
@@ -3823,17 +4036,9 @@
                 const dedHijosInc = (parseInt(cfg.hijosIncapacitados, 10) || 0) * params.hijoIncapacitado;
 
                 let dedEspecialBase = 0;
-                let etiquetaDedEsp = "Sin Deducción Especial";
-                if (cfg.tipoDedEspecial === 'AUTONOMO') {
-                    dedEspecialBase = params.dedEspAutonomo;
-                    etiquetaDedEsp = "Art. 30 inc. c) - Autónomo / Profesional";
-                } else if (cfg.tipoDedEspecial === 'EMPRENDEDOR') {
-                    dedEspecialBase = params.dedEspEmprendedor;
-                    etiquetaDedEsp = "Art. 30 inc. c) - Nuevo Emprendedor / Prof. <3 años";
-                } else if (cfg.tipoDedEspecial === 'REL_DEP') {
-                    dedEspecialBase = params.dedEspRelDep;
-                    etiquetaDedEsp = "Art. 30 inc. c) - Relación de Dependencia / Jubilados";
-                }
+                if (cfg.tipoDedEspecial === 'AUTONOMO') dedEspecialBase = params.dedEspAutonomo;
+                else if (cfg.tipoDedEspecial === 'EMPRENDEDOR') dedEspecialBase = params.dedEspEmprendedor;
+                else if (cfg.tipoDedEspecial === 'REL_DEP') dedEspecialBase = params.dedEspRelDep;
 
                 const doceavaParte = cfg.tipoDedEspecial === 'REL_DEP'
                     ? (dedGni + dedConyuge + dedHijos + dedHijosInc + dedEspecialBase) / 12
@@ -3848,24 +4053,27 @@
                 const resEscala = calcularEscalaProgresiva(gananciaNetaSujetaImpuesto, params.escalaPH);
                 const impuestoDeterminado = resEscala.impuesto;
                 const saldoFinal = impuestoDeterminado - totalPagosCuenta;
+                const aPagar = saldoFinal >= 0;
+                const condicionCorreoPh = aPagar ? "SALDO A PAGAR" : "SALDO A FAVOR";
 
                 const vtoGanPh = resolverVencimientoGanancias(emp, anio, "PH");
-                const filasCsvGanPh = [
-                    { concepto: "Sujeto / Período", valor: `Persona Humana - Año Fiscal ${anio}` },
-                    { concepto: "Terminación CUIT", valor: vtoGanPh.digito },
-                    { concepto: "Vencimiento Estimado DDJJ", valor: `${vtoGanPh.fechaFormateada} (${vtoGanPh.badge})` },
-                    { concepto: "1ª Categoría (Suelo Urbano/Rural)", valor: fmtMoneda(netoCat1) },
-                    { concepto: "2ª Categoría (Capitales/Inversiones)", valor: fmtMoneda(netoCat2) },
-                    { concepto: "3ª Categoría (Empresa/Unipersonal)", valor: fmtMoneda(netoCat3) },
-                    { concepto: "4ª Categoría (Trabajo Personal)", valor: fmtMoneda(netoCat4) },
-                    { concepto: "Ganancia Neta antes Deducciones", valor: fmtMoneda(gananciaNetaAntesDed) },
+
+                const filasCsvPh = [
+                    { concepto: "Tipo Sujeto", valor: "Persona Humana (PH)" },
+                    { concepto: "Año Fiscal", valor: anio },
+                    { concepto: "Condición del Saldo", valor: condicionCorreoPh },
+                    { concepto: "Fecha Vencimiento Ganancias", valor: `${vtoGanPh.fechaFormateada} (${vtoGanPh.badge})` },
+                    { concepto: "Renta Neta 1ª Cat.", valor: fmtMoneda(netoCat1) },
+                    { concepto: "Renta Neta 2ª Cat.", valor: fmtMoneda(netoCat2) },
+                    { concepto: "Renta Neta 3ª Cat.", valor: fmtMoneda(netoCat3) },
+                    { concepto: "Renta Neta 4ª Cat.", valor: fmtMoneda(netoCat4) },
+                    { concepto: "Ganancia Neta Antes Deducciones", valor: fmtMoneda(gananciaNetaAntesDed) },
                     { concepto: "Deducciones Generales Computables", valor: fmtMoneda(totalDedGeneralesComputables) },
-                    { concepto: "Ganancia Neta del Ejercicio", valor: fmtMoneda(gananciaNetaEjercicio) },
                     { concepto: "Deducciones Personales Computables", valor: fmtMoneda(totalDedPersonalesComputables) },
                     { concepto: "Ganancia Neta Sujeta a Impuesto", valor: fmtMoneda(gananciaNetaSujetaImpuesto) },
-                    { concepto: "Impuesto Determinado (Art. 94)", valor: fmtMoneda(impuestoDeterminado) },
-                    { concepto: "Pagos a Cuenta / Retenciones / Anticipos", valor: fmtMoneda(totalPagosCuenta) },
-                    { concepto: saldoFinal >= 0 ? "SALDO A PAGAR" : "SALDO A FAVOR", valor: fmtMoneda(Math.abs(saldoFinal)) }
+                    { concepto: "Impuesto Determinado", valor: fmtMoneda(impuestoDeterminado) },
+                    { concepto: "Total Pagos a Cuenta", valor: fmtMoneda(totalPagosCuenta) },
+                    { concepto: aPagar ? "SALDO A PAGAR" : "SALDO A FAVOR", valor: fmtMoneda(Math.abs(saldoFinal)) }
                 ];
 
                 cont.innerHTML = `
@@ -3873,234 +4081,193 @@
                         <div class="flex flex-wrap justify-between items-center bg-white p-3 sm:p-4 rounded-xl border shadow-sm gap-3">
                             <div>
                                 <h2 class="text-lg sm:text-xl font-bold text-gray-800">Impuesto a las Ganancias — Persona Humana (PH)</h2>
-                                <p class="text-xs text-gray-500">Liquidación por categorías (1ª a 4ª), deducciones generales/personales y escala progresiva Art. 94 LIG</p>
+                                <p class="text-xs text-gray-500">Liquidación integral por categorías, deducciones generales/personales y escala progresiva ARCA</p>
                             </div>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="text-xs font-bold text-gray-500 uppercase">Sujeto:</span>
-                                <select onchange="obtenerEmpresaActual().gananciasConfig.tipoSujeto=this.value; guardarInmediato();" class="text-xs border border-purple-300 bg-purple-50 rounded-lg p-1.5 font-bold text-purple-900">
+                            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Tipo Sujeto:</span>
+                                <select onchange="actualizarCampoGanancias('tipoSujeto', this.value, false)" class="text-xs border rounded p-1.5 font-bold bg-purple-50 text-purple-900">
                                     <option value="PH" selected>Persona Humana (PH)</option>
                                     <option value="PJ">Persona Jurídica (PJ - Art. 73)</option>
                                 </select>
                                 <span class="text-xs font-bold text-gray-500 uppercase">Año Fiscal:</span>
-                                <select onchange="obtenerEmpresaActual().gananciasConfig.anio=this.value; guardarInmediato();" class="text-xs border rounded-lg p-1.5 font-bold">
+                                <select onchange="actualizarCampoGanancias('anio', this.value, false)" class="text-xs border rounded p-1.5 font-bold">
                                     <option value="2026" ${anio==='2026'?'selected':''}>2026</option>
                                     <option value="2025" ${anio==='2025'?'selected':''}>2025</option>
                                 </select>
                             </div>
                         </div>
 
-                        ${renderBarraAccionesImpositivas(`Ganancias_PH_${anio}`, vtoGanPh.fechaIso, Math.abs(saldoFinal), vtoGanPh.motivo, emp, filasCsvGanPh)}
+                        ${renderBarraAccionesImpositivas(`Ganancias_PH_${anio}`, vtoGanPh.fechaIso, Math.abs(saldoFinal), `${condicionCorreoPh} (Período ${anio}) - ${vtoGanPh.motivo}`, emp, filasCsvPh, condicionCorreoPh)}
 
-                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-5">
-                            <div class="flex flex-wrap items-center justify-between gap-3">
-                                <div class="space-y-1">
-                                    <div class="flex flex-wrap items-center gap-2">
-                                        <span class="text-xs font-bold text-gray-700 uppercase">Vencimiento DDJJ Ganancias PH (Año ${anio}):</span>
-                                        <span class="text-sm sm:text-base font-black text-gray-900 num-row">${vtoGanPh.fechaFormateada}</span>
-                                        <span class="text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${vtoGanPh.esOrientativa ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'}">${vtoGanPh.badge}</span>
-                                        <span class="text-[11px] font-semibold text-gray-500 num-row">(CUIT term. ${vtoGanPh.digito} · Grupo ${vtoGanPh.grupo})</span>
-                                    </div>
-                                    <p class="text-xs text-gray-600">${vtoGanPh.motivo}</p>
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+                            <div class="space-y-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="text-xs font-bold text-gray-700 uppercase">Vencimiento Estimado / Oficial DDJJ Ganancias PH (${anio}):</span>
+                                    <span class="text-sm sm:text-base font-black text-purple-900 num-row">${vtoGanPh.fechaFormateada}</span>
+                                    <span class="text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${vtoGanPh.esOrientativa ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'}">${vtoGanPh.badge}</span>
+                                    <span class="text-[11px] font-semibold text-gray-500 num-row">(CUIT term. ${vtoGanPh.digito})</span>
                                 </div>
-                                <a href="https://www.arca.gob.ar/" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-purple-700 hover:underline flex items-center space-x-1 shrink-0">
-                                    <span>Portal ARCA</span>
-                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                                </a>
+                                <p class="text-xs text-gray-500">${vtoGanPh.motivo}</p>
                             </div>
+                            <a href="https://www.arca.gob.ar/" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-purple-700 hover:underline flex items-center space-x-1 shrink-0">
+                                <span>Portal ARCA</span>
+                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                            </a>
                         </div>
 
                         <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
                             <div class="flex flex-wrap justify-between items-center border-b pb-2 gap-2">
-                                <h3 class="text-sm font-bold text-gray-900 uppercase">1. Determinación de Ganancia Neta por Categoría</h3>
-                                <label class="flex items-center space-x-2 text-xs font-semibold text-blue-900 bg-blue-50 px-3 py-1 rounded-lg border border-blue-200 cursor-pointer">
-                                    <input type="checkbox" ${cfg.vincularComprobantes3ra ? 'checked' : ''} onchange="obtenerEmpresaActual().gananciasConfig.vincularComprobantes3ra=this.checked; guardarInmediato();">
-                                    <span>Vincular comprobantes ${anio} en 3ª Cat. (Vtas: $ ${fmtMoneda(ventasAnioComps)} | Cpras: $ ${fmtMoneda(comprasAnioComps)})</span>
+                                <h3 class="text-sm font-bold text-gray-900 uppercase">1. Rentas por Categoría (Período ${anio})</h3>
+                                <label class="flex items-center space-x-2 text-xs font-semibold text-blue-900 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 cursor-pointer">
+                                    <input type="checkbox" ${cfg.vincularComprobantes3ra ? 'checked' : ''} onchange="actualizarCampoGanancias('vincularComprobantes3ra', this.checked, false)">
+                                    <span>Vincular Comprobantes ${anio} a 3ª Cat. (Vtas: $ ${fmtMoneda(ventasAnioComps)} / Cpras: $ ${fmtMoneda(comprasAnioComps)})</span>
                                 </label>
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                                 <div class="p-3.5 rounded-xl border bg-gray-50 space-y-2">
-                                    <div class="flex justify-between font-bold text-gray-800">
-                                        <span>1ª Categoría — Rentas del Suelo</span>
-                                        <span class="text-blue-900 num-row">Neto: $ ${fmtMoneda(netoCat1)}</span>
-                                    </div>
+                                    <div class="flex justify-between font-bold text-gray-800"><span>1ª Categoría (Suelo Urbano / Rural)</span><span class="text-blue-800 num-row">Neto: $ ${fmtMoneda(netoCat1)}</span></div>
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
-                                            <label class="text-[10px] font-bold text-gray-500 uppercase">Ingresos Brutos / Alquileres</label>
-                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat1Ingresos)}" onchange="obtenerEmpresaActual().gananciasConfig.rentas.cat1Ingresos=parsearNumeroAr(this.value); guardarInmediato();" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
+                                            <label class="block text-[11px] text-gray-500 mb-1">Ingresos Brutos</label>
+                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat1Ingresos)}" onchange="actualizarCampoGanancias('rentas.cat1Ingresos', this.value)" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
                                         </div>
                                         <div>
-                                            <label class="text-[10px] font-bold text-gray-500 uppercase">Gastos / Amortizaciones</label>
-                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat1Gastos)}" onchange="obtenerEmpresaActual().gananciasConfig.rentas.cat1Gastos=parsearNumeroAr(this.value); guardarInmediato();" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
+                                            <label class="block text-[11px] text-gray-500 mb-1">Gastos Deducibles</label>
+                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat1Gastos)}" onchange="actualizarCampoGanancias('rentas.cat1Gastos', this.value)" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="p-3.5 rounded-xl border bg-gray-50 space-y-2">
-                                    <div class="flex justify-between font-bold text-gray-800">
-                                        <span>2ª Categoría — Rentas de Capitales</span>
-                                        <span class="text-blue-900 num-row">Neto: $ ${fmtMoneda(netoCat2)}</span>
-                                    </div>
+                                    <div class="flex justify-between font-bold text-gray-800"><span>2ª Categoría (Capitales / Intereses / Dividendos)</span><span class="text-blue-800 num-row">Neto: $ ${fmtMoneda(netoCat2)}</span></div>
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
-                                            <label class="text-[10px] font-bold text-gray-500 uppercase">Intereses / Dividendos / Otros</label>
-                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat2Ingresos)}" onchange="obtenerEmpresaActual().gananciasConfig.rentas.cat2Ingresos=parsearNumeroAr(this.value); guardarInmediato();" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
+                                            <label class="block text-[11px] text-gray-500 mb-1">Ingresos Gravados</label>
+                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat2Ingresos)}" onchange="actualizarCampoGanancias('rentas.cat2Ingresos', this.value)" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
                                         </div>
                                         <div>
-                                            <label class="text-[10px] font-bold text-gray-500 uppercase">Gastos Deducibles 2ª Cat.</label>
-                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat2Gastos)}" onchange="obtenerEmpresaActual().gananciasConfig.rentas.cat2Gastos=parsearNumeroAr(this.value); guardarInmediato();" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
+                                            <label class="block text-[11px] text-gray-500 mb-1">Gastos / Deducciones</label>
+                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat2Gastos)}" onchange="actualizarCampoGanancias('rentas.cat2Gastos', this.value)" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="p-3.5 rounded-xl border bg-gray-50 space-y-2">
-                                    <div class="flex justify-between font-bold text-gray-800">
-                                        <span>3ª Categoría — Beneficios Empresas / Unipersonales</span>
-                                        <span class="text-blue-900 num-row">Neto: $ ${fmtMoneda(netoCat3)}</span>
-                                    </div>
+                                    <div class="flex justify-between font-bold text-gray-800"><span>3ª Categoría (Comercio / Empresa Unipersonal)</span><span class="text-blue-800 num-row">Neto: $ ${fmtMoneda(netoCat3)}</span></div>
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
-                                            <label class="text-[10px] font-bold text-gray-500 uppercase">Ingresos Adicionales / Ajustes</label>
-                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat3IngresosManual)}" onchange="obtenerEmpresaActual().gananciasConfig.rentas.cat3IngresosManual=parsearNumeroAr(this.value); guardarInmediato();" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
+                                            <label class="block text-[11px] text-gray-500 mb-1">Ingresos Adicionales / Manual</label>
+                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat3IngresosManual)}" onchange="actualizarCampoGanancias('rentas.cat3IngresosManual', this.value)" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
                                         </div>
                                         <div>
-                                            <label class="text-[10px] font-bold text-gray-500 uppercase">Gastos / Costos Adicionales</label>
-                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat3GastosManual)}" onchange="obtenerEmpresaActual().gananciasConfig.rentas.cat3GastosManual=parsearNumeroAr(this.value); guardarInmediato();" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
+                                            <label class="block text-[11px] text-gray-500 mb-1">Costos / Gastos Adicionales</label>
+                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat3GastosManual)}" onchange="actualizarCampoGanancias('rentas.cat3GastosManual', this.value)" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="p-3.5 rounded-xl border bg-gray-50 space-y-2">
-                                    <div class="flex justify-between font-bold text-gray-800">
-                                        <span>4ª Categoría — Trabajo Personal / Rel. Dep. / Prof.</span>
-                                        <span class="text-blue-900 num-row">Neto: $ ${fmtMoneda(netoCat4)}</span>
-                                    </div>
+                                    <div class="flex justify-between font-bold text-gray-800"><span>4ª Categoría (Trabajo Personal / Honorarios / Rel. Dep.)</span><span class="text-blue-800 num-row">Neto: $ ${fmtMoneda(netoCat4)}</span></div>
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
-                                            <label class="text-[10px] font-bold text-gray-500 uppercase">Ingresos Gravados 4ª Cat.</label>
-                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat4Ingresos)}" onchange="obtenerEmpresaActual().gananciasConfig.rentas.cat4Ingresos=parsearNumeroAr(this.value); guardarInmediato();" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
+                                            <label class="block text-[11px] text-gray-500 mb-1">Ingresos Gravados</label>
+                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat4Ingresos)}" onchange="actualizarCampoGanancias('rentas.cat4Ingresos', this.value)" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
                                         </div>
                                         <div>
-                                            <label class="text-[10px] font-bold text-gray-500 uppercase">Gastos / Deducciones 4ª Cat.</label>
-                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat4Gastos)}" onchange="obtenerEmpresaActual().gananciasConfig.rentas.cat4Gastos=parsearNumeroAr(this.value); guardarInmediato();" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
+                                            <label class="block text-[11px] text-gray-500 mb-1">Gastos Deducibles</label>
+                                            <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat4Gastos)}" onchange="actualizarCampoGanancias('rentas.cat4Gastos', this.value)" class="w-full border rounded p-1.5 text-right font-semibold bg-white num-row">
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-
-                            <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 flex flex-wrap justify-between items-center text-xs sm:text-sm font-bold text-blue-950 gap-2">
-                                <span>Ganancia Neta antes de Deducciones Generales:</span>
-                                <span class="num-row">$ ${fmtMoneda(gananciaNetaAntesDed)}</span>
                             </div>
                         </div>
 
                         <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-3">
                             <div class="flex flex-wrap justify-between items-center border-b pb-2 gap-2">
                                 <div>
-                                    <h3 class="text-sm font-bold text-gray-900 uppercase">2. Deducciones Generales (Art. 85 / 86 LIG)</h3>
-                                    <p class="text-[11px] text-gray-500">Topes vigentes ${anio}: 5% Ganancia Neta ($ ${fmtMoneda(tope5PorcValor)}) · GNI ($ ${fmtMoneda(params.gni)}) · Seguro Vida ($ ${fmtMoneda(params.topeSeguroVida)})</p>
+                                    <h3 class="text-sm font-bold text-gray-900 uppercase">2. Deducciones Generales del Art. 85 (con Topes Legales)</h3>
+                                    <p class="text-xs text-gray-500">Declarado: $ ${fmtMoneda(totalDedGeneralesDeclaradas)} · Computable con topes: <strong class="text-emerald-700">$ ${fmtMoneda(totalDedGeneralesComputables)}</strong></p>
                                 </div>
                                 <button type="button" onclick="agregarDeduccionGeneralGanancias()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow">+ Agregar Deducción</button>
                             </div>
-
-                            <div class="space-y-2">${filasDeducciones || '<p class="text-xs text-gray-400 py-3 text-center">Sin deducciones generales cargadas para el período.</p>'}</div>
-
-                            <div class="flex flex-wrap justify-between items-center bg-gray-50 p-3 rounded-xl border text-xs font-bold gap-2">
-                                <span class="num-row">Total Cargado: $ ${fmtMoneda(totalDedGeneralesBrutas)} | Computable con Topes: <span class="text-purple-800">$ ${fmtMoneda(totalDedGeneralesComputables)}</span></span>
-                                <span class="text-gray-900 num-row">Ganancia Neta del Ejercicio: $ ${fmtMoneda(gananciaNetaEjercicio)}</span>
+                            <div class="space-y-2">
+                                ${filasDeduccionesHtml || `<p class="text-xs text-gray-400 text-center py-3">Sin deducciones generales cargadas.</p>`}
                             </div>
                         </div>
 
                         <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
-                            <h3 class="text-sm font-bold text-gray-900 uppercase border-b pb-2">3. Deducciones Personales (Art. 30 LIG - Tabla ${anio})</h3>
-
+                            <h3 class="text-sm font-bold text-gray-900 uppercase border-b pb-2">3. Deducciones Personales (Art. 30 LIG - Valores Anuales ${anio})</h3>
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                                <div class="p-3 rounded-xl border bg-gray-50 flex items-center justify-between">
+                                <label class="flex items-center space-x-2 bg-gray-50 p-3 rounded-lg border cursor-pointer">
+                                    <input type="checkbox" ${cfg.conyuge ? 'checked' : ''} onchange="actualizarCampoGanancias('conyuge', this.checked, false)">
                                     <div>
-                                        <p class="font-bold text-gray-800">Cónyuge / Conviviente</p>
-                                        <p class="text-[11px] text-gray-500 num-row">$ ${fmtMoneda(params.conyuge)}</p>
+                                        <span class="font-bold block">Cónyuge / Conviviente</span>
+                                        <span class="text-[11px] text-gray-500 num-row">$ ${fmtMoneda(params.conyuge)}</span>
                                     </div>
-                                    <input type="checkbox" ${cfg.conyuge ? 'checked' : ''} onchange="obtenerEmpresaActual().gananciasConfig.conyuge=this.checked; guardarInmediato();" class="w-4 h-4">
+                                </label>
+                                <div class="bg-gray-50 p-3 rounded-lg border">
+                                    <label class="block font-bold mb-1">Hijos / Hijastros (&lt;18 o inc.)</label>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <input type="number" min="0" value="${cfg.hijos || 0}" onchange="actualizarCampoGanancias('hijos', this.value)" class="w-16 border rounded p-1 text-center font-bold bg-white">
+                                        <span class="text-[11px] text-gray-500 num-row">c/u $ ${fmtMoneda(params.hijo)}</span>
+                                    </div>
                                 </div>
-
-                                <div class="p-3 rounded-xl border bg-gray-50">
-                                    <label class="block font-bold text-gray-800">Hijos / Hijastros (&lt;18 años)</label>
-                                    <p class="text-[11px] text-gray-500 mb-1 num-row">$ ${fmtMoneda(params.hijo)} c/u</p>
-                                    <input type="number" min="0" value="${cfg.hijos}" onchange="obtenerEmpresaActual().gananciasConfig.hijos=Math.max(0, parseInt(this.value)||0); guardarInmediato();" class="w-full border rounded p-1.5 bg-white font-bold">
+                                <div class="bg-gray-50 p-3 rounded-lg border">
+                                    <label class="block font-bold mb-1">Hijos Incapacitados</label>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <input type="number" min="0" value="${cfg.hijosIncapacitados || 0}" onchange="actualizarCampoGanancias('hijosIncapacitados', this.value)" class="w-16 border rounded p-1 text-center font-bold bg-white">
+                                        <span class="text-[11px] text-gray-500 num-row">c/u $ ${fmtMoneda(params.hijoIncapacitado)}</span>
+                                    </div>
                                 </div>
-
-                                <div class="p-3 rounded-xl border bg-gray-50">
-                                    <label class="block font-bold text-gray-800">Hijos Incapacitados</label>
-                                    <p class="text-[11px] text-gray-500 mb-1 num-row">$ ${fmtMoneda(params.hijoIncapacitado)} c/u</p>
-                                    <input type="number" min="0" value="${cfg.hijosIncapacitados}" onchange="obtenerEmpresaActual().gananciasConfig.hijosIncapacitados=Math.max(0, parseInt(this.value)||0); guardarInmediato();" class="w-full border rounded p-1.5 bg-white font-bold">
-                                </div>
-
-                                <div class="p-3 rounded-xl border bg-gray-50">
-                                    <label class="block font-bold text-gray-800 mb-1">Deducción Especial (Art. 30 c)</label>
-                                    <select onchange="obtenerEmpresaActual().gananciasConfig.tipoDedEspecial=this.value; guardarInmediato();" class="w-full border rounded p-1.5 bg-white font-semibold">
+                                <div class="bg-gray-50 p-3 rounded-lg border">
+                                    <label class="block font-bold mb-1">Deducción Especial</label>
+                                    <select onchange="actualizarCampoGanancias('tipoDedEspecial', this.value, false)" class="w-full border rounded p-1 font-semibold bg-white">
                                         <option value="AUTONOMO" ${cfg.tipoDedEspecial==='AUTONOMO'?'selected':''}>Autónomo ($ ${fmtMoneda(params.dedEspAutonomo, 0)})</option>
-                                        <option value="EMPRENDEDOR" ${cfg.tipoDedEspecial==='EMPRENDEDOR'?'selected':''}>Emprendedor ($ ${fmtMoneda(params.dedEspEmprendedor, 0)})</option>
-                                        <option value="REL_DEP" ${cfg.tipoDedEspecial==='REL_DEP'?'selected':''}>Rel. Dep. ($ ${fmtMoneda(params.dedEspRelDep, 0)})</option>
+                                        <option value="EMPRENDEDOR" ${cfg.tipoDedEspecial==='EMPRENDEDOR'?'selected':''}>Nuevo Emprend. ($ ${fmtMoneda(params.dedEspEmprendedor, 0)})</option>
+                                        <option value="REL_DEP" ${cfg.tipoDedEspecial==='REL_DEP'?'selected':''}>Rel. Dep. / Jubil. (+1/12)</option>
                                         <option value="NINGUNA" ${cfg.tipoDedEspecial==='NINGUNA'?'selected':''}>Sin Deducción Especial</option>
                                     </select>
                                 </div>
                             </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm bg-gray-50 p-3.5 sm:p-4 rounded-xl border">
-                                <div class="space-y-1.5">
-                                    <div class="flex justify-between gap-2"><span>Ganancia No Imponible (GNI):</span><span class="font-semibold num-row">$ ${fmtMoneda(dedGni)}</span></div>
-                                    <div class="flex justify-between gap-2"><span>Cargas de Familia (Cónyuge + Hijos):</span><span class="font-semibold num-row">$ ${fmtMoneda(dedConyuge + dedHijos + dedHijosInc)}</span></div>
-                                    <div class="flex justify-between gap-2"><span>Deducción Especial (${etiquetaDedEsp}):</span><span class="font-semibold num-row">$ ${fmtMoneda(dedEspecialBase)}</span></div>
-                                    ${doceavaParte > 0 ? `<div class="flex justify-between gap-2 text-blue-800"><span>Deducción Especial Incrementada (1/12):</span><span class="font-semibold num-row">$ ${fmtMoneda(doceavaParte)}</span></div>` : ''}
-                                </div>
-                                <div class="space-y-1.5 border-t md:border-t-0 md:border-l pt-2 md:pt-0 md:pl-4 flex flex-col justify-center">
-                                    <div class="flex justify-between gap-2"><span>Total Deducciones Personales (Tope):</span><span class="font-bold num-row">$ ${fmtMoneda(totalDedPersonalesTeoricas)}</span></div>
-                                    <div class="flex justify-between gap-2"><span>Deducciones Personales Computables:</span><span class="font-bold text-purple-800 num-row">$ ${fmtMoneda(totalDedPersonalesComputables)}</span></div>
-                                    <div class="flex justify-between gap-2 border-t pt-1.5 font-black text-gray-900"><span>GANANCIA NETA SUJETA A IMPUESTO:</span><span class="text-blue-900 num-row">$ ${fmtMoneda(gananciaNetaSujetaImpuesto)}</span></div>
-                                </div>
-                            </div>
                         </div>
 
                         <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
-                            <h3 class="text-sm font-bold text-gray-900 uppercase border-b pb-2">4. Escala Progresiva (Art. 94 LIG) y Saldo de Declaración Jurada</h3>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
-                                <div class="bg-gray-50 p-3.5 sm:p-4 rounded-xl border space-y-2">
-                                    <p class="text-xs font-bold text-gray-500 uppercase">Aplicación de Escala (${anio})</p>
-                                    <div class="flex justify-between gap-2"><span>Tramo Aplicado:</span><span class="font-bold num-row">$ ${fmtMoneda(resEscala.tramo.desde)} a ${resEscala.tramo.hasta === Infinity ? 'En adelante' : '$ ' + fmtMoneda(resEscala.tramo.hasta)}</span></div>
-                                    <div class="flex justify-between gap-2"><span>Importe Fijo del Tramo:</span><span class="font-semibold num-row">$ ${fmtMoneda(resEscala.tramo.fijo)}</span></div>
-                                    <div class="flex justify-between gap-2"><span>Alícuota Marginal sobre Excedente:</span><span class="font-semibold num-row">${fmtMoneda(resEscala.tramo.alicuota * 100, 0)}% s/ $ ${fmtMoneda(resEscala.excedente)}</span></div>
-                                    <div class="flex justify-between gap-2 border-t pt-2 font-black text-blue-900 text-sm sm:text-base"><span>IMPUESTO DETERMINADO:</span><span class="num-row">$ ${fmtMoneda(impuestoDeterminado)}</span></div>
+                            <h3 class="text-sm font-bold text-gray-900 uppercase border-b pb-2">4. Pagos a Cuenta y Liquidación Final</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs bg-purple-50/60 p-3.5 rounded-xl border border-purple-200">
+                                <div>
+                                    <label class="block font-bold text-purple-950 uppercase mb-1">Retenciones Sufridas ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.retencionesSufridas)}" onchange="actualizarCampoGanancias('retencionesSufridas', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
                                 </div>
-
-                                <div class="bg-gray-50 p-3.5 sm:p-4 rounded-xl border space-y-2">
-                                    <p class="text-xs font-bold text-gray-500 uppercase">Pagos a Cuenta, Retenciones y Anticipos</p>
-                                    <div class="flex justify-between items-center gap-2">
-                                        <span>Retenciones Sufridas ($):</span>
-                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.retencionesSufridas)}" onchange="obtenerEmpresaActual().gananciasConfig.retencionesSufridas=parsearNumeroAr(this.value); guardarInmediato();" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
-                                    </div>
-                                    <div class="flex justify-between items-center gap-2">
-                                        <span>Percepciones / Imp. Déb. y Créd. ($):</span>
-                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.percepcionesSufridas)}" onchange="obtenerEmpresaActual().gananciasConfig.percepcionesSufridas=parsearNumeroAr(this.value); guardarInmediato();" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
-                                    </div>
-                                    <div class="flex justify-between items-center gap-2">
-                                        <span>Anticipos Ingresados ($):</span>
-                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.anticiposIngresados)}" onchange="obtenerEmpresaActual().gananciasConfig.anticiposIngresados=parsearNumeroAr(this.value); guardarInmediato();" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
-                                    </div>
-                                    <div class="flex justify-between items-center gap-2">
-                                        <span>Saldo a Favor Período Anterior ($):</span>
-                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.saldoFavorAnterior)}" onchange="obtenerEmpresaActual().gananciasConfig.saldoFavorAnterior=parsearNumeroAr(this.value); guardarInmediato();" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
-                                    </div>
+                                <div>
+                                    <label class="block font-bold text-purple-950 uppercase mb-1">Percepciones Sufridas ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.percepcionesSufridas)}" onchange="actualizarCampoGanancias('percepcionesSufridas', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-purple-950 uppercase mb-1">Anticipos Ingresados ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.anticiposIngresados)}" onchange="actualizarCampoGanancias('anticiposIngresados', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-purple-950 uppercase mb-1">Saldo a Favor Anterior ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.saldoFavorAnterior)}" onchange="actualizarCampoGanancias('saldoFavorAnterior', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
                                 </div>
                             </div>
 
-                            <div class="bg-slate-900 text-white p-4 sm:p-5 rounded-xl flex flex-wrap justify-between items-center shadow gap-2">
-                                <div>
-                                    <p class="text-[11px] text-slate-400 uppercase font-semibold">Resultado Final DDJJ Ganancias PH (${anio}) · Pagos a cuenta: $ ${fmtMoneda(totalPagosCuenta)}</p>
-                                    <h4 class="text-sm sm:text-lg font-black tracking-wider ${saldoFinal >= 0 ? 'text-amber-400' : 'text-emerald-400'}">${saldoFinal >= 0 ? 'IMPUESTO A PAGAR (SALDO DDJJ)' : 'SALDO A FAVOR DEL CONTRIBUYENTE'}</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm bg-gray-50 p-4 rounded-xl border">
+                                <div class="space-y-2">
+                                    <div class="flex justify-between gap-2"><span>Ganancia Neta antes de Deducciones:</span><span class="font-bold num-row">$ ${fmtMoneda(gananciaNetaAntesDed)}</span></div>
+                                    <div class="flex justify-between gap-2"><span>(-) Deducciones Generales Computables:</span><span class="font-bold text-red-600 num-row">- $ ${fmtMoneda(totalDedGeneralesComputables)}</span></div>
+                                    <div class="flex justify-between gap-2"><span>(-) Deducciones Personales Computables:</span><span class="font-bold text-red-600 num-row">- $ ${fmtMoneda(totalDedPersonalesComputables)}</span></div>
+                                    <div class="flex justify-between gap-2 border-t pt-2 font-bold text-blue-950"><span>Ganancia Neta Sujeta a Impuesto:</span><span class="num-row">$ ${fmtMoneda(gananciaNetaSujetaImpuesto)}</span></div>
+                                    <p class="text-[11px] text-gray-500">${resEscala.tramoDesc}</p>
                                 </div>
-                                <div class="text-right">
-                                    <span class="text-xl sm:text-3xl font-black num-row">$ ${fmtMoneda(Math.abs(saldoFinal))}</span>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between gap-2"><span>Impuesto Determinado (Escala PH):</span><span class="font-bold text-purple-900 num-row">$ ${fmtMoneda(impuestoDeterminado)}</span></div>
+                                    <div class="flex justify-between gap-2 border-b pb-2"><span>(-) Total Pagos a Cuenta:</span><span class="font-bold text-emerald-700 num-row">- $ ${fmtMoneda(totalPagosCuenta)}</span></div>
+                                    <div class="flex justify-between gap-2 pt-2 text-base font-black ${aPagar ? 'text-purple-950' : 'text-emerald-700'}">
+                                        <span>${aPagar ? 'SALDO A PAGAR:' : 'SALDO A FAVOR:'}</span>
+                                        <span class="num-row">$ ${fmtMoneda(Math.abs(saldoFinal))}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -4113,9 +4280,9 @@
                 const anioTablaEscala = PARAMS_GANANCIAS_ARCA[rangoEj.anioInicio]
                     ? rangoEj.anioInicio
                     : (PARAMS_GANANCIAS_ARCA[rangoEj.anioCierre] ? rangoEj.anioCierre : "2026");
-                const paramsPJ = PARAMS_GANANCIAS_ARCA[anioTablaEscala] || PARAMS_GANANCIAS_ARCA["2026"];
+                const paramsPj = PARAMS_GANANCIAS_ARCA[anioTablaEscala] || PARAMS_GANANCIAS_ARCA["2026"];
 
-                const compsEjercicio = (emp.comprobantes || []).filter(c => c.fecha && c.fecha >= rangoEj.fechaInicio && c.fecha <= rangoEj.fechaFin);
+                const compsEjercicio = emp.comprobantes.filter(c => c.fecha && c.fecha >= rangoEj.fechaInicio && c.fecha <= rangoEj.fechaFin);
                 let ventasEjComps = 0, comprasEjComps = 0;
                 compsEjercicio.forEach(c => {
                     const sub = (Number(c.netoTotal) || 0) + (Number(c.exento) || 0) + (Number(c.noGravado) || 0);
@@ -4132,29 +4299,32 @@
                 const quebrantosComputables = gananciaNetaAntesQueb > 0 ? Math.min(gananciaNetaAntesQueb, quebrantos) : 0;
                 const gananciaNetaImponible = Math.max(0, gananciaNetaAntesQueb - quebrantosComputables);
 
-                const resEscalaPJ = calcularEscalaProgresiva(gananciaNetaImponible, paramsPJ.escalaPJ);
-                const impuestoDeterminadoPJ = resEscalaPJ.impuesto;
+                const resEscalaPj = calcularEscalaProgresiva(gananciaNetaImponible, paramsPj.escalaPJ);
+                const impuestoDeterminadoPJ = resEscalaPj.impuesto;
                 const saldoFinalPJ = impuestoDeterminadoPJ - totalPagosCuenta;
-
-                const divDistribuidos = Math.max(0, Number(cfg.pjDividendosDistribuidos) || 0);
-                const impuestoCedularDiv = divDistribuidos * 0.07;
+                const aPagarPJ = saldoFinalPJ >= 0;
+                const condicionCorreoPj = aPagarPJ ? "SALDO A PAGAR" : "SALDO A FAVOR";
+                const dividendos = Math.max(0, Number(cfg.pjDividendosDistribuidos) || 0);
+                const retencionDividendos7 = dividendos * 0.07;
 
                 const vtoGanPj = resolverVencimientoGanancias(emp, anioCierre, "PJ");
-                const filasCsvGanPj = [
-                    { concepto: "Sujeto / Cierre", valor: `Persona Jurídica - Cierre ${NOMBRES_MESES[mesCierre]} ${anioCierre}` },
+
+                const filasCsvPj = [
+                    { concepto: "Tipo Sujeto", valor: "Persona Jurídica (PJ - Art. 73)" },
                     { concepto: "Ejercicio Fiscal", valor: `${formatearFechaAr(rangoEj.fechaInicio)} al ${formatearFechaAr(rangoEj.fechaFin)}` },
-                    { concepto: "Terminación CUIT", valor: vtoGanPj.digito },
-                    { concepto: "Vencimiento Estimado DDJJ", valor: `${vtoGanPj.fechaFormateada} (${vtoGanPj.badge})` },
-                    { concepto: "Ingresos Totales del Ejercicio", valor: fmtMoneda(ingTotales) },
-                    { concepto: "Costos y Gastos del Ejercicio", valor: fmtMoneda(gasTotales) },
-                    { concepto: "Resultado Contable Neto", valor: fmtMoneda(resultadoContable) },
-                    { concepto: "Ajustes Impositivos / Inflación", valor: fmtMoneda((Number(cfg.pjAjustesImpositivos) || 0) + (Number(cfg.pjAjusteInflacion) || 0)) },
-                    { concepto: "Quebrantos Computados", valor: fmtMoneda(quebrantosComputables) },
+                    { concepto: "Condición del Saldo", valor: condicionCorreoPj },
+                    { concepto: "Fecha Vencimiento Ganancias PJ", valor: `${vtoGanPj.fechaFormateada} (${vtoGanPj.badge})` },
+                    { concepto: "Ingresos Totales Ejercicio", valor: fmtMoneda(ingTotales) },
+                    { concepto: "Costos y Gastos Ejercicio", valor: fmtMoneda(gasTotales) },
+                    { concepto: "Resultado Contable", valor: fmtMoneda(resultadoContable) },
+                    { concepto: "Ajustes Impositivos", valor: fmtMoneda(cfg.pjAjustesImpositivos) },
+                    { concepto: "Ajuste por Inflación Impositivo", valor: fmtMoneda(cfg.pjAjusteInflacion) },
+                    { concepto: "Quebrantos Computables", valor: fmtMoneda(quebrantosComputables) },
                     { concepto: "Ganancia Neta Imponible", valor: fmtMoneda(gananciaNetaImponible) },
-                    { concepto: "Impuesto Determinado (Art. 73)", valor: fmtMoneda(impuestoDeterminadoPJ) },
-                    { concepto: "Pagos a Cuenta / Anticipos", valor: fmtMoneda(totalPagosCuenta) },
-                    { concepto: saldoFinalPJ >= 0 ? "SALDO A PAGAR" : "SALDO A FAVOR", valor: fmtMoneda(Math.abs(saldoFinalPJ)) },
-                    { concepto: "Impuesto Cedular Dividendos (7%)", valor: fmtMoneda(impuestoCedularDiv) }
+                    { concepto: "Impuesto Determinado PJ", valor: fmtMoneda(impuestoDeterminadoPJ) },
+                    { concepto: "Total Pagos a Cuenta", valor: fmtMoneda(totalPagosCuenta) },
+                    { concepto: aPagarPJ ? "SALDO A PAGAR" : "SALDO A FAVOR", valor: fmtMoneda(Math.abs(saldoFinalPJ)) },
+                    { concepto: "Retención Dividendos (7%)", valor: fmtMoneda(retencionDividendos7) }
                 ];
 
                 cont.innerHTML = `
@@ -4162,156 +4332,124 @@
                         <div class="flex flex-wrap justify-between items-center bg-white p-3 sm:p-4 rounded-xl border shadow-sm gap-3">
                             <div>
                                 <h2 class="text-lg sm:text-xl font-bold text-gray-800">Impuesto a las Ganancias — Persona Jurídica (PJ)</h2>
-                                <p class="text-xs text-gray-500">Sociedades Art. 73 LIG · Cierre de ejercicio configurable (ej. Junio / Diciembre), ajustes impositivos y escala progresiva</p>
+                                <p class="text-xs text-gray-500">Determinación por ejercicio comercial, ajustes impositivos, escala Art. 73 y dividendos</p>
                             </div>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="text-xs font-bold text-gray-500 uppercase">Sujeto:</span>
-                                <select onchange="obtenerEmpresaActual().gananciasConfig.tipoSujeto=this.value; guardarInmediato();" class="text-xs border border-purple-300 bg-purple-50 rounded-lg p-1.5 font-bold text-purple-900">
+                            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Tipo Sujeto:</span>
+                                <select onchange="actualizarCampoGanancias('tipoSujeto', this.value, false)" class="text-xs border rounded p-1.5 font-bold bg-purple-50 text-purple-900">
                                     <option value="PH">Persona Humana (PH)</option>
                                     <option value="PJ" selected>Persona Jurídica (PJ - Art. 73)</option>
                                 </select>
-                                <span class="text-xs font-bold text-gray-500 uppercase">Mes Cierre:</span>
-                                <select onchange="obtenerEmpresaActual().gananciasConfig.pjMesCierre=this.value; guardarInmediato();" class="text-xs border rounded-lg p-1.5 font-bold bg-purple-50">
-                                    <option value="01" ${mesCierre==='01'?'selected':''}>Enero</option>
-                                    <option value="02" ${mesCierre==='02'?'selected':''}>Febrero</option>
-                                    <option value="03" ${mesCierre==='03'?'selected':''}>Marzo</option>
-                                    <option value="04" ${mesCierre==='04'?'selected':''}>Abril</option>
-                                    <option value="05" ${mesCierre==='05'?'selected':''}>Mayo</option>
-                                    <option value="06" ${mesCierre==='06'?'selected':''}>Junio</option>
-                                    <option value="07" ${mesCierre==='07'?'selected':''}>Julio</option>
-                                    <option value="08" ${mesCierre==='08'?'selected':''}>Agosto</option>
-                                    <option value="09" ${mesCierre==='09'?'selected':''}>Septiembre</option>
-                                    <option value="10" ${mesCierre==='10'?'selected':''}>Octubre</option>
-                                    <option value="11" ${mesCierre==='11'?'selected':''}>Noviembre</option>
-                                    <option value="12" ${mesCierre==='12'?'selected':''}>Diciembre</option>
+                                <span class="text-xs font-bold text-gray-500 uppercase">Cierre:</span>
+                                <select onchange="actualizarCampoGanancias('pjMesCierre', this.value, false)" class="text-xs border rounded p-1.5 font-bold bg-purple-50">
+                                    ${Object.keys(NOMBRES_MESES).map(m => `<option value="${m}" ${mesCierre===m?'selected':''}>${NOMBRES_MESES[m]}</option>`).join('')}
                                 </select>
-                                <span class="text-xs font-bold text-gray-500 uppercase">Año Cierre:</span>
-                                <input type="number" value="${anioCierre}" onchange="obtenerEmpresaActual().gananciasConfig.pjAnioCierre=this.value; obtenerEmpresaActual().gananciasConfig.anio=this.value; guardarInmediato();" class="w-20 text-xs border rounded-lg p-1.5 font-bold">
+                                <input type="number" value="${anioCierre}" onchange="actualizarCampoGanancias('pjAnioCierre', this.value, false); actualizarCampoGanancias('anio', this.value, false);" class="w-20 text-xs border rounded p-1.5 font-bold">
                             </div>
                         </div>
 
-                        ${renderBarraAccionesImpositivas(`Ganancias_PJ_${anioCierre}`, vtoGanPj.fechaIso, Math.abs(saldoFinalPJ), vtoGanPj.motivo, emp, filasCsvGanPj)}
+                        ${renderBarraAccionesImpositivas(`Ganancias_PJ_${anioCierre}`, vtoGanPj.fechaIso, Math.abs(saldoFinalPJ), `${condicionCorreoPj} (Ej. ${formatearFechaAr(rangoEj.fechaInicio)} al ${formatearFechaAr(rangoEj.fechaFin)}) - ${vtoGanPj.motivo}`, emp, filasCsvPj, condicionCorreoPj)}
 
-                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-5">
-                            <div class="flex flex-wrap items-center justify-between gap-3">
-                                <div class="space-y-1">
-                                    <div class="flex flex-wrap items-center gap-2">
-                                        <span class="text-xs font-bold text-gray-700 uppercase">Vencimiento DDJJ Ganancias PJ (Cierre ${NOMBRES_MESES[mesCierre]} ${anioCierre}):</span>
-                                        <span class="text-sm sm:text-base font-black text-gray-900 num-row">${vtoGanPj.fechaFormateada}</span>
-                                        <span class="text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${vtoGanPj.esOrientativa ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'}">${vtoGanPj.badge}</span>
-                                        <span class="text-[11px] font-semibold text-gray-500 num-row">(CUIT term. ${vtoGanPj.digito} · Grupo ${vtoGanPj.grupo})</span>
-                                    </div>
-                                    <p class="text-xs text-gray-600">${vtoGanPj.motivo}</p>
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+                            <div class="space-y-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="text-xs font-bold text-gray-700 uppercase">Vencimiento Estimado / Oficial DDJJ Ganancias PJ (Cierre ${anioCierre}):</span>
+                                    <span class="text-sm sm:text-base font-black text-purple-900 num-row">${vtoGanPj.fechaFormateada}</span>
+                                    <span class="text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${vtoGanPj.esOrientativa ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'}">${vtoGanPj.badge}</span>
+                                    <span class="text-[11px] font-semibold text-gray-500 num-row">(CUIT term. ${vtoGanPj.digito})</span>
                                 </div>
-                                <a href="https://www.arca.gob.ar/" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-purple-700 hover:underline flex items-center space-x-1 shrink-0">
-                                    <span>Portal ARCA</span>
-                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                                </a>
+                                <p class="text-xs text-gray-500">${vtoGanPj.motivo}</p>
                             </div>
+                            <a href="https://www.arca.gob.ar/" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-purple-700 hover:underline flex items-center space-x-1 shrink-0">
+                                <span>Portal ARCA</span>
+                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                            </a>
                         </div>
 
-                        <div class="bg-purple-50 border border-purple-200 rounded-xl p-3.5 sm:p-4 flex flex-wrap justify-between items-center gap-3 text-xs">
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-5 flex flex-wrap justify-between items-center gap-2 text-xs">
                             <div>
-                                <span class="font-bold text-purple-950 uppercase">Ejercicio Fiscal Computado:</span>
-                                <span class="ml-2 font-mono font-bold text-purple-900 num-row">${formatearFechaAr(rangoEj.fechaInicio)} al ${formatearFechaAr(rangoEj.fechaFin)}</span>
-                                <span class="ml-2 text-purple-700 num-row">(${compsEjercicio.length} comprobantes en rango)</span>
+                                <span class="font-bold text-gray-700 uppercase">Ejercicio Fiscal:</span>
+                                <span class="font-black text-purple-900 ml-1 num-row">${formatearFechaAr(rangoEj.fechaInicio)} al ${formatearFechaAr(rangoEj.fechaFin)}</span>
+                                ${rangoEj.esIrregular ? '<span class="ml-2 bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-semibold">Cierre distinto a Diciembre</span>' : ''}
                             </div>
-                            <label class="flex items-center space-x-2 font-semibold text-purple-950 cursor-pointer">
-                                <input type="checkbox" ${cfg.vincularComprobantesPJ ? 'checked' : ''} onchange="obtenerEmpresaActual().gananciasConfig.vincularComprobantesPJ=this.checked; guardarInmediato();">
-                                <span>Tomar comprobantes del ejercicio (Vtas: $ ${fmtMoneda(ventasEjComps)} | Cpras: $ ${fmtMoneda(comprasEjComps)})</span>
+                            <label class="flex items-center space-x-2 font-semibold text-blue-900 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 cursor-pointer">
+                                <input type="checkbox" ${cfg.vincularComprobantesPJ ? 'checked' : ''} onchange="actualizarCampoGanancias('vincularComprobantesPJ', this.checked, false)">
+                                <span>Vincular Comprobantes del Ejercicio (Vtas: $ ${fmtMoneda(ventasEjComps)} / Cpras: $ ${fmtMoneda(comprasEjComps)})</span>
                             </label>
                         </div>
 
                         <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
                             <h3 class="text-sm font-bold text-gray-900 uppercase border-b pb-2">1. Resultado Contable y Ajustes Impositivos</h3>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
-                                <div class="bg-gray-50 p-3.5 sm:p-4 rounded-xl border space-y-2.5">
-                                    <p class="text-xs font-bold text-gray-500 uppercase">Resultado Contable del Ejercicio</p>
-                                    <div class="flex justify-between items-center gap-2">
-                                        <span>Ingresos Adicionales / Contables ($):</span>
-                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjIngresosManual)}" onchange="obtenerEmpresaActual().gananciasConfig.pjIngresosManual=parsearNumeroAr(this.value); guardarInmediato();" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
-                                    </div>
-                                    <div class="flex justify-between gap-2 text-gray-600">
-                                        <span>+ Ventas Comprobantes Ejercicio:</span>
-                                        <span class="font-semibold num-row">$ ${fmtMoneda(cfg.vincularComprobantesPJ ? ventasEjComps : 0)}</span>
-                                    </div>
-                                    <div class="flex justify-between items-center gap-2">
-                                        <span>Costos / Gastos Adicionales ($):</span>
-                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjCostosGastosManual)}" onchange="obtenerEmpresaActual().gananciasConfig.pjCostosGastosManual=parsearNumeroAr(this.value); guardarInmediato();" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
-                                    </div>
-                                    <div class="flex justify-between gap-2 text-gray-600">
-                                        <span>- Compras Comprobantes Ejercicio:</span>
-                                        <span class="font-semibold num-row">$ ${fmtMoneda(cfg.vincularComprobantesPJ ? comprasEjComps : 0)}</span>
-                                    </div>
-                                    <div class="flex justify-between gap-2 border-t pt-2 font-bold text-gray-900">
-                                        <span>Resultado Contable Neto:</span>
-                                        <span class="num-row">$ ${fmtMoneda(resultadoContable)}</span>
-                                    </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                                <div class="bg-gray-50 p-3 rounded-lg border">
+                                    <label class="block font-bold text-gray-600 uppercase mb-1">Ingresos Adicionales / Manual ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjIngresosManual)}" onchange="actualizarCampoGanancias('pjIngresosManual', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
                                 </div>
-
-                                <div class="bg-gray-50 p-3.5 sm:p-4 rounded-xl border space-y-2.5">
-                                    <p class="text-xs font-bold text-gray-500 uppercase">Ajustes Impositivos, Inflación y Quebrantos</p>
-                                    <div class="flex justify-between items-center gap-2">
-                                        <span>Ajustes Impositivos (+ / - $):</span>
-                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjAjustesImpositivos)}" onchange="obtenerEmpresaActual().gananciasConfig.pjAjustesImpositivos=parsearNumeroAr(this.value); guardarInmediato();" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
-                                    </div>
-                                    <div class="flex justify-between items-center gap-2">
-                                        <span>Ajuste por Inflación Impositivo (+ / - $):</span>
-                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjAjusteInflacion)}" onchange="obtenerEmpresaActual().gananciasConfig.pjAjusteInflacion=parsearNumeroAr(this.value); guardarInmediato();" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
-                                    </div>
-                                    <div class="flex justify-between items-center gap-2">
-                                        <span>Quebrantos Impositivos Anteriores ($):</span>
-                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjQuebrantosAnt)}" onchange="obtenerEmpresaActual().gananciasConfig.pjQuebrantosAnt=parsearNumeroAr(this.value); guardarInmediato();" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
-                                    </div>
-                                    <div class="flex justify-between gap-2 text-purple-800">
-                                        <span>Quebrantos Computados:</span>
-                                        <span class="font-bold num-row">- $ ${fmtMoneda(quebrantosComputables)}</span>
-                                    </div>
-                                    <div class="flex justify-between gap-2 border-t pt-2 font-black text-blue-900">
-                                        <span>GANANCIA NETA IMPONIBLE:</span>
-                                        <span class="num-row">$ ${fmtMoneda(gananciaNetaImponible)}</span>
-                                    </div>
+                                <div class="bg-gray-50 p-3 rounded-lg border">
+                                    <label class="block font-bold text-gray-600 uppercase mb-1">Costos y Gastos Adicionales ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjCostosGastosManual)}" onchange="actualizarCampoGanancias('pjCostosGastosManual', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded-lg border">
+                                    <label class="block font-bold text-gray-600 uppercase mb-1">Ajustes Impositivos (+/-) ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjAjustesImpositivos)}" onchange="actualizarCampoGanancias('pjAjustesImpositivos', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded-lg border">
+                                    <label class="block font-bold text-gray-600 uppercase mb-1">Ajuste por Inflación Impositivo (+/-) ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjAjusteInflacion)}" onchange="actualizarCampoGanancias('pjAjusteInflacion', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded-lg border">
+                                    <label class="block font-bold text-gray-600 uppercase mb-1">Quebrantos Impositivos Anteriores ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjQuebrantosAnt)}" onchange="actualizarCampoGanancias('pjQuebrantosAnt', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded-lg border">
+                                    <label class="block font-bold text-gray-600 uppercase mb-1">Dividendos / Utilidades Distribuidas ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjDividendosDistribuidos)}" onchange="actualizarCampoGanancias('pjDividendosDistribuidos', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
                                 </div>
                             </div>
                         </div>
 
                         <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
-                            <h3 class="text-sm font-bold text-gray-900 uppercase border-b pb-2">2. Impuesto Determinado (Art. 73), Pagos a Cuenta y Dividendos</h3>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
-                                <div class="bg-gray-50 p-3.5 sm:p-4 rounded-xl border space-y-2">
-                                    <p class="text-xs font-bold text-gray-500 uppercase">Escala Sociedades Art. 73 (Tabla ${anioTablaEscala})</p>
-                                    <div class="flex justify-between gap-2"><span>Tramo Aplicado:</span><span class="font-bold num-row">$ ${fmtMoneda(resEscalaPJ.tramo.desde)} a ${resEscalaPJ.tramo.hasta === Infinity ? 'En adelante' : '$ ' + fmtMoneda(resEscalaPJ.tramo.hasta)}</span></div>
-                                    <div class="flex justify-between gap-2"><span>Importe Fijo del Tramo:</span><span class="font-semibold num-row">$ ${fmtMoneda(resEscalaPJ.tramo.fijo)}</span></div>
-                                    <div class="flex justify-between gap-2"><span>Alícuota Marginal sobre Excedente:</span><span class="font-semibold num-row">${fmtMoneda(resEscalaPJ.tramo.alicuota * 100, 0)}% s/ $ ${fmtMoneda(resEscalaPJ.excedente)}</span></div>
-                                    <div class="flex justify-between gap-2 border-t pt-2 font-black text-blue-900 text-sm sm:text-base"><span>IMPUESTO DETERMINADO PJ:</span><span class="num-row">$ ${fmtMoneda(impuestoDeterminadoPJ)}</span></div>
+                            <h3 class="text-sm font-bold text-gray-900 uppercase border-b pb-2">2. Pagos a Cuenta y Determinación Final (Art. 73)</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs bg-purple-50/60 p-3.5 rounded-xl border border-purple-200">
+                                <div>
+                                    <label class="block font-bold text-purple-950 uppercase mb-1">Retenciones Sufridas ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.retencionesSufridas)}" onchange="actualizarCampoGanancias('retencionesSufridas', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
                                 </div>
-
-                                <div class="bg-gray-50 p-3.5 sm:p-4 rounded-xl border space-y-2">
-                                    <p class="text-xs font-bold text-gray-500 uppercase">Pagos a Cuenta y Impuesto Cedular (7%)</p>
-                                    <div class="flex justify-between items-center gap-2">
-                                        <span>Anticipos / Retenciones / Saldo Ant. ($):</span>
-                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.anticiposIngresados)}" onchange="obtenerEmpresaActual().gananciasConfig.anticiposIngresados=parsearNumeroAr(this.value); guardarInmediato();" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
-                                    </div>
-                                    <div class="flex justify-between items-center gap-2 border-t pt-2">
-                                        <span>Dividendos / Utilidades Distribuidas ($):</span>
-                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjDividendosDistribuidos)}" onchange="obtenerEmpresaActual().gananciasConfig.pjDividendosDistribuidos=parsearNumeroAr(this.value); guardarInmediato();" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
-                                    </div>
-                                    <div class="flex justify-between gap-2 text-purple-900 font-bold">
-                                        <span>Impuesto Cedular Dividendos (7%):</span>
-                                        <span class="num-row">$ ${fmtMoneda(impuestoCedularDiv)}</span>
-                                    </div>
+                                <div>
+                                    <label class="block font-bold text-purple-950 uppercase mb-1">Percepciones Sufridas ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.percepcionesSufridas)}" onchange="actualizarCampoGanancias('percepcionesSufridas', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-purple-950 uppercase mb-1">Anticipos Ingresados ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.anticiposIngresados)}" onchange="actualizarCampoGanancias('anticiposIngresados', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-purple-950 uppercase mb-1">Saldo a Favor Anterior ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.saldoFavorAnterior)}" onchange="actualizarCampoGanancias('saldoFavorAnterior', this.value)" class="w-full border rounded p-1.5 text-right font-bold bg-white num-row">
                                 </div>
                             </div>
 
-                            <div class="bg-slate-900 text-white p-4 sm:p-5 rounded-xl flex flex-wrap justify-between items-center shadow gap-2">
-                                <div>
-                                    <p class="text-[11px] text-slate-400 uppercase font-semibold">Resultado Final DDJJ Ganancias PJ (Cierre ${NOMBRES_MESES[mesCierre]} ${anioCierre}) · Pagos a cuenta: $ ${fmtMoneda(totalPagosCuenta)}</p>
-                                    <h4 class="text-sm sm:text-lg font-black tracking-wider ${saldoFinalPJ >= 0 ? 'text-amber-400' : 'text-emerald-400'}">${saldoFinalPJ >= 0 ? 'IMPUESTO A PAGAR (SALDO DDJJ)' : 'SALDO A FAVOR DEL CONTRIBUYENTE'}</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm bg-gray-50 p-4 rounded-xl border">
+                                <div class="space-y-2">
+                                    <div class="flex justify-between gap-2"><span>Ingresos Totales del Ejercicio:</span><span class="font-bold num-row">$ ${fmtMoneda(ingTotales)}</span></div>
+                                    <div class="flex justify-between gap-2"><span>(-) Costos y Gastos del Ejercicio:</span><span class="font-bold text-red-600 num-row">- $ ${fmtMoneda(gasTotales)}</span></div>
+                                    <div class="flex justify-between gap-2 border-t pt-1 font-bold"><span>Resultado Contable:</span><span class="num-row">$ ${fmtMoneda(resultadoContable)}</span></div>
+                                    <div class="flex justify-between gap-2"><span>(+) Ajustes Impositivos:</span><span class="font-bold num-row">$ ${fmtMoneda(cfg.pjAjustesImpositivos)}</span></div>
+                                    <div class="flex justify-between gap-2"><span>(+/-) Ajuste por Inflación Impositivo:</span><span class="font-bold num-row">$ ${fmtMoneda(cfg.pjAjusteInflacion)}</span></div>
+                                    <div class="flex justify-between gap-2"><span>(-) Quebrantos Computables:</span><span class="font-bold text-red-600 num-row">- $ ${fmtMoneda(quebrantosComputables)}</span></div>
+                                    <div class="flex justify-between gap-2 border-t pt-2 font-bold text-blue-950"><span>Ganancia Neta Imponible:</span><span class="num-row">$ ${fmtMoneda(gananciaNetaImponible)}</span></div>
+                                    <p class="text-[11px] text-gray-500">${resEscalaPj.tramoDesc}</p>
                                 </div>
-                                <div class="text-right">
-                                    <span class="text-xl sm:text-3xl font-black num-row">$ ${fmtMoneda(Math.abs(saldoFinalPJ))}</span>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between gap-2"><span>Impuesto Determinado PJ (Escala Art. 73):</span><span class="font-bold text-purple-900 num-row">$ ${fmtMoneda(impuestoDeterminadoPJ)}</span></div>
+                                    <div class="flex justify-between gap-2 border-b pb-2"><span>(-) Total Pagos a Cuenta:</span><span class="font-bold text-emerald-700 num-row">- $ ${fmtMoneda(totalPagosCuenta)}</span></div>
+                                    <div class="flex justify-between gap-2 pt-2 text-base font-black ${aPagarPJ ? 'text-purple-950' : 'text-emerald-700'}">
+                                        <span>${aPagarPJ ? 'SALDO A PAGAR:' : 'SALDO A FAVOR:'}</span>
+                                        <span class="num-row">$ ${fmtMoneda(Math.abs(saldoFinalPJ))}</span>
+                                    </div>
+                                    <div class="pt-3 border-t text-xs text-gray-600 space-y-1">
+                                        <div class="flex justify-between gap-2"><span>Retención Dividendos (7% s/ $ ${fmtMoneda(dividendos)}):</span><span class="font-bold text-amber-800 num-row">$ ${fmtMoneda(retencionDividendos7)}</span></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
