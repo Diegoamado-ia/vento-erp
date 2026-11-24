@@ -1036,7 +1036,7 @@
                     const c = item.comp;
                     const ref = `${c.tipoNombre} ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} - ${c.razonSocial}`;
                     rows.push([
-                        { content: `Asiento N° ${nro} | ${formatearFechaAr(c.fecha)} | ${ref}`, colSpan: 4, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }
+                        { content: `Asiento N° ${nro} | ${formatearFechaAr(c.fecha)} | ${ref}`, colSpan: 3, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }
                     ]);
                     const lineas = obtenerLineasEfectivasComprobante(c);
                     lineas.forEach(l => {
@@ -1047,14 +1047,13 @@
                         rows.push([
                             `${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}`,
                             d !== 0 ? `$ ${fmtMoneda(d)}` : '-',
-                            h !== 0 ? `$ ${fmtMoneda(h)}` : '-',
-                            d !== 0 && h === 0 ? 'DEBE' : (h !== 0 && d === 0 ? 'HABER' : '')
+                            h !== 0 ? `$ ${fmtMoneda(h)}` : '-'
                         ]);
                     });
                 } else {
                     const m = item.manual;
                     rows.push([
-                        { content: `Asiento Manual N° ${nro} | ${formatearFechaAr(m.fecha)} | ${m.concepto}`, colSpan: 4, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }
+                        { content: `Asiento Manual N° ${nro} | ${formatearFechaAr(m.fecha)} | ${m.concepto}`, colSpan: 3, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }
                     ]);
                     (m.lineas || []).forEach(l => {
                         const d = Number(l.debe) || 0;
@@ -1064,8 +1063,7 @@
                         rows.push([
                             `${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}`,
                             d !== 0 ? `$ ${fmtMoneda(d)}` : '-',
-                            h !== 0 ? `$ ${fmtMoneda(h)}` : '-',
-                            d !== 0 && h === 0 ? 'DEBE' : (h !== 0 && d === 0 ? 'HABER' : '')
+                            h !== 0 ? `$ ${fmtMoneda(h)}` : '-'
                         ]);
                     });
                 }
@@ -1074,22 +1072,20 @@
             rows.push([
                 { content: 'TOTALES GENERALES DEL PERÍODO', styles: { fontStyle: 'bold', fillColor: [226, 232, 240], textColor: [15, 23, 42] } },
                 { content: `$ ${fmtMoneda(totDebe)}`, styles: { fontStyle: 'bold', fillColor: [226, 232, 240], textColor: [30, 58, 138], halign: 'right' } },
-                { content: `$ ${fmtMoneda(totHaber)}`, styles: { fontStyle: 'bold', fillColor: [226, 232, 240], textColor: [30, 58, 138], halign: 'right' } },
-                { content: '', styles: { fillColor: [226, 232, 240] } }
+                { content: `$ ${fmtMoneda(totHaber)}`, styles: { fontStyle: 'bold', fillColor: [226, 232, 240], textColor: [30, 58, 138], halign: 'right' } }
             ]);
 
             doc.autoTable({
                 startY: 28,
-                head: [['Cuenta Contable / Asiento', 'Debe', 'Haber', 'Tipo']],
+                head: [['Cuenta Contable / Asiento', 'Debe', 'Haber']],
                 body: rows,
                 theme: 'grid',
                 styles: { fontSize: 7.5, cellPadding: 1.8, textColor: [30, 41, 59] },
-                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold' },
+                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 8, fontStyle: 'bold', halign: 'center' },
                 columnStyles: {
                     0: { cellWidth: 'auto' },
-                    1: { halign: 'right', cellWidth: 32 },
-                    2: { halign: 'right', cellWidth: 32 },
-                    3: { halign: 'center', cellWidth: 18 }
+                    1: { halign: 'right', cellWidth: 36 },
+                    2: { halign: 'right', cellWidth: 36 }
                 },
                 margin: { top: 28, bottom: 14, left: 10, right: 10 },
                 didDrawPage: (data) => {
@@ -1113,6 +1109,43 @@
             doc.save(`Libro_Diario_${emp.cuit}_${diarioFechaDesde}_a_${diarioFechaHasta}.pdf`);
         }
 
+        function calcularResumenMensualLibroIva(comprobantesLista) {
+            const res = {
+                neto105: 0,
+                neto21: 0,
+                neto27: 0,
+                iva105: 0,
+                iva21: 0,
+                iva27: 0,
+                exento: 0,
+                noGravado: 0,
+                exentoNoGravTotal: 0,
+                netoTotal: 0,
+                ivaTotal: 0,
+                totalGeneral: 0
+            };
+            (comprobantesLista || []).forEach(c => {
+                const esFacturaC = [11, 12, 13].includes(c.tipoCodigo);
+                const totComp = Number(c.total) || 0;
+                const exComp = esFacturaC ? totComp : (Number(c.exento) || 0);
+                const noGravComp = esFacturaC ? 0 : (Number(c.noGravado) || 0);
+
+                res.neto105 += Number(c.neto105) || 0;
+                res.neto21 += Number(c.neto21) || 0;
+                res.neto27 += Number(c.neto27) || 0;
+                res.iva105 += Number(c.iva105) || 0;
+                res.iva21 += Number(c.iva21) || 0;
+                res.iva27 += Number(c.iva27) || 0;
+                res.exento += exComp;
+                res.noGravado += noGravComp;
+                res.exentoNoGravTotal += (exComp + noGravComp);
+                res.netoTotal += (Number(c.neto105) || 0) + (Number(c.neto21) || 0) + (Number(c.neto27) || 0);
+                res.ivaTotal += (Number(c.iva105) || 0) + (Number(c.iva21) || 0) + (Number(c.iva27) || 0);
+                res.totalGeneral += totComp;
+            });
+            return res;
+        }
+
         function exportarLibroIvaPdfHorizontal() {
             if (!window.jspdf || !window.jspdf.jsPDF) {
                 window.print();
@@ -1129,6 +1162,12 @@
                     return (partes[1] === filtroMesIva && partes[0] === filtroAnioIva);
                 }
                 return true;
+            }).sort((a, b) => {
+                const fCmp = (a.fecha || '').localeCompare(b.fecha || '');
+                if (fCmp !== 0) return fCmp;
+                const pvCmp = (Number(a.pv) || 0) - (Number(b.pv) || 0);
+                if (pvCmp !== 0) return pvCmp;
+                return (Number(a.numero) || 0) - (Number(b.numero) || 0);
             });
 
             const rows = [];
@@ -1186,12 +1225,12 @@
                 body: rows,
                 theme: 'grid',
                 styles: { fontSize: 7.5, cellPadding: 1.8, textColor: [30, 41, 59] },
-                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: 'bold' },
+                headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: 'bold', halign: 'center' },
                 columnStyles: {
-                    0: { cellWidth: 20 },
+                    0: { cellWidth: 20, halign: 'center' },
                     1: { cellWidth: 34 },
                     2: { cellWidth: 'auto' },
-                    3: { cellWidth: 26 },
+                    3: { cellWidth: 26, halign: 'center' },
                     4: { halign: 'right', cellWidth: 28 },
                     5: { halign: 'right', cellWidth: 28 },
                     6: { halign: 'right', cellWidth: 16 },
@@ -1214,6 +1253,59 @@
                     doc.setFontSize(8);
                     doc.text(`VENTO ERP — ${tituloLibro} — ${emp.razonSocial}`, 10, 202);
                     doc.text(`Hoja ${folioActual} — Página ${data.pageNumber}`, 287, 202, { align: 'right' });
+                }
+            });
+
+            const resMes = calcularResumenMensualLibroIva(comprobantesFiltrados);
+            const nombreMesLabel = (NOMBRES_MESES[filtroMesIva] || filtroMesIva).toUpperCase();
+            const startYResumen = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 30) + 6;
+
+            doc.autoTable({
+                startY: startYResumen,
+                head: [[
+                    { content: `RESUMEN MENSUAL — ${nombreMesLabel} ${filtroAnioIva}`, colSpan: 3, styles: { halign: 'center' } }
+                ], [
+                    'Concepto / Alícuota',
+                    'Base Imponible / Importe',
+                    libroIvaModo === 'COMPRA' ? 'IVA Crédito Fiscal' : 'IVA Débito Fiscal'
+                ]],
+                body: [
+                    ['Importe Neto Gravado al 10,50%', `$ ${fmtMoneda(resMes.neto105)}`, `$ ${fmtMoneda(resMes.iva105)}`],
+                    ['Importe Neto Gravado al 21,00%', `$ ${fmtMoneda(resMes.neto21)}`, `$ ${fmtMoneda(resMes.iva21)}`],
+                    ['Importe Neto Gravado al 27,00%', `$ ${fmtMoneda(resMes.neto27)}`, `$ ${fmtMoneda(resMes.iva27)}`],
+                    ['Importes Exentos', `$ ${fmtMoneda(resMes.exento)}`, '-'],
+                    ['Importes No Gravados', `$ ${fmtMoneda(resMes.noGravado)}`, '-'],
+                    [
+                        { content: 'TOTALES RESUMEN DEL MES', styles: { fontStyle: 'bold', fillColor: [226, 232, 240] } },
+                        { content: `$ ${fmtMoneda(resMes.netoTotal + resMes.exentoNoGravTotal)}`, styles: { fontStyle: 'bold', fillColor: [226, 232, 240], halign: 'right' } },
+                        { content: `$ ${fmtMoneda(resMes.ivaTotal)}`, styles: { fontStyle: 'bold', fillColor: [226, 232, 240], halign: 'right' } }
+                    ]
+                ],
+                theme: 'grid',
+                tableWidth: 165,
+                styles: { fontSize: 7.5, cellPadding: 1.8, textColor: [30, 41, 59] },
+                headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontSize: 7.5, fontStyle: 'bold', halign: 'center' },
+                columnStyles: {
+                    0: { cellWidth: 75 },
+                    1: { halign: 'right', cellWidth: 45 },
+                    2: { halign: 'right', cellWidth: 45 }
+                },
+                margin: { top: 26, bottom: 14, left: 10, right: 10 },
+                didDrawPage: (data) => {
+                    const folioActual = (folioInicialIva || 1) + doc.internal.getNumberOfPages() - 1;
+                    doc.setFontSize(11);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(`${emp.razonSocial} — CUIT: ${emp.cuit} (${emp.condicionIva})`, 10, 11);
+                    doc.setFontSize(9);
+                    doc.setFont(undefined, 'normal');
+                    doc.text(`${tituloLibro} — Período: ${filtroMesIva}/${filtroAnioIva}`, 10, 17);
+                    doc.text(`Hoja N° ${folioActual} | Pág. ${doc.internal.getNumberOfPages()}`, 287, 17, { align: 'right' });
+                    doc.setDrawColor(15, 23, 42);
+                    doc.line(10, 20, 287, 20);
+
+                    doc.setFontSize(8);
+                    doc.text(`VENTO ERP — ${tituloLibro} — ${emp.razonSocial}`, 10, 202);
+                    doc.text(`Hoja ${folioActual} — Página ${doc.internal.getNumberOfPages()}`, 287, 202, { align: 'right' });
                 }
             });
 
@@ -2751,7 +2843,16 @@
                     return (partes[1] === filtroMesIva && partes[0] === filtroAnioIva);
                 }
                 return true;
+            }).sort((a, b) => {
+                const fCmp = (a.fecha || '').localeCompare(b.fecha || '');
+                if (fCmp !== 0) return fCmp;
+                const pvCmp = (Number(a.pv) || 0) - (Number(b.pv) || 0);
+                if (pvCmp !== 0) return pvCmp;
+                return (Number(a.numero) || 0) - (Number(b.numero) || 0);
             });
+
+            const resMesWeb = calcularResumenMensualLibroIva(comprobantesFiltrados);
+            const nombreMesWeb = (NOMBRES_MESES[filtroMesIva] || filtroMesIva).toUpperCase();
 
             let lineasTabla = [];
 
@@ -2843,23 +2944,72 @@
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl border p-3 sm:p-4 overflow-x-auto">
+                    <div class="bg-white rounded-xl border p-3 sm:p-4 overflow-x-auto space-y-4">
                         <table class="w-full text-left text-xs border-collapse mobile-compact-table">
                             <thead>
                                 <tr class="border-b font-bold text-gray-700 bg-gray-50 uppercase whitespace-nowrap">
-                                    <th class="p-2">Fecha</th>
-                                    <th class="p-2">Comprobante</th>
-                                    <th class="p-2">Razón Social</th>
-                                    <th class="p-2">C.U.I.T.</th>
-                                    <th class="p-2 text-right">No Grav/Ex.</th>
-                                    <th class="p-2 text-right">Neto Grav.</th>
-                                    <th class="p-2 text-right">Alíc.</th>
-                                    <th class="p-2 text-right">${libroIvaModo==='COMPRA'?'IVA CF':'IVA DF'}</th>
-                                    <th class="p-2 text-right">Total</th>
+                                    <th class="p-2 text-center">Fecha</th>
+                                    <th class="p-2 text-center">Comprobante</th>
+                                    <th class="p-2 text-center">Razón Social</th>
+                                    <th class="p-2 text-center">C.U.I.T.</th>
+                                    <th class="p-2 text-center">No Grav/Ex.</th>
+                                    <th class="p-2 text-center">Neto Grav.</th>
+                                    <th class="p-2 text-center">Alíc.</th>
+                                    <th class="p-2 text-center">${libroIvaModo==='COMPRA'?'IVA CF':'IVA DF'}</th>
+                                    <th class="p-2 text-center">Total</th>
                                 </tr>
                             </thead>
                             <tbody>${lineasTabla.join('') || `<tr><td colspan="9" class="text-center py-6 text-gray-400">Sin comprobantes para el período.</td></tr>`}</tbody>
                         </table>
+
+                        <div class="max-w-xl border rounded-xl overflow-hidden bg-slate-50">
+                            <div class="bg-slate-800 text-white px-3 py-2 text-xs font-bold uppercase text-center">
+                                Resumen Mensual — ${nombreMesWeb} ${filtroAnioIva}
+                            </div>
+                            <table class="w-full text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-200 text-slate-800 font-bold uppercase border-b">
+                                        <th class="p-2 text-center">Concepto / Alícuota</th>
+                                        <th class="p-2 text-center">Neto / Importe</th>
+                                        <th class="p-2 text-center">${libroIvaModo==='COMPRA'?'IVA Crédito Fiscal':'IVA Débito Fiscal'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y bg-white">
+                                    <tr>
+                                        <td class="p-2 font-medium">Importe Neto Gravado al 10,50%</td>
+                                        <td class="p-2 text-right num-row">$ ${fmtMoneda(resMesWeb.neto105)}</td>
+                                        <td class="p-2 text-right num-row font-semibold text-blue-900">$ ${fmtMoneda(resMesWeb.iva105)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2 font-medium">Importe Neto Gravado al 21,00%</td>
+                                        <td class="p-2 text-right num-row">$ ${fmtMoneda(resMesWeb.neto21)}</td>
+                                        <td class="p-2 text-right num-row font-semibold text-blue-900">$ ${fmtMoneda(resMesWeb.iva21)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2 font-medium">Importe Neto Gravado al 27,00%</td>
+                                        <td class="p-2 text-right num-row">$ ${fmtMoneda(resMesWeb.neto27)}</td>
+                                        <td class="p-2 text-right num-row font-semibold text-blue-900">$ ${fmtMoneda(resMesWeb.iva27)}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2 font-medium">Importes Exentos</td>
+                                        <td class="p-2 text-right num-row">$ ${fmtMoneda(resMesWeb.exento)}</td>
+                                        <td class="p-2 text-right text-gray-400">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="p-2 font-medium">Importes No Gravados</td>
+                                        <td class="p-2 text-right num-row">$ ${fmtMoneda(resMesWeb.noGravado)}</td>
+                                        <td class="p-2 text-right text-gray-400">-</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot class="bg-slate-200 font-black text-slate-900 border-t-2 border-slate-400">
+                                    <tr>
+                                        <td class="p-2 uppercase">Totales Resumen del Mes</td>
+                                        <td class="p-2 text-right num-row">$ ${fmtMoneda(resMesWeb.netoTotal + resMesWeb.exentoNoGravTotal)}</td>
+                                        <td class="p-2 text-right num-row text-blue-950">$ ${fmtMoneda(resMesWeb.ivaTotal)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
                 </div>
             `;
