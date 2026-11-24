@@ -1286,11 +1286,11 @@
             renderizarVista();
         }
 
-        // ==========================================
-        // CÁLCULOS IMPOSITIVOS CONSOLIDADOS POR MÓDULO
-        // ==========================================
-        function calcularLiquidacionIvaPeriodo(emp, mes = impositivoMes, anio = impositivoAnio) {
-            const retencionesPercepcionesFiltradas = (emp.retencionesPercepciones || []).filter(r => {
+        /* =====================================================================
+           FUNCIONES SINCRONIZADAS DE CÁLCULO IMPOSITIVO POR MÓDULO
+        ===================================================================== */
+        function calcularLiquidacionIvaSincronizada(emp, mes = impositivoMes, anio = impositivoAnio) {
+            const retPercFiltradas = (emp.retencionesPercepciones || []).filter(r => {
                 if (!r.fecha) return false;
                 const partes = r.fecha.split('-');
                 return (partes.length === 3 && partes[1] === mes && partes[0] === anio);
@@ -1309,7 +1309,7 @@
             });
 
             let retIva = 0, percIva = 0;
-            retencionesPercepcionesFiltradas.forEach(r => {
+            retPercFiltradas.forEach(r => {
                 if (r.tipo === 'RETENCION') retIva += Number(r.importe) || 0;
                 if (r.tipo === 'PERCEPCION') percIva += Number(r.importe) || 0;
             });
@@ -1349,7 +1349,7 @@
             };
         }
 
-        function calcularLiquidacionIibbPeriodo(emp, mes = iibbMes, anio = iibbAnio) {
+        function calcularLiquidacionIibbSincronizada(emp, mes = iibbMes, anio = iibbAnio) {
             const ventasPeriodo = (emp.comprobantes || []).filter(c => {
                 if (c.tipoOp !== 'VENTA' || !c.fecha) return false;
                 const partes = c.fecha.split('-');
@@ -1380,4 +1380,2426 @@
             let totalRetenciones = 0, totalPercepciones = 0, totalBancarias = 0;
             retPercIibbPeriodo.forEach(r => {
                 if (r.tipo === 'RETENCION') totalRetenciones += Number(r.importe) || 0;
-                else if (r
+                else if (r.tipo === 'PERCEPCION') totalPercepciones += Number(r.importe) || 0;
+                else if (r.tipo === 'RETENCION BANCARIA' || r.tipo === 'DEVOLUCION BANCARIA') totalBancarias += Number(r.importe) || 0;
+            });
+
+            const totalDeducciones = totalRetenciones + totalPercepciones + totalBancarias + saldoAnt;
+            const resultadoLiquidacion = impuestoDeterminado - totalDeducciones;
+            const aPagar = resultadoLiquidacion >= 0;
+            const regimenLabel = emp.iibbRegimen === 'CONVENIO' ? 'Convenio Multilateral' : 'Local';
+
+            return {
+                periodoLabel: `${NOMBRES_MESES[mes] || mes} ${anio} · ${regimenLabel}`,
+                regimenLabel,
+                baseImponibleTotalVentas,
+                baseImponibleJurisdiccion,
+                impuestoDeterminado,
+                totalDeducciones,
+                resultadoLiquidacion,
+                saldoFinal: Math.abs(resultadoLiquidacion),
+                aPagar,
+                etiqueta: aPagar ? "IIBB A PAGAR" : "SALDO A FAVOR IIBB"
+            };
+        }
+
+        function calcularLiquidacionGananciasSincronizada(emp) {
+            const cfg = emp.gananciasConfig || obtenerConfigGananciasDefault();
+            const totalPagosCuenta = (Number(cfg.retencionesSufridas) || 0) +
+                                     (Number(cfg.percepcionesSufridas) || 0) +
+                                     (Number(cfg.anticiposIngresados) || 0) +
+                                     (Number(cfg.saldoFavorAnterior) || 0);
+
+            if (cfg.tipoSujeto === 'PH') {
+                const anio = cfg.anio || "2026";
+                const params = PARAMS_GANANCIAS_ARCA[anio] || PARAMS_GANANCIAS_ARCA["2026"];
+                const compsAnio = (emp.comprobantes || []).filter(c => c.fecha && c.fecha.startsWith(anio));
+
+                let ventasAnioComps = 0, comprasAnioComps = 0;
+                compsAnio.forEach(c => {
+                    const sub = (Number(c.netoTotal) || 0) + (Number(c.exento) || 0) + (Number(c.noGravado) || 0);
+                    if (c.tipoOp === 'VENTA') ventasAnioComps += sub;
+                    else if (c.tipoOp === 'COMPRA') comprasAnioComps += sub;
+                });
+
+                const r = cfg.rentas || {};
+                const netoCat1 = (Number(r.cat1Ingresos) || 0) - (Number(r.cat1Gastos) || 0);
+                const netoCat2 = (Number(r.cat2Ingresos) || 0) - (Number(r.cat2Gastos) || 0);
+                const ingCat3 = (cfg.vincularComprobantes3ra ? ventasAnioComps : 0) + (Number(r.cat3IngresosManual) || 0);
+                const gasCat3 = (cfg.vincularComprobantes3ra ? comprasAnioComps : 0) + (Number(r.cat3GastosManual) || 0);
+                const netoCat3 = ingCat3 - gasCat3;
+                const netoCat4 = (Number(r.cat4Ingresos) || 0) - (Number(r.cat4Gastos) || 0);
+
+                const gananciaNetaAntesDed = netoCat1 + netoCat2 + netoCat3 + netoCat4;
+                const baseTope5Porc = Math.max(0, gananciaNetaAntesDed);
+
+                let totalDedGeneralesComputables = 0;
+                (cfg.deduccionesGenerales || []).forEach(d => {
+                    const meta = TIPOS_DEDUCCION_GENERAL.find(t => t.id === d.tipoId) || { topeTipo: 'SIN_TOPE' };
+                    let topeAplicable = Infinity;
+                    if (meta.topeTipo === '5_GNI') topeAplicable = baseTope5Porc * 0.05;
+                    else if (meta.topeTipo === 'SEGURO') topeAplicable = params.topeSeguroVida;
+                    else if (meta.topeTipo === 'GNI') topeAplicable = params.gni;
+                    else if (meta.topeTipo === '40_GNI') topeAplicable = params.gni * 0.40;
+                    else if (meta.topeTipo === 'HIPOTECARIO') topeAplicable = params.topeHipotecario;
+                    else if (meta.topeTipo === 'SEPELIO') topeAplicable = params.topeSepelio;
+
+                    totalDedGeneralesComputables += Math.min(Number(d.importe) || 0, topeAplicable);
+                });
+
+                const gananciaNetaEjercicio = gananciaNetaAntesDed - totalDedGeneralesComputables;
+                const dedGni = params.gni;
+                const dedConyuge = cfg.conyuge ? params.conyuge : 0;
+                const dedHijos = (parseInt(cfg.hijos, 10) || 0) * params.hijo;
+                const dedHijosInc = (parseInt(cfg.hijosIncapacitados, 10) || 0) * params.hijoIncapacitado;
+
+                let dedEspecialBase = 0;
+                if (cfg.tipoDedEspecial === 'AUTONOMO') dedEspecialBase = params.dedEspAutonomo;
+                else if (cfg.tipoDedEspecial === 'EMPRENDEDOR') dedEspecialBase = params.dedEspEmprendedor;
+                else if (cfg.tipoDedEspecial === 'REL_DEP') dedEspecialBase = params.dedEspRelDep;
+
+                const doceavaParte = cfg.tipoDedEspecial === 'REL_DEP'
+                    ? (dedGni + dedConyuge + dedHijos + dedHijosInc + dedEspecialBase) / 12
+                    : 0;
+
+                const totalDedPersonalesTeoricas = dedGni + dedConyuge + dedHijos + dedHijosInc + dedEspecialBase + doceavaParte;
+                const totalDedPersonalesComputables = gananciaNetaEjercicio > 0
+                    ? Math.min(gananciaNetaEjercicio, totalDedPersonalesTeoricas)
+                    : 0;
+
+                const gananciaNetaSujetaImpuesto = Math.max(0, gananciaNetaEjercicio - totalDedPersonalesComputables);
+                const impuestoDeterminado = calcularEscalaProgresiva(gananciaNetaSujetaImpuesto, params.escalaPH).impuesto;
+                const saldoFinal = impuestoDeterminado - totalPagosCuenta;
+                const aPagar = saldoFinal >= 0;
+
+                return {
+                    periodoLabel: `Año Fiscal ${anio} (PH)`,
+                    impuestoDeterminado,
+                    saldoFinal: Math.abs(saldoFinal),
+                    aPagar,
+                    etiqueta: aPagar ? "GANANCIAS A PAGAR" : "SALDO A FAVOR GANANCIAS"
+                };
+            } else {
+                const mesCierre = cfg.pjMesCierre || "12";
+                const anioCierre = cfg.pjAnioCierre || cfg.anio || "2026";
+                const rangoEj = calcularRangoEjercicioPJ(mesCierre, anioCierre);
+                const anioTablaEscala = PARAMS_GANANCIAS_ARCA[rangoEj.anioInicio]
+                    ? rangoEj.anioInicio
+                    : (PARAMS_GANANCIAS_ARCA[rangoEj.anioCierre] ? rangoEj.anioCierre : "2026");
+                const params = PARAMS_GANANCIAS_ARCA[anioTablaEscala] || PARAMS_GANANCIAS_ARCA["2026"];
+
+                const compsEjercicio = (emp.comprobantes || []).filter(c => c.fecha && c.fecha >= rangoEj.fechaInicio && c.fecha <= rangoEj.fechaFin);
+                let ventasEjComps = 0, comprasEjComps = 0;
+                compsEjercicio.forEach(c => {
+                    const sub = (Number(c.netoTotal) || 0) + (Number(c.exento) || 0) + (Number(c.noGravado) || 0);
+                    if (c.tipoOp === 'VENTA') ventasEjComps += sub;
+                    else if (c.tipoOp === 'COMPRA') comprasEjComps += sub;
+                });
+
+                const ingTotales = (cfg.vincularComprobantesPJ ? ventasEjComps : 0) + (Number(cfg.pjIngresosManual) || 0);
+                const gasTotales = (cfg.vincularComprobantesPJ ? comprasEjComps : 0) + (Number(cfg.pjCostosGastosManual) || 0);
+                const resultadoContable = ingTotales - gasTotales;
+
+                const gananciaNetaAntesQueb = resultadoContable + (Number(cfg.pjAjustesImpositivos) || 0) + (Number(cfg.pjAjusteInflacion) || 0);
+                const quebrantos = Math.max(0, Number(cfg.pjQuebrantosAnt) || 0);
+                const quebrantosComputables = gananciaNetaAntesQueb > 0 ? Math.min(gananciaNetaAntesQueb, quebrantos) : 0;
+                const gananciaNetaImponible = Math.max(0, gananciaNetaAntesQueb - quebrantosComputables);
+
+                const impuestoDeterminadoPJ = calcularEscalaProgresiva(gananciaNetaImponible, params.escalaPJ).impuesto;
+                const saldoFinalPJ = impuestoDeterminadoPJ - totalPagosCuenta;
+                const aPagar = saldoFinalPJ >= 0;
+
+                return {
+                    periodoLabel: `Ej. ${formatearFechaAr(rangoEj.fechaInicio)} al ${formatearFechaAr(rangoEj.fechaFin)} (PJ)`,
+                    impuestoDeterminado: impuestoDeterminadoPJ,
+                    saldoFinal: Math.abs(saldoFinalPJ),
+                    aPagar,
+                    etiqueta: aPagar ? "GANANCIAS A PAGAR" : "SALDO A FAVOR GANANCIAS"
+                };
+            }
+        }
+
+        function obtenerSaldosContablesDashboard(emp) {
+            const saldosCuentas = {};
+            (emp.comprobantes || []).forEach(c => {
+                const lineas = obtenerLineasEfectivasComprobante(c);
+                lineas.forEach(l => {
+                    if (!saldosCuentas[l.cuenta]) saldosCuentas[l.cuenta] = 0;
+                    saldosCuentas[l.cuenta] += (Number(l.debe) || 0) - (Number(l.haber) || 0);
+                });
+            });
+            (emp.asientosManuales || []).forEach(m => {
+                (m.lineas || []).forEach(l => {
+                    if (!saldosCuentas[l.cuenta]) saldosCuentas[l.cuenta] = 0;
+                    saldosCuentas[l.cuenta] += (Number(l.debe) || 0) - (Number(l.haber) || 0);
+                });
+            });
+
+            const cuentasPorCobrar = ['1.1.04'];
+            const cuentasPorPagar = ['2.1.01'];
+            const cuentasDisponibilidades = ['1.1.01', '1.1.02'];
+
+            let cxc = 0;
+            cuentasPorCobrar.forEach(cod => { cxc += (saldosCuentas[cod] || 0); });
+
+            let cxp = 0;
+            cuentasPorPagar.forEach(cod => { cxp += Math.abs(saldosCuentas[cod] || 0); });
+
+            let disp = 0;
+            cuentasDisponibilidades.forEach(cod => { disp += (saldosCuentas[cod] || 0); });
+
+            return { cxc, cxp, disp };
+        }
+
+        function obtenerVencimientosPorCuit(emp) {
+            const digitos = String(emp.cuit || '').replace(/\D/g, '');
+            const terminacion = digitos.length > 0 ? digitos[digitos.length - 1] : '0';
+            const grupos = {
+                '0': { diaBase: 18, letra: '0' },
+                '1': { diaBase: 18, letra: '1' },
+                '2': { diaBase: 19, letra: '2' },
+                '3': { diaBase: 19, letra: '3' },
+                '4': { diaBase: 20, letra: '4' },
+                '5': { diaBase: 20, letra: '5' },
+                '6': { diaBase: 21, letra: '6' },
+                '7': { diaBase: 21, letra: '7' },
+                '8': { diaBase: 22, letra: '8' },
+                '9': { diaBase: 22, letra: '9' }
+            };
+            const info = grupos[terminacion] || { diaBase: 20, letra: '-' };
+            return {
+                terminacion: info.letra,
+                diaIva: info.diaBase,
+                diaIibb: Math.min(28, info.diaBase + 2),
+                nota: `CUIT terminado en ${info.letra} · Verificar feriados/prórrogas oficiales`
+            };
+        }
+
+        function renderDashboard(cont) {
+            const emp = obtenerEmpresaActual();
+            const compsFiltrados = emp.comprobantes.filter(c => c.fecha >= dashFechaDesde && c.fecha <= dashFechaHasta);
+
+            let ventasNetas = 0, comprasNetas = 0, cantVentas = 0, cantCompras = 0;
+            const mapaEntidadesClientes = {};
+            const mapaEntidadesProveedores = {};
+            const serieMensual = {};
+
+            compsFiltrados.forEach(c => {
+                const subtotalNeto = (Number(c.netoTotal) || 0) + (Number(c.exento) || 0) + (Number(c.noGravado) || 0);
+                const mesKey = c.fecha && c.fecha.length >= 7 ? c.fecha.slice(0, 7) : 'Sin fecha';
+                if (!serieMensual[mesKey]) serieMensual[mesKey] = { ventas: 0, compras: 0 };
+
+                const nombreEnt = (c.razonSocial || 'Sin denominación').trim();
+                const cuitEnt = (c.cuit || '').trim();
+                const claveEnt = `${nombreEnt}__${cuitEnt}`;
+
+                if (c.tipoOp === 'VENTA') {
+                    ventasNetas += subtotalNeto;
+                    cantVentas++;
+                    serieMensual[mesKey].ventas += subtotalNeto;
+                    if (!mapaEntidadesClientes[claveEnt]) {
+                        mapaEntidadesClientes[claveEnt] = { nombre: nombreEnt, cuit: cuitEnt, monto: 0, cant: 0 };
+                    }
+                    mapaEntidadesClientes[claveEnt].monto += subtotalNeto;
+                    mapaEntidadesClientes[claveEnt].cant++;
+                } else if (c.tipoOp === 'COMPRA') {
+                    comprasNetas += subtotalNeto;
+                    cantCompras++;
+                    serieMensual[mesKey].compras += subtotalNeto;
+                    if (!mapaEntidadesProveedores[claveEnt]) {
+                        mapaEntidadesProveedores[claveEnt] = { nombre: nombreEnt, cuit: cuitEnt, monto: 0, cant: 0 };
+                    }
+                    mapaEntidadesProveedores[claveEnt].monto += subtotalNeto;
+                    mapaEntidadesProveedores[claveEnt].cant++;
+                }
+            });
+
+            // Período anterior equivalente para variación de Resultado Operativo Neto
+            let variacionOpPct = null;
+            let tienePeriodoPrevio = false;
+            if (dashFechaDesde && dashFechaHasta && dashFechaDesde <= dashFechaHasta) {
+                const dDesde = new Date(dashFechaDesde + 'T00:00:00');
+                const dHasta = new Date(dashFechaHasta + 'T00:00:00');
+                if (!isNaN(dDesde) && !isNaN(dHasta)) {
+                    const diasRango = Math.round((dHasta - dDesde) / (1000 * 60 * 60 * 24)) + 1;
+                    const prevHastaDate = new Date(dDesde.getTime() - (1000 * 60 * 60 * 24));
+                    const prevDesdeDate = new Date(prevHastaDate.getTime() - ((diasRango - 1) * 1000 * 60 * 60 * 24));
+                    const fmtIso = (dt) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+                    const prevDesde = fmtIso(prevDesdeDate);
+                    const prevHasta = fmtIso(prevHastaDate);
+
+                    let prevVentas = 0, prevCompras = 0;
+                    emp.comprobantes.forEach(c => {
+                        if (c.fecha >= prevDesde && c.fecha <= prevHasta) {
+                            const sub = (Number(c.netoTotal) || 0) + (Number(c.exento) || 0) + (Number(c.noGravado) || 0);
+                            if (c.tipoOp === 'VENTA') prevVentas += sub;
+                            else if (c.tipoOp === 'COMPRA') prevCompras += sub;
+                        }
+                    });
+                    const prevResOp = prevVentas - prevCompras;
+                    const currResOp = ventasNetas - comprasNetas;
+                    if (Math.abs(prevResOp) > 0.01) {
+                        variacionOpPct = ((currResOp - prevResOp) / Math.abs(prevResOp)) * 100;
+                        tienePeriodoPrevio = true;
+                    }
+                }
+            }
+
+            const resultadoOperativo = ventasNetas - comprasNetas;
+            const margenOperativoPct = ventasNetas > 0 ? (resultadoOperativo / ventasNetas) * 100 : 0;
+
+            const liqIva = calcularLiquidacionIvaSincronizada(emp, impositivoMes, impositivoAnio);
+            const liqIibb = calcularLiquidacionIibbSincronizada(emp, iibbMes, iibbAnio);
+            const liqGanancias = calcularLiquidacionGananciasSincronizada(emp);
+
+            const saldosCont = obtenerSaldosContablesDashboard(emp);
+            const vencCuit = obtenerVencimientosPorCuit(emp);
+
+            const topClientes = Object.values(mapaEntidadesClientes).sort((a, b) => b.monto - a.monto).slice(0, 5);
+            const topProveedores = Object.values(mapaEntidadesProveedores).sort((a, b) => b.monto - a.monto).slice(0, 5);
+
+            const renderRankingRows = (items, totalRef, colorBarClass) => {
+                if (!items.length) {
+                    return `<p class="text-xs text-gray-400 py-4 text-center">Sin operaciones en el rango seleccionado.</p>`;
+                }
+                return items.map((item, idx) => {
+                    const pct = totalRef > 0 ? Math.min(100, (item.monto / totalRef) * 100) : 0;
+                    return `
+                        <div class="space-y-1 py-2 border-b border-gray-100 last:border-b-0">
+                            <div class="flex justify-between items-baseline gap-2 text-xs">
+                                <div class="min-w-0">
+                                    <span class="font-black text-gray-400 mr-1.5">#${idx + 1}</span>
+                                    <span class="font-bold text-gray-800 truncate">${item.nombre}</span>
+                                    ${item.cuit ? `<span class="text-[10px] text-gray-400 ml-1 num-row">(${item.cuit})</span>` : ''}
+                                </div>
+                                <span class="font-black text-gray-900 num-row shrink-0">$ ${fmtMoneda(item.monto)}</span>
+                            </div>
+                            <div class="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                <div class="${colorBarClass} h-1.5 rounded-full" style="width: ${pct.toFixed(1)}%"></div>
+                            </div>
+                            <div class="flex justify-between text-[10px] text-gray-400 num-row">
+                                <span>${item.cant} comprobante(s)</span>
+                                <span>${fmtMoneda(pct, 1)}% del total</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            };
+
+            cont.innerHTML = `
+                <div class="space-y-4 sm:space-y-6">
+                    <!-- ENCABEZADO Y FILTRO DE RANGO -->
+                    <div class="flex flex-wrap justify-between items-center bg-white p-3 sm:p-4 rounded-xl border shadow-sm gap-3">
+                        <div>
+                            <h2 class="text-base sm:text-xl font-bold text-gray-800">Dashboard General</h2>
+                            <p class="text-xs text-gray-500">Visión ejecutiva, saldos impositivos sincronizados y posición contable</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-[11px] font-bold text-gray-500 uppercase">Desde:</span>
+                            <input type="date" value="${dashFechaDesde}" onchange="dashFechaDesde=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                            <span class="text-[11px] font-bold text-gray-500 uppercase">Hasta:</span>
+                            <input type="date" value="${dashFechaHasta}" onchange="dashFechaHasta=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                        </div>
+                    </div>
+
+                    <!-- 1. TARJETAS IMPOSITIVAS SINCRONIZADAS POR MÓDULO -->
+                    <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-5 space-y-3">
+                        <div class="flex flex-wrap justify-between items-center border-b pb-2.5 gap-2">
+                            <div>
+                                <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase">Posición Impositiva por Módulo</h3>
+                                <p class="text-xs text-gray-500">Importes calculados en cada módulo según su período activo · Hacé clic para abrir el módulo</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- IVA -->
+                            <div onclick="cambiarVista('impositivo')" class="cursor-pointer bg-gray-50 hover:bg-blue-50/50 p-4 sm:p-5 rounded-xl border shadow-sm border-t-4 ${liqIva.aPagar ? 'border-t-blue-600' : 'border-t-emerald-600'} transition flex flex-col justify-between space-y-3">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div>
+                                        <span class="text-xs font-black uppercase text-gray-800">IVA</span>
+                                        <p class="text-[11px] font-semibold text-gray-600 mt-0.5 num-row">Período: ${liqIva.periodoLabel}</p>
+                                    </div>
+                                    <span class="text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${liqIva.aPagar ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}">${liqIva.aPagar ? 'A Pagar' : 'Saldo a Favor'}</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-xl sm:text-2xl font-black num-row ${liqIva.aPagar ? 'text-blue-950' : 'text-emerald-700'}">$ ${fmtMoneda(liqIva.saldoFinal)}</h4>
+                                    <p class="text-[11px] text-gray-500 mt-1">${liqIva.etiqueta} · Ir a módulo IVA →</p>
+                                </div>
+                            </div>
+
+                            <!-- INGRESOS BRUTOS -->
+                            <div onclick="cambiarVista('ingresos-brutos')" class="cursor-pointer bg-gray-50 hover:bg-amber-50/50 p-4 sm:p-5 rounded-xl border shadow-sm border-t-4 ${liqIibb.aPagar ? 'border-t-amber-500' : 'border-t-emerald-600'} transition flex flex-col justify-between space-y-3">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div>
+                                        <span class="text-xs font-black uppercase text-gray-800">Ingresos Brutos</span>
+                                        <p class="text-[11px] font-semibold text-gray-600 mt-0.5 num-row">Período: ${liqIibb.periodoLabel}</p>
+                                    </div>
+                                    <span class="text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${liqIibb.aPagar ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${liqIibb.aPagar ? 'A Pagar' : 'Saldo a Favor'}</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-xl sm:text-2xl font-black num-row ${liqIibb.aPagar ? 'text-amber-700' : 'text-emerald-700'}">$ ${fmtMoneda(liqIibb.saldoFinal)}</h4>
+                                    <p class="text-[11px] text-gray-500 mt-1">${liqIibb.etiqueta} · Ir a módulo IIBB →</p>
+                                </div>
+                            </div>
+
+                            <!-- GANANCIAS -->
+                            <div onclick="cambiarVista('ganancias')" class="cursor-pointer bg-gray-50 hover:bg-purple-50/50 p-4 sm:p-5 rounded-xl border shadow-sm border-t-4 ${liqGanancias.aPagar ? 'border-t-purple-700' : 'border-t-emerald-600'} transition flex flex-col justify-between space-y-3">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div>
+                                        <span class="text-xs font-black uppercase text-gray-800">Impuesto a las Ganancias</span>
+                                        <p class="text-[11px] font-semibold text-gray-600 mt-0.5 num-row">Período: ${liqGanancias.periodoLabel}</p>
+                                    </div>
+                                    <span class="text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${liqGanancias.aPagar ? 'bg-purple-100 text-purple-900' : 'bg-emerald-100 text-emerald-800'}">${liqGanancias.aPagar ? 'A Pagar' : 'Saldo a Favor'}</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-xl sm:text-2xl font-black num-row ${liqGanancias.aPagar ? 'text-purple-950' : 'text-emerald-700'}">$ ${fmtMoneda(liqGanancias.saldoFinal)}</h4>
+                                    <p class="text-[11px] text-gray-500 mt-1">${liqGanancias.etiqueta} · Ir a módulo Ganancias →</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. INDICADORES EJECUTIVOS DE NEGOCIO -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+                        <div class="bg-white p-4 sm:p-5 rounded-xl border shadow-sm border-l-4 border-l-blue-600">
+                            <p class="text-[11px] font-bold text-gray-500 uppercase">VENTAS NETAS</p>
+                            <h3 class="text-lg sm:text-xl font-black text-gray-900 mt-1 num-row mobile-kpi-val">$ ${fmtMoneda(ventasNetas)}</h3>
+                            <p class="text-[11px] text-gray-400 mt-1 num-row">${fmtMoneda(cantVentas, 0)} comprobante(s)</p>
+                        </div>
+
+                        <div class="bg-white p-4 sm:p-5 rounded-xl border shadow-sm border-l-4 border-l-red-500">
+                            <p class="text-[11px] font-bold text-gray-500 uppercase">COMPRAS / GASTOS NETOS</p>
+                            <h3 class="text-lg sm:text-xl font-black text-gray-900 mt-1 num-row mobile-kpi-val">$ ${fmtMoneda(comprasNetas)}</h3>
+                            <p class="text-[11px] text-gray-400 mt-1 num-row">${fmtMoneda(cantCompras, 0)} comprobante(s)</p>
+                        </div>
+
+                        <div class="bg-white p-4 sm:p-5 rounded-xl border shadow-sm border-l-4 ${resultadoOperativo >= 0 ? 'border-l-emerald-600' : 'border-l-amber-500'}">
+                            <p class="text-[11px] font-bold text-gray-500 uppercase">RESULTADO OPERATIVO NETO</p>
+                            <h3 class="text-lg sm:text-xl font-black mt-1 num-row mobile-kpi-val ${resultadoOperativo >= 0 ? 'text-emerald-700' : 'text-red-600'}">$ ${fmtMoneda(resultadoOperativo)}</h3>
+                            <p class="text-[11px] text-gray-500 mt-1 num-row">
+                                Margen: <strong>${fmtMoneda(margenOperativoPct, 1)}%</strong>
+                                ${tienePeriodoPrevio ? ` · <span class="${variacionOpPct >= 0 ? 'text-emerald-600' : 'text-red-600'} font-bold">${variacionOpPct >= 0 ? '+' : ''}${fmtMoneda(variacionOpPct, 1)}% vs per. ant.</span>` : ''}
+                            </p>
+                        </div>
+
+                        <div class="bg-white p-4 sm:p-5 rounded-xl border shadow-sm border-l-4 border-l-slate-700">
+                            <p class="text-[11px] font-bold text-gray-500 uppercase">DISPONIBILIDADES (1.1.01/02)</p>
+                            <h3 class="text-lg sm:text-xl font-black text-slate-900 mt-1 num-row mobile-kpi-val">$ ${fmtMoneda(saldosCont.disp)}</h3>
+                            <p class="text-[11px] text-gray-400 mt-1 num-row">Caja + Banco Cta. Cte. (Libro Diario)</p>
+                        </div>
+                    </div>
+
+                    <!-- 3. CUENTAS A COBRAR VS CUENTAS A PAGAR + VENCIMIENTOS -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                        <div onclick="cambiarVista('balance')" class="cursor-pointer bg-white p-4 sm:p-5 rounded-xl border shadow-sm hover:border-blue-300 transition flex flex-col justify-between">
+                            <div class="flex justify-between items-center border-b pb-2">
+                                <span class="text-xs font-bold text-gray-500 uppercase">CUENTAS A COBRAR (1.1.04)</span>
+                                <span class="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">Deudores Ventas</span>
+                            </div>
+                            <div class="py-3">
+                                <h4 class="text-xl sm:text-2xl font-black text-blue-900 num-row">$ ${fmtMoneda(saldosCont.cxc)}</h4>
+                                <p class="text-[11px] text-gray-400 mt-1">Saldo contable acumulado en comprobantes y asientos</p>
+                            </div>
+                        </div>
+
+                        <div onclick="cambiarVista('balance')" class="cursor-pointer bg-white p-4 sm:p-5 rounded-xl border shadow-sm hover:border-red-300 transition flex flex-col justify-between">
+                            <div class="flex justify-between items-center border-b pb-2">
+                                <span class="text-xs font-bold text-gray-500 uppercase">CUENTAS A PAGAR (2.1.01)</span>
+                                <span class="text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded">Proveedores</span>
+                            </div>
+                            <div class="py-3">
+                                <h4 class="text-xl sm:text-2xl font-black text-red-700 num-row">$ ${fmtMoneda(saldosCont.cxp)}</h4>
+                                <p class="text-[11px] text-gray-400 mt-1">Pasivo comercial registrado en el sistema</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900 text-white p-4 sm:p-5 rounded-xl border shadow-sm flex flex-col justify-between">
+                            <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                                <span class="text-xs font-bold text-amber-400 uppercase">VENCIMIENTOS ORIENTATIVOS</span>
+                                <span class="text-[10px] font-black bg-slate-800 text-slate-200 px-2 py-0.5 rounded num-row">CUIT Term. ${vencCuit.terminacion}</span>
+                            </div>
+                            <div class="py-2.5 space-y-1.5 text-xs">
+                                <div class="flex justify-between num-row">
+                                    <span class="text-slate-300">IVA / Fiscales (Día ref.):</span>
+                                    <span class="font-bold text-white">Día ${vencCuit.diaIva} de cada mes</span>
+                                </div>
+                                <div class="flex justify-between num-row">
+                                    <span class="text-slate-300">IIBB Mensual (Día ref.):</span>
+                                    <span class="font-bold text-amber-300">Día ${vencCuit.diaIibb} de cada mes</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400 pt-1">${vencCuit.nota}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. EVOLUCIÓN MENSUAL VENTAS VS COMPRAS (CHART.JS) -->
+                    <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-3">
+                        <div class="flex flex-wrap justify-between items-center border-b pb-2.5 gap-2">
+                            <div>
+                                <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase">Evolución Mensual: Ventas Netas vs. Compras Netas</h3>
+                                <p class="text-xs text-gray-500">Comparativo mes a mes dentro del rango ${formatearFechaAr(dashFechaDesde)} al ${formatearFechaAr(dashFechaHasta)}</p>
+                            </div>
+                        </div>
+                        <div class="relative h-64 sm:h-72 w-full">
+                            <canvas id="graficoVentasCompras"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 5. TOP 5 CLIENTES Y TOP 5 PROVEEDORES -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-5 space-y-3">
+                            <div class="flex justify-between items-center border-b pb-2">
+                                <h3 class="text-sm font-bold text-gray-900 uppercase">Top 5 Clientes (Ventas Netas)</h3>
+                                <span class="text-[11px] text-gray-400 num-row">${fmtMoneda(compsFiltrados.filter(c=>c.tipoOp==='VENTA').length, 0)} vtas</span>
+                            </div>
+                            <div>${renderRankingRows(topClientes, ventasNetas, 'bg-blue-600')}</div>
+                        </div>
+
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-5 space-y-3">
+                            <div class="flex justify-between items-center border-b pb-2">
+                                <h3 class="text-sm font-bold text-gray-900 uppercase">Top 5 Proveedores (Compras Netas)</h3>
+                                <span class="text-[11px] text-gray-400 num-row">${fmtMoneda(compsFiltrados.filter(c=>c.tipoOp==='COMPRA').length, 0)} cpras</span>
+                            </div>
+                            <div>${renderRankingRows(topProveedores, comprasNetas, 'bg-rose-500')}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Renderizar gráfico Chart.js
+            const canvasEl = document.getElementById('graficoVentasCompras');
+            if (canvasEl && typeof Chart !== 'undefined') {
+                if (dashChartInstance) {
+                    dashChartInstance.destroy();
+                    dashChartInstance = null;
+                }
+                const mesesOrdenados = Object.keys(serieMensual).filter(k => k !== 'Sin fecha').sort();
+                const labelsMeses = mesesOrdenados.map(ym => {
+                    const [y, m] = ym.split('-');
+                    return `${(NOMBRES_MESES[m] || m).substring(0, 3)} ${y}`;
+                });
+                const dataVentas = mesesOrdenados.map(ym => serieMensual[ym].ventas);
+                const dataCompras = mesesOrdenados.map(ym => serieMensual[ym].compras);
+
+                dashChartInstance = new Chart(canvasEl.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: labelsMeses.length ? labelsMeses : ['Sin datos'],
+                        datasets: [
+                            {
+                                label: 'Ventas Netas ($)',
+                                data: dataVentas.length ? dataVentas : [0],
+                                backgroundColor: 'rgba(37, 99, 235, 0.82)',
+                                borderRadius: 6
+                            },
+                            {
+                                label: 'Compras Netas ($)',
+                                data: dataCompras.length ? dataCompras : [0],
+                                backgroundColor: 'rgba(239, 68, 68, 0.78)',
+                                borderRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => `${ctx.dataset.label}: $ ${fmtMoneda(ctx.parsed.y)}`
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: (val) => `$ ${fmtMoneda(val, 0)}`
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function renderImportacion(cont) {
+            cont.innerHTML = `
+                <div class="space-y-6 max-w-4xl mx-auto">
+                    <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Importación "Mis Comprobantes" (ARCA)</h2>
+                    <div class="bg-white p-5 sm:p-6 rounded-xl border space-y-4">
+                        <div class="flex flex-wrap gap-6">
+                            <label class="font-bold text-sm text-gray-700"><input type="radio" name="tipoOperacionImport" value="COMPRA" checked> COMPRAS (Recibidos)</label>
+                            <label class="font-bold text-sm text-gray-700"><input type="radio" name="tipoOperacionImport" value="VENTA"> VENTAS (Emitidos)</label>
+                        </div>
+                        <div class="border-2 border-dashed rounded-xl p-8 text-center bg-gray-50">
+                            <input type="file" id="fileArca" accept=".csv" class="hidden" onchange="procesarCsvArcaReal(event)">
+                            <button onclick="document.getElementById('fileArca').click()" class="bg-blue-600 text-white font-semibold px-5 py-2.5 rounded-lg text-sm">Seleccionar CSV de ARCA</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderComprobantes(cont) {
+            const emp = obtenerEmpresaActual();
+            const cuentasImputables = emp.planCuentas.filter(p => p.imputable);
+
+            let listaComps = [...emp.comprobantes];
+            listaComps.sort((a, b) => {
+                let vA = a[ordenComprobantes.campo], vB = b[ordenComprobantes.campo];
+                if (typeof vA === 'string') { vA = vA.toLowerCase(); vB = vB.toLowerCase(); }
+                return vA < vB ? (ordenComprobantes.asc ? -1 : 1) : (vA > vB ? (ordenComprobantes.asc ? 1 : -1) : 0);
+            });
+            let arrowComp = (campo) => ordenComprobantes.campo !== campo ? '' : (ordenComprobantes.asc ? ' ▲' : ' ▼');
+
+            let filas = listaComps.map(c => {
+                const optionsCuenta = cuentasImputables.map(pc => `<option value="${pc.codigo}" ${c.cuentaNeto === pc.codigo ? 'selected' : ''}>${pc.codigo} - ${pc.nombre}</option>`).join('');
+                return `
+                    <tr class="hover:bg-gray-50 text-xs sm:text-sm">
+                        <td class="px-3 py-2.5 font-bold whitespace-nowrap ${c.tipoOp === 'VENTA' ? 'text-green-600' : 'text-red-600'}">${c.tipoOp}</td>
+                        <td class="px-3 py-2.5 num-row">${formatearFechaAr(c.fecha)}</td>
+                        <td class="px-3 py-2.5 font-semibold whitespace-nowrap">${c.tipoNombre}</td>
+                        <td class="px-3 py-2.5 font-mono num-row">${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')}</td>
+                        <td class="px-3 py-2.5 min-w-[160px]">${c.razonSocial}<br><span class="text-[11px] text-gray-400 num-row">CUIT: ${c.cuit}</span></td>
+                        <td class="px-3 py-2.5 text-right font-semibold num-row">$ ${fmtMoneda(c.netoTotal)}</td>
+                        <td class="px-3 py-2.5 text-right text-gray-600 num-row">$ ${fmtMoneda(c.totalIva)}</td>
+                        <td class="px-3 py-2.5 text-right font-bold num-row">$ ${fmtMoneda(c.total)}</td>
+                        <td class="px-3 py-2.5"><select onchange="actualizarCuentaComprobante(${c.id}, this.value)" class="text-xs bg-white border border-gray-300 rounded px-2 py-1 font-semibold text-blue-900 max-w-[160px]">${optionsCuenta}</select></td>
+                        <td class="px-3 py-2.5 text-center"><button onclick="eliminarComprobante(${c.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+                    </tr>
+                `;
+            }).join('');
+
+            cont.innerHTML = `
+                <div class="space-y-4 sm:space-y-6">
+                    <h2 class="text-lg sm:text-2xl font-bold text-gray-800">Comprobantes Registrados</h2>
+                    <div class="bg-white rounded-xl border overflow-x-auto">
+                        <table class="w-full text-left mobile-compact-table">
+                            <thead class="bg-gray-50 text-[11px] text-gray-500 uppercase select-none whitespace-nowrap">
+                                <tr>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('tipoOp')">OP.${arrowComp('tipoOp')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('fecha')">FECHA${arrowComp('fecha')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('tipoNombre')">TIPO${arrowComp('tipoNombre')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('numero')">NÚMERO${arrowComp('numero')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarComprobantesPor('razonSocial')">PROVEEDOR / CLIENTE${arrowComp('razonSocial')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarComprobantesPor('netoTotal')">NETO${arrowComp('netoTotal')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarComprobantesPor('totalIva')">IVA${arrowComp('totalIva')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarComprobantesPor('total')">TOTAL${arrowComp('total')}</th>
+                                    <th class="p-3">CUENTA</th>
+                                    <th class="p-3 text-center">ACCIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">${filas || `<tr><td colspan="10" class="text-center py-6 text-gray-400">Sin comprobantes cargados.</td></tr>`}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function actualizarCuentaComprobante(id, nuevaCuenta) {
+            const emp = obtenerEmpresaActual();
+            const comp = emp.comprobantes.find(c => c.id === id);
+            if (comp) { comp.cuentaNeto = nuevaCuenta; guardarEnLocalStorage(); }
+        }
+
+        function obtenerLineasEfectivasComprobante(c) {
+            if (Array.isArray(c.lineasAsiento) && c.lineasAsiento.length > 0) {
+                return c.lineasAsiento;
+            }
+            const codigoNeto = c.cuentaNeto || (c.tipoOp === 'VENTA' ? '4.1.01' : '5.1.01');
+            const codigoIva = c.cuentaIva || (c.tipoOp === 'VENTA' ? '2.1.02' : '1.1.03');
+            const codigoOtros = c.cuentaOtrosTributos || '1.1.05';
+            const codigoProvCliente = c.cuentaContrapartida || (c.tipoOp === 'VENTA' ? '1.1.04' : '2.1.01');
+            const baseNeta = (Number(c.netoTotal) || 0) + (Number(c.exento) || 0) + (Number(c.noGravado) || 0);
+            const iva = Number(c.totalIva) || 0;
+            const otros = Number(c.otrosTributos) || 0;
+            const total = Number(c.total) || 0;
+
+            const lineas = [];
+            if (c.tipoOp === 'VENTA') {
+                lineas.push({ cuenta: codigoProvCliente, debe: total, haber: 0 });
+                if (baseNeta !== 0) lineas.push({ cuenta: codigoNeto, debe: 0, haber: baseNeta });
+                if (iva !== 0) lineas.push({ cuenta: codigoIva, debe: 0, haber: iva });
+                if (otros !== 0) lineas.push({ cuenta: codigoOtros, debe: 0, haber: otros });
+            } else {
+                if (baseNeta !== 0) lineas.push({ cuenta: codigoNeto, debe: baseNeta, haber: 0 });
+                if (iva !== 0) lineas.push({ cuenta: codigoIva, debe: iva, haber: 0 });
+                if (otros !== 0) lineas.push({ cuenta: codigoOtros, debe: otros, haber: 0 });
+                lineas.push({ cuenta: codigoProvCliente, debe: 0, haber: total });
+            }
+            return lineas;
+        }
+
+        function asegurarLineasComprobante(c) {
+            if (!Array.isArray(c.lineasAsiento) || c.lineasAsiento.length === 0) {
+                c.lineasAsiento = obtenerLineasEfectivasComprobante(c).map(l => ({ ...l }));
+            }
+            return c.lineasAsiento;
+        }
+
+        function editarRenglonDiario(tipoAsiento, id, idxLinea, campo, valor) {
+            const emp = obtenerEmpresaActual();
+            let lineas = null;
+            if (tipoAsiento === 'COMPRA_VENTA') {
+                const c = emp.comprobantes.find(x => String(x.id) === String(id));
+                if (!c) return;
+                lineas = asegurarLineasComprobante(c);
+            } else {
+                const m = (emp.asientosManuales || []).find(x => String(x.id) === String(id));
+                if (!m) return;
+                lineas = m.lineas;
+            }
+            if (!lineas || !lineas[idxLinea]) return;
+
+            if (campo === 'cuenta') {
+                lineas[idxLinea].cuenta = valor;
+            } else if (campo === 'debe') {
+                lineas[idxLinea].debe = parsearNumeroAr(valor);
+            } else if (campo === 'haber') {
+                lineas[idxLinea].haber = parsearNumeroAr(valor);
+            }
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function agregarRenglonDiario(tipoAsiento, id) {
+            const emp = obtenerEmpresaActual();
+            const ctaDefault = (emp.planCuentas.find(p => p.imputable) || { codigo: '5.1.01' }).codigo;
+            if (tipoAsiento === 'COMPRA_VENTA') {
+                const c = emp.comprobantes.find(x => String(x.id) === String(id));
+                if (!c) return;
+                const lineas = asegurarLineasComprobante(c);
+                lineas.push({ cuenta: ctaDefault, debe: 0, haber: 0 });
+            } else {
+                const m = (emp.asientosManuales || []).find(x => String(x.id) === String(id));
+                if (!m) return;
+                m.lineas.push({ cuenta: ctaDefault, debe: 0, haber: 0 });
+            }
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function eliminarRenglonDiario(tipoAsiento, id, idxLinea) {
+            const emp = obtenerEmpresaActual();
+            if (tipoAsiento === 'COMPRA_VENTA') {
+                const c = emp.comprobantes.find(x => String(x.id) === String(id));
+                if (!c) return;
+                const lineas = asegurarLineasComprobante(c);
+                if (lineas.length <= 1) return;
+                lineas.splice(idxLinea, 1);
+            } else {
+                const m = (emp.asientosManuales || []).find(x => String(x.id) === String(id));
+                if (!m || m.lineas.length <= 1) return;
+                m.lineas.splice(idxLinea, 1);
+            }
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function eliminarComprobante(id) {
+            const emp = obtenerEmpresaActual();
+            emp.comprobantes = emp.comprobantes.filter(c => c.id !== id);
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function renderLibroIva(cont) {
+            const emp = obtenerEmpresaActual();
+            const comprobantesFiltrados = emp.comprobantes.filter(c => {
+                if (c.tipoOp !== libroIvaModo) return false;
+                const partes = c.fecha.split('-');
+                if (partes.length === 3) {
+                    return (partes[1] === filtroMesIva && partes[0] === filtroAnioIva);
+                }
+                return true;
+            });
+
+            let lineasTabla = [];
+
+            comprobantesFiltrados.forEach(c => {
+                const esFacturaC = [11, 12, 13].includes(c.tipoCodigo);
+                const exentoNoGravCalculado = esFacturaC ? c.total : (c.noGravado + c.exento);
+
+                const desgloses = [];
+                if (c.neto105 > 0 || c.iva105 > 0) desgloses.push({ neto: c.neto105, tasa: '10,50%', iva: c.iva105 });
+                if (c.neto21 > 0 || c.iva21 > 0) desgloses.push({ neto: c.neto21, tasa: '21,00%', iva: c.iva21 });
+                if (c.neto27 > 0 || c.iva27 > 0) desgloses.push({ neto: c.neto27, tasa: '27,00%', iva: c.iva27 });
+
+                if (desgloses.length === 0) {
+                    desgloses.push({ neto: c.netoTotal, tasa: '0,00%', iva: 0 });
+                }
+
+                desgloses.forEach((d, idx) => {
+                    lineasTabla.push(`
+                        <tr class="text-xs border-b border-gray-100">
+                            <td class="py-2 px-2 num-row">${idx === 0 ? formatearFechaAr(c.fecha) : ''}</td>
+                            <td class="py-2 px-2 font-mono num-row">${idx === 0 ? c.tipoNombre + ' ' + String(c.pv).padStart(4,'0') + '-' + String(c.numero).padStart(8,'0') : ''}</td>
+                            <td class="py-2 px-2">${idx === 0 ? c.razonSocial : ''}</td>
+                            <td class="py-2 px-2 font-mono num-row">${idx === 0 ? c.cuit : ''}</td>
+                            <td class="py-2 px-2 text-right num-row">${idx === 0 && exentoNoGravCalculado > 0 ? fmtMoneda(exentoNoGravCalculado) : ''}</td>
+                            <td class="py-2 px-2 text-right font-medium num-row">${d.neto > 0 ? fmtMoneda(d.neto) : ''}</td>
+                            <td class="py-2 px-2 text-right font-bold text-blue-800 num-row">${d.tasa !== '0,00%' ? d.tasa : ''}</td>
+                            <td class="py-2 px-2 text-right font-medium num-row">${d.iva > 0 ? fmtMoneda(d.iva) : ''}</td>
+                            <td class="py-2 px-2 text-right font-bold num-row">${idx === 0 ? '$ ' + fmtMoneda(c.total) : ''}</td>
+                        </tr>
+                    `);
+                });
+            });
+
+            cont.innerHTML = `
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="bg-white p-3 sm:p-4 rounded-xl border flex flex-wrap justify-between items-center no-print shadow-sm gap-3">
+                        <div class="flex flex-wrap items-center gap-2 sm:gap-4">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Libro:</span>
+                                <select onchange="libroIvaModo=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                                    <option value="COMPRA" ${libroIvaModo==='COMPRA'?'selected':''}>IVA COMPRAS</option>
+                                    <option value="VENTA" ${libroIvaModo==='VENTA'?'selected':''}>IVA VENTAS</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Mes:</span>
+                                <select onchange="filtroMesIva=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                                    <option value="01" ${filtroMesIva==='01'?'selected':''}>Enero</option>
+                                    <option value="02" ${filtroMesIva==='02'?'selected':''}>Febrero</option>
+                                    <option value="03" ${filtroMesIva==='03'?'selected':''}>Marzo</option>
+                                    <option value="04" ${filtroMesIva==='04'?'selected':''}>Abril</option>
+                                    <option value="05" ${filtroMesIva==='05'?'selected':''}>Mayo</option>
+                                    <option value="06" ${filtroMesIva==='06'?'selected':''}>Junio</option>
+                                    <option value="07" ${filtroMesIva==='07'?'selected':''}>Julio</option>
+                                    <option value="08" ${filtroMesIva==='08'?'selected':''}>Agosto</option>
+                                    <option value="09" ${filtroMesIva==='09'?'selected':''}>Septiembre</option>
+                                    <option value="10" ${filtroMesIva==='10'?'selected':''}>Octubre</option>
+                                    <option value="11" ${filtroMesIva==='11'?'selected':''}>Noviembre</option>
+                                    <option value="12" ${filtroMesIva==='12'?'selected':''}>Diciembre</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Año:</span>
+                                <input type="number" value="${filtroAnioIva}" onchange="filtroAnioIva=this.value; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold">
+                            </div>
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Hoja:</span>
+                                <input type="number" value="${folioInicialIva}" onchange="folioInicialIva=parseInt(this.value)||1; renderizarVista();" class="w-16 text-xs border rounded p-1.5 font-bold text-blue-600">
+                            </div>
+                        </div>
+                        <button onclick="window.print()" class="bg-gray-900 text-white px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center space-x-2 shadow">
+                            <i data-lucide="printer" class="w-4 h-4"></i><span>Imprimir / PDF</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-4 sm:p-6 border-b-2 border-gray-900 flex flex-wrap justify-between items-start gap-2">
+                        <div>
+                            <h1 class="text-base sm:text-lg font-black uppercase text-gray-900">${emp.razonSocial}</h1>
+                            <p class="text-xs text-gray-600">CUIT: ${emp.cuit} — Condición: ${emp.condicionIva}</p>
+                        </div>
+                        <div class="text-left sm:text-right">
+                            <h2 class="text-lg sm:text-xl font-bold text-gray-900">Libro IVA ${libroIvaModo === 'COMPRA' ? 'Compras' : 'Ventas'}</h2>
+                            <p class="text-xs text-gray-600 num-row">Período: ${filtroMesIva}/${filtroAnioIva} | Hoja Nro: ${fmtMoneda(folioInicialIva, 0)}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border p-3 sm:p-4 overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse mobile-compact-table">
+                            <thead>
+                                <tr class="border-b font-bold text-gray-700 bg-gray-50 uppercase whitespace-nowrap">
+                                    <th class="p-2">Fecha</th>
+                                    <th class="p-2">Comprobante</th>
+                                    <th class="p-2">Razón Social</th>
+                                    <th class="p-2">C.U.I.T.</th>
+                                    <th class="p-2 text-right">No Grav/Ex.</th>
+                                    <th class="p-2 text-right">Neto Grav.</th>
+                                    <th class="p-2 text-right">Alíc.</th>
+                                    <th class="p-2 text-right">${libroIvaModo==='COMPRA'?'IVA CF':'IVA DF'}</th>
+                                    <th class="p-2 text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>${lineasTabla.join('') || `<tr><td colspan="9" class="text-center py-6 text-gray-400">Sin comprobantes para el período.</td></tr>`}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPlanCuentas(cont) {
+            const emp = obtenerEmpresaActual();
+            cont.innerHTML = `
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="flex flex-wrap justify-between items-center gap-3">
+                        <h2 class="text-lg sm:text-2xl font-bold text-gray-800">Plan de Cuentas</h2>
+                        <div class="flex flex-wrap gap-2">
+                            <input type="file" id="filePlan" accept=".csv,.txt" class="hidden" onchange="importarPlanCuentas(event)">
+                            <button onclick="document.getElementById('filePlan').click()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold shadow">
+                                Importar Plan (CSV)
+                            </button>
+                            <button onclick="abrirModalCuenta()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold shadow">
+                                + Nueva Cuenta
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl border overflow-x-auto">
+                        <table class="w-full text-left text-xs sm:text-sm mobile-compact-table">
+                            <thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase whitespace-nowrap">
+                                <tr>
+                                    <th class="p-3">Código</th>
+                                    <th class="p-3">Nombre</th>
+                                    <th class="p-3">Tipo</th>
+                                    <th class="p-3">Imputable</th>
+                                    <th class="p-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${emp.planCuentas.map(p => `
+                                    <tr class="${!p.imputable ? 'bg-gray-100 font-bold' : ''}">
+                                        <td class="p-3 font-mono num-row">${p.codigo}</td>
+                                        <td class="p-3">${p.nombre}</td>
+                                        <td class="p-3 whitespace-nowrap">${p.tipo}</td>
+                                        <td class="p-3">${p.imputable ? 'SI' : 'NO'}</td>
+                                        <td class="p-3 text-center space-x-2 whitespace-nowrap">
+                                            <button onclick="abrirModalCuenta('${p.codigo}')" class="text-blue-600 hover:text-blue-800"><i data-lucide="edit-3" class="w-4 h-4 inline"></i></button>
+                                            <button onclick="eliminarCuenta('${p.codigo}')" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-4 h-4 inline"></i></button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function obtenerAsientosUnificadosOrdenados() {
+            const emp = obtenerEmpresaActual();
+            let lista = [];
+
+            (emp.comprobantes || []).forEach(c => {
+                lista.push({ tipo: 'COMPRA_VENTA', fecha: c.fecha || '', comp: c });
+            });
+
+            (emp.asientosManuales || []).forEach(m => {
+                lista.push({ tipo: 'MANUAL', fecha: m.fecha || '', manual: m });
+            });
+
+            lista.sort((a, b) => a.fecha.localeCompare(b.fecha));
+            return lista;
+        }
+
+        function exportarLibroDiarioTxt() {
+            const emp = obtenerEmpresaActual();
+            const mapaCuentas = {};
+            emp.planCuentas.forEach(p => mapaCuentas[p.codigo] = p.nombre);
+            
+            const asientosOrdenados = obtenerAsientosUnificadosOrdenados().filter(item => {
+                return item.fecha >= diarioFechaDesde && item.fecha <= diarioFechaHasta;
+            });
+
+            let txt = `================================================================================\n`;
+            txt += `LIBRO DIARIO - ${emp.razonSocial}\n`;
+            txt += `CUIT: ${emp.cuit} | Período Desde: ${formatearFechaAr(diarioFechaDesde)} Hasta: ${formatearFechaAr(diarioFechaHasta)}\n`;
+            txt += `================================================================================\n\n`;
+
+            asientosOrdenados.forEach((item, i) => {
+                const nro = i + 1;
+                if (item.tipo === 'COMPRA_VENTA') {
+                    const c = item.comp;
+                    txt += `Asiento N° ${nro} — Fecha: ${formatearFechaAr(c.fecha)}\n`;
+                    txt += `Ref: ${c.tipoNombre} ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} - ${c.razonSocial}\n`;
+                    txt += `--------------------------------------------------------------------------------\n`;
+
+                    const lineasTxt = obtenerLineasEfectivasComprobante(c);
+                    lineasTxt.forEach(l => {
+                        if ((Number(l.debe) || 0) !== 0) {
+                            txt += `  [DEBE]  ${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}: $ ${fmtMoneda(l.debe)}\n`;
+                        }
+                        if ((Number(l.haber) || 0) !== 0) {
+                            txt += `  [HABER] ${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}: $ ${fmtMoneda(l.haber)}\n`;
+                        }
+                    });
+                } else {
+                    const m = item.manual;
+                    txt += `Asiento Manual N° ${nro} — Fecha: ${formatearFechaAr(m.fecha)}\n`;
+                    txt += `Concepto: ${m.concepto}\n`;
+                    txt += `--------------------------------------------------------------------------------\n`;
+                    (m.lineas || []).forEach(l => {
+                        const de = l.debe > 0 ? `[DEBE] ` : `[HABER]`;
+                        const imp = l.debe > 0 ? l.debe : l.haber;
+                        txt += `  ${de} ${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}: $ ${fmtMoneda(imp)}\n`;
+                    });
+                }
+                txt += `--------------------------------------------------------------------------------\n\n`;
+            });
+
+            const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Libro_Diario_${emp.cuit}.txt`;
+            a.click();
+        }
+
+        function renderLibroDiario(cont) {
+            const emp = obtenerEmpresaActual();
+            const cuentasImputables = emp.planCuentas.filter(p => p.imputable);
+            const mapaCuentas = {};
+            emp.planCuentas.forEach(p => mapaCuentas[p.codigo] = p.nombre);
+
+            const asientosUnificados = obtenerAsientosUnificadosOrdenados().filter(item => {
+                return item.fecha >= diarioFechaDesde && item.fecha <= diarioFechaHasta;
+            });
+
+            let totDebeAcumulado = 0, totHaberAcumulado = 0;
+
+            const renderFilasEditables = (tipoAsiento, idAsiento, lineas) => {
+                return lineas.map((l, idx) => {
+                    const debe = Number(l.debe) || 0;
+                    const haber = Number(l.haber) || 0;
+                    totDebeAcumulado += debe;
+                    totHaberAcumulado += haber;
+
+                    const selectCta = `
+                        <select onchange="editarRenglonDiario('${tipoAsiento}', ${idAsiento}, ${idx}, 'cuenta', this.value)" class="text-xs bg-white border border-gray-300 rounded px-1.5 py-0.5 font-semibold text-blue-900 no-print">
+                            ${cuentasImputables.map(pc => `<option value="${pc.codigo}" ${l.cuenta === pc.codigo ? 'selected' : ''}>${pc.codigo} - ${pc.nombre}</option>`).join('')}
+                        </select>
+                        <span class="hidden print:inline ${haber > 0 && debe === 0 ? 'pl-6' : 'font-semibold'}">${l.cuenta} - ${mapaCuentas[l.cuenta] || ''}</span>
+                    `;
+
+                    return `
+                        <tr class="border-b border-gray-100">
+                            <td class="py-1.5 px-3 ${haber > 0 && debe === 0 ? 'pl-6 sm:pl-8 text-gray-700' : 'font-semibold'}">${selectCta}</td>
+                            <td class="py-1.5 px-3 text-right num-row">
+                                <input type="text" inputmode="decimal" value="${debe !== 0 ? fmtMoneda(debe) : '0,00'}" onchange="editarRenglonDiario('${tipoAsiento}', ${idAsiento}, ${idx}, 'debe', this.value)" class="w-24 sm:w-32 text-right border border-gray-300 rounded px-1.5 py-0.5 font-semibold bg-white num-row no-print">
+                                <span class="hidden print:inline num-row">${debe !== 0 ? '$ ' + fmtMoneda(debe) : '-'}</span>
+                            </td>
+                            <td class="py-1.5 px-3 text-right num-row">
+                                <input type="text" inputmode="decimal" value="${haber !== 0 ? fmtMoneda(haber) : '0,00'}" onchange="editarRenglonDiario('${tipoAsiento}', ${idAsiento}, ${idx}, 'haber', this.value)" class="w-24 sm:w-32 text-right border border-gray-300 rounded px-1.5 py-0.5 font-semibold bg-white num-row no-print">
+                                <span class="hidden print:inline num-row">${haber !== 0 ? '$ ' + fmtMoneda(haber) : '-'}</span>
+                            </td>
+                            <td class="py-1.5 px-2 text-center w-8 no-print">
+                                ${lineas.length > 1 ? `<button type="button" onclick="eliminarRenglonDiario('${tipoAsiento}', ${idAsiento}, ${idx})" class="text-red-500 hover:text-red-700 font-bold" title="Quitar renglón">×</button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            };
+
+            let htmlAsientos = asientosUnificados.map((item, i) => {
+                const nroAsiento = i + 1;
+
+                if (item.tipo === 'COMPRA_VENTA') {
+                    const c = item.comp;
+                    const lineas = obtenerLineasEfectivasComprobante(c);
+                    const filasRenglon = renderFilasEditables('COMPRA_VENTA', c.id, lineas);
+
+                    return `
+                        <div class="bg-white border rounded-xl overflow-x-auto mb-3 sm:mb-4 asiento-card">
+                            <div class="bg-gray-50 border-b px-3 sm:px-4 py-2 flex flex-wrap justify-between items-center text-xs gap-2">
+                                <span class="font-bold text-gray-900 num-row">ASIENTO N° ${fmtMoneda(nroAsiento, 0)} — ${formatearFechaAr(c.fecha)}</span>
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-gray-600 font-mono text-[11px]">${c.tipoNombre} ${String(c.pv).padStart(4,'0')}-${String(c.numero).padStart(8,'0')} | ${c.razonSocial}</span>
+                                    <button type="button" onclick="agregarRenglonDiario('COMPRA_VENTA', ${c.id})" class="text-blue-700 hover:text-blue-900 font-bold text-[11px] no-print">+ Renglón</button>
+                                </div>
+                            </div>
+                            <table class="w-full text-xs text-left mobile-compact-table">
+                                <thead>
+                                    <tr class="border-b bg-gray-100 text-gray-500 font-bold uppercase whitespace-nowrap">
+                                        <th class="py-1.5 px-3">Cuenta Contable</th>
+                                        <th class="py-1.5 px-3 text-right w-28 sm:w-36">Debe</th>
+                                        <th class="py-1.5 px-3 text-right w-28 sm:w-36">Haber</th>
+                                        <th class="py-1.5 px-2 w-8 no-print"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>${filasRenglon}</tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    const m = item.manual;
+                    const filasRenglon = renderFilasEditables('MANUAL', m.id, m.lineas || []);
+
+                    return `
+                        <div class="bg-white border rounded-xl overflow-x-auto mb-3 sm:mb-4 asiento-card">
+                            <div class="bg-gray-50 border-b px-3 sm:px-4 py-2 flex flex-wrap justify-between items-center text-xs gap-2">
+                                <span class="font-bold text-gray-900 num-row">ASIENTO N° ${fmtMoneda(nroAsiento, 0)} — ${formatearFechaAr(m.fecha)}</span>
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-gray-600 font-medium">${m.concepto}</span>
+                                    <button type="button" onclick="agregarRenglonDiario('MANUAL', ${m.id})" class="text-blue-700 hover:text-blue-900 font-bold text-[11px] no-print">+ Renglón</button>
+                                    <button type="button" onclick="eliminarAsientoManual(${m.id})" class="text-red-500 hover:text-red-700 no-print"><i data-lucide="trash-2" class="w-4 h-4 inline"></i></button>
+                                </div>
+                            </div>
+                            <table class="w-full text-xs text-left mobile-compact-table">
+                                <thead>
+                                    <tr class="border-b bg-gray-100 text-gray-500 font-bold uppercase whitespace-nowrap">
+                                        <th class="py-1.5 px-3">Cuenta Contable</th>
+                                        <th class="py-1.5 px-3 text-right w-28 sm:w-36">Debe</th>
+                                        <th class="py-1.5 px-3 text-right w-28 sm:w-36">Haber</th>
+                                        <th class="py-1.5 px-2 w-8 no-print"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>${filasRenglon}</tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            cont.innerHTML = `
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="bg-white p-3 sm:p-4 rounded-xl border flex flex-wrap justify-between items-center no-print shadow-sm gap-3">
+                        <div class="flex flex-wrap items-center gap-2 sm:gap-4">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Desde:</span>
+                                <input type="date" value="${diarioFechaDesde}" onchange="diarioFechaDesde=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                            </div>
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Hasta:</span>
+                                <input type="date" value="${diarioFechaHasta}" onchange="diarioFechaHasta=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                            </div>
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Hoja:</span>
+                                <input type="number" value="${folioInicialDiario}" onchange="folioInicialDiario=parseInt(this.value)||1; renderizarVista();" class="w-16 text-xs border rounded p-1.5 font-bold text-blue-600">
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="abrirModalAsientoManual()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i><span>Asiento Manual</span>
+                            </button>
+                            <button onclick="exportarLibroDiarioTxt()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
+                                <i data-lucide="download" class="w-3.5 h-3.5"></i><span>TXT</span>
+                            </button>
+                            <button onclick="window.print()" class="bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow flex items-center space-x-1">
+                                <i data-lucide="printer" class="w-3.5 h-3.5"></i><span>PDF</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 sm:p-6 border-b-2 border-gray-900 flex flex-wrap justify-between items-start gap-2">
+                        <div>
+                            <h1 class="text-base sm:text-lg font-black uppercase text-gray-900">${emp.razonSocial}</h1>
+                            <p class="text-xs text-gray-600">CUIT: ${emp.cuit} — Condición: ${emp.condicionIva}</p>
+                        </div>
+                        <div class="text-left sm:text-right">
+                            <h2 class="text-lg sm:text-xl font-bold text-gray-900">Libro Diario General</h2>
+                            <p class="text-xs text-gray-600 num-row">Del ${formatearFechaAr(diarioFechaDesde)} al ${formatearFechaAr(diarioFechaHasta)} | Hoja: ${fmtMoneda(folioInicialDiario, 0)}</p>
+                        </div>
+                    </div>
+
+                    <div>${htmlAsientos || '<div class="bg-white p-8 rounded-xl border text-center text-gray-400">Sin asientos en el rango seleccionado.</div>'}</div>
+
+                    <div class="bg-white rounded-xl border p-3 sm:p-4 overflow-x-auto">
+                        <table class="w-full text-xs font-black mobile-compact-table">
+                            <tr class="border-t-2 border-gray-900 pt-2 text-gray-900">
+                                <td class="p-2 uppercase">TOTALES GENERALES DEL PERÍODO</td>
+                                <td class="p-2 text-right text-blue-900 w-28 sm:w-36 num-row">$ ${fmtMoneda(totDebeAcumulado)}</td>
+                                <td class="p-2 text-right text-blue-900 w-28 sm:w-36 num-row">$ ${fmtMoneda(totHaberAcumulado)}</td>
+                                <td class="w-8 no-print"></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderBalance(cont) {
+            const emp = obtenerEmpresaActual();
+            const compsFiltrados = emp.comprobantes.filter(c => c.fecha >= balanceFechaDesde && c.fecha <= balanceFechaHasta);
+            const manualesFiltrados = (emp.asientosManuales || []).filter(m => m.fecha >= balanceFechaDesde && m.fecha <= balanceFechaHasta);
+
+            const acumulador = {};
+            emp.planCuentas.forEach(p => {
+                if (p.imputable) {
+                    acumulador[p.codigo] = { codigo: p.codigo, nombre: p.nombre, debe: 0, haber: 0 };
+                }
+            });
+
+            compsFiltrados.forEach(c => {
+                const lineas = obtenerLineasEfectivasComprobante(c);
+                lineas.forEach(l => {
+                    if (acumulador[l.cuenta]) {
+                        acumulador[l.cuenta].debe += Number(l.debe) || 0;
+                        acumulador[l.cuenta].haber += Number(l.haber) || 0;
+                    }
+                });
+            });
+
+            manualesFiltrados.forEach(m => {
+                m.lineas.forEach(l => {
+                    if (acumulador[l.cuenta]) {
+                        acumulador[l.cuenta].debe += l.debe;
+                        acumulador[l.cuenta].haber += l.haber;
+                    }
+                });
+            });
+
+            let filasBalance = '';
+            let totalDebe = 0, totalHaber = 0, totalSaldoDeudor = 0, totalSaldoAcreedor = 0;
+
+            Object.values(acumulador).forEach(acc => {
+                if (acc.debe > 0 || acc.haber > 0) {
+                    const saldo = acc.debe - acc.haber;
+                    const saldoDeudor = saldo > 0 ? saldo : 0;
+                    const saldoAcreedor = saldo < 0 ? Math.abs(saldo) : 0;
+
+                    totalDebe += acc.debe;
+                    totalHaber += acc.haber;
+                    totalSaldoDeudor += saldoDeudor;
+                    totalSaldoAcreedor += saldoAcreedor;
+
+                    filasBalance += `
+                        <tr class="text-xs border-b hover:bg-gray-50">
+                            <td class="p-2.5 font-mono font-bold num-row">${acc.codigo}</td>
+                            <td class="p-2.5">${acc.nombre}</td>
+                            <td class="p-2.5 text-right num-row">$ ${fmtMoneda(acc.debe)}</td>
+                            <td class="p-2.5 text-right num-row">$ ${fmtMoneda(acc.haber)}</td>
+                            <td class="p-2.5 text-right font-medium text-blue-800 num-row">$ ${fmtMoneda(saldoDeudor)}</td>
+                            <td class="p-2.5 text-right font-medium text-emerald-800 num-row">$ ${fmtMoneda(saldoAcreedor)}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            cont.innerHTML = `
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="flex flex-wrap justify-between items-center bg-white p-3 sm:p-4 rounded-xl border shadow-sm no-print gap-3">
+                        <h2 class="text-lg sm:text-xl font-bold text-gray-800">Balance de Sumas y Saldos</h2>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Desde:</span>
+                            <input type="date" value="${balanceFechaDesde}" onchange="balanceFechaDesde=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                            <span class="text-xs font-bold text-gray-500 uppercase">Hasta:</span>
+                            <input type="date" value="${balanceFechaHasta}" onchange="balanceFechaHasta=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                            <button onclick="window.print()" class="bg-gray-900 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold flex items-center space-x-1.5">
+                                <i data-lucide="printer" class="w-4 h-4"></i><span>PDF</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border overflow-x-auto p-3 sm:p-4">
+                        <div class="text-center pb-3 border-b mb-3">
+                            <h1 class="text-sm sm:text-base font-black uppercase text-gray-900">${emp.razonSocial}</h1>
+                            <p class="text-xs text-gray-500 num-row">CUIT: ${emp.cuit} — Balance de Sumas y Saldos (${formatearFechaAr(balanceFechaDesde)} al ${formatearFechaAr(balanceFechaHasta)})</p>
+                        </div>
+                        <table class="w-full text-left text-xs mobile-compact-table">
+                            <thead class="bg-gray-50 font-bold uppercase text-gray-600 border-b whitespace-nowrap">
+                                <tr>
+                                    <th class="p-2.5">Código</th>
+                                    <th class="p-2.5">Cuenta Contable</th>
+                                    <th class="p-2.5 text-right">Débitos</th>
+                                    <th class="p-2.5 text-right">Créditos</th>
+                                    <th class="p-2.5 text-right">Saldo Deudor</th>
+                                    <th class="p-2.5 text-right">Saldo Acreedor</th>
+                                </tr>
+                            </thead>
+                            <tbody>${filasBalance || `<tr><td colspan="6" class="text-center py-6 text-gray-400">Sin movimientos en el rango de fechas.</td></tr>`}</tbody>
+                            <tfoot class="border-t-2 border-gray-900 font-bold bg-gray-50">
+                                <tr>
+                                    <td colspan="2" class="p-2.5 uppercase">Totales:</td>
+                                    <td class="p-2.5 text-right num-row">$ ${fmtMoneda(totalDebe)}</td>
+                                    <td class="p-2.5 text-right num-row">$ ${fmtMoneda(totalHaber)}</td>
+                                    <td class="p-2.5 text-right text-blue-900 num-row">$ ${fmtMoneda(totalSaldoDeudor)}</td>
+                                    <td class="p-2.5 text-right text-emerald-900 num-row">$ ${fmtMoneda(totalSaldoAcreedor)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderImpositivo(cont) {
+            const emp = obtenerEmpresaActual();
+            const liq = calcularLiquidacionIvaSincronizada(emp, impositivoMes, impositivoAnio);
+
+            let listaRet = [...(emp.retencionesPercepciones || [])];
+            listaRet.sort((a, b) => {
+                let valA = a[ordenRetenciones.campo], valB = b[ordenRetenciones.campo];
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                return valA < valB ? (ordenRetenciones.asc ? -1 : 1) : (valA > valB ? (ordenRetenciones.asc ? 1 : -1) : 0);
+            });
+
+            let arrow = (campo) => ordenRetenciones.campo !== campo ? '' : (ordenRetenciones.asc ? ' ▲' : ' ▼');
+
+            let filas = listaRet.map(r => `
+                <tr class="hover:bg-gray-50 text-xs sm:text-sm">
+                    <td class="px-3 py-2.5 num-row">${formatearFechaAr(r.fecha)}</td>
+                    <td class="px-3 py-2.5 font-bold whitespace-nowrap ${r.tipo === 'RETENCION' ? 'text-blue-700' : 'text-purple-700'}">${r.tipo}</td>
+                    <td class="px-3 py-2.5 font-semibold">${r.impuesto}</td>
+                    <td class="px-3 py-2.5">${r.agente}</td>
+                    <td class="px-3 py-2.5 text-right font-bold num-row">$ ${fmtMoneda(r.importe)}</td>
+                    <td class="px-3 py-2.5 text-center">
+                        <button onclick="eliminarRetencionPercepcion(${r.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+
+            cont.innerHTML = `
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="flex flex-wrap justify-between items-center bg-white p-3 sm:p-4 rounded-xl border shadow-sm gap-3">
+                        <div>
+                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">Módulo Impositivo - IVA</h2>
+                            <p class="text-xs text-gray-500">Liquidación mensual de IVA</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <input type="file" id="filePerc" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoPercepciones(event)">
+                            <button onclick="document.getElementById('filePerc').click()" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
+                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Percepciones</span>
+                            </button>
+                            <input type="file" id="fileRet" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoRetenciones(event)">
+                            <button onclick="document.getElementById('fileRet').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
+                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Retenciones</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
+                        <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
+                            <h3 class="text-sm font-bold text-gray-900 uppercase">Determinación de IVA por Período</h3>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold text-gray-500">Mes:</span>
+                                <select onchange="impositivoMes=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                                    <option value="01" ${impositivoMes==='01'?'selected':''}>Enero</option>
+                                    <option value="02" ${impositivoMes==='02'?'selected':''}>Febrero</option>
+                                    <option value="03" ${impositivoMes==='03'?'selected':''}>Marzo</option>
+                                    <option value="04" ${impositivoMes==='04'?'selected':''}>Abril</option>
+                                    <option value="05" ${impositivoMes==='05'?'selected':''}>Mayo</option>
+                                    <option value="06" ${impositivoMes==='06'?'selected':''}>Junio</option>
+                                    <option value="07" ${impositivoMes==='07'?'selected':''}>Julio</option>
+                                    <option value="08" ${impositivoMes==='08'?'selected':''}>Agosto</option>
+                                    <option value="09" ${impositivoMes==='09'?'selected':''}>Septiembre</option>
+                                    <option value="10" ${impositivoMes==='10'?'selected':''}>Octubre</option>
+                                    <option value="11" ${impositivoMes==='11'?'selected':''}>Noviembre</option>
+                                    <option value="12" ${impositivoMes==='12'?'selected':''}>Diciembre</option>
+                                </select>
+                                <span class="text-xs font-bold text-gray-500">Año:</span>
+                                <input type="number" value="${impositivoAnio}" onchange="impositivoAnio=this.value; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 p-3.5 sm:p-4 rounded-xl border border-blue-200">
+                            <div>
+                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Saldo Técnico a Favor Período Anterior ($)</label>
+                                <input type="text" inputmode="decimal" value="${fmtMoneda(saldoTecnicoAnt)}" onchange="saldoTecnicoAnt=parsearNumeroAr(this.value); renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white num-row">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Saldo Libre Disponibilidad Período Ant. ($)</label>
+                                <input type="text" inputmode="decimal" value="${fmtMoneda(saldoLibreDispAnt)}" onchange="saldoLibreDispAnt=parsearNumeroAr(this.value); renderizarVista();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white num-row">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm bg-gray-50 p-3.5 sm:p-4 rounded-xl border">
+                            <div class="space-y-2">
+                                <div class="flex justify-between gap-2"><span>IVA Débito Fiscal:</span><span class="font-bold num-row">$ ${fmtMoneda(liq.ivaDebito)}</span></div>
+                                <div class="flex justify-between gap-2"><span>IVA Crédito Fiscal:</span><span class="font-bold text-red-600 num-row">- $ ${fmtMoneda(liq.ivaCredito)}</span></div>
+                                <div class="flex justify-between gap-2 border-b pb-1"><span>Saldo Técnico Anterior:</span><span class="font-bold text-red-600 num-row">- $ ${fmtMoneda(saldoTecnicoAnt)}</span></div>
+                                <div class="flex justify-between gap-2 pt-1"><span class="font-bold">Saldo Técnico Neto:</span><span class="font-bold num-row">$ ${fmtMoneda(liq.saldoTecnicoNeto)}</span></div>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex justify-between gap-2"><span>Retenciones:</span><span class="font-bold text-blue-700 num-row">$ ${fmtMoneda(liq.retIva)}</span></div>
+                                <div class="flex justify-between gap-2"><span>Percepciones:</span><span class="font-bold text-purple-700 num-row">$ ${fmtMoneda(liq.percIva)}</span></div>
+                                <div class="flex justify-between gap-2 border-b pb-1"><span>Saldo Libre Disp. Anterior:</span><span class="font-bold text-red-600 num-row">$ ${fmtMoneda(saldoLibreDispAnt)}</span></div>
+                                <div class="flex justify-between gap-2 pt-1 font-black text-blue-900"><span>${liq.etiqueta}:</span><span class="num-row">$ ${fmtMoneda(liq.saldoFinal)}</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border overflow-x-auto">
+                        <div class="p-3 sm:p-4 border-b bg-gray-50 font-bold text-xs sm:text-sm text-gray-700">Listado de Retenciones y Percepciones Registradas</div>
+                        <table class="w-full text-left mobile-compact-table">
+                            <thead class="bg-gray-50 text-[11px] text-gray-500 uppercase select-none whitespace-nowrap">
+                                <tr>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarRetencionesPor('fecha')">FECHA${arrow('fecha')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarRetencionesPor('tipo')">TIPO${arrow('tipo')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarRetencionesPor('impuesto')">IMPUESTO${arrow('impuesto')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarRetencionesPor('agente')">AGENTE / DESCRIPCIÓN${arrow('agente')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarRetencionesPor('importe')">IMPORTE${arrow('importe')}</th>
+                                    <th class="p-3 text-center">ACCIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">${filas || `<tr><td colspan="6" class="text-center py-6 text-gray-400">No hay retenciones o percepciones importadas.</td></tr>`}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function normalizarFechaImportacion(fechaRaw) {
+            if (!fechaRaw) return "";
+            if (typeof fechaRaw === 'number' && fechaRaw > 20000) {
+                const dateObj = new Date(Math.round((fechaRaw - 25569) * 86400 * 1000));
+                const y = dateObj.getUTCFullYear();
+                const m = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+                const d = String(dateObj.getUTCDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            }
+            const str = fechaRaw.toString().trim().split('T')[0].split(' ')[0];
+            if (str.includes('/')) {
+                const p = str.split('/');
+                if (p.length === 3) {
+                    const dia = p[0].split('T')[0];
+                    const mes = p[1].split('T')[0];
+                    const anioRaw = p[2].split('T')[0];
+                    const anio = anioRaw.length === 2 ? `20${anioRaw}` : anioRaw;
+                    return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+                }
+            }
+            if (str.includes('-')) {
+                const p = str.split('-');
+                if (p.length === 3 && p[0].length === 2) {
+                    return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+                }
+            }
+            return str;
+        }
+
+        function parsearImporteImportacion(val) {
+            if (val === null || val === undefined || val === '') return 0;
+            if (typeof val === 'number') return isNaN(val) ? 0 : val;
+            let s = val.toString().trim().replace(/[^0-9,.-]/g, '');
+            if (!s) return 0;
+            if (s.includes(',') && s.includes('.')) {
+                if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+                    s = s.replace(/\./g, '').replace(',', '.');
+                } else {
+                    s = s.replace(/,/g, '');
+                }
+            } else if (s.includes(',')) {
+                s = s.replace(',', '.');
+            }
+            const num = parseFloat(s);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function parsearXmlSpreadsheet2003(xmlText) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+            const worksheets = xmlDoc.getElementsByTagNameNS("*", "Worksheet");
+            const result = {};
+            for (let i = 0; i < worksheets.length; i++) {
+                const ws = worksheets[i];
+                const sheetName = ws.getAttribute("ss:Name") || ws.getAttribute("Name") || `Hoja_${i+1}`;
+                const rows = ws.getElementsByTagNameNS("*", "Row");
+                if (rows.length < 2) {
+                    result[sheetName] = [];
+                    continue;
+                }
+                const headers = [];
+                const headerCells = rows[0].getElementsByTagNameNS("*", "Cell");
+                let colIdx = 0;
+                for (let c = 0; c < headerCells.length; c++) {
+                    const idxAttr = headerCells[c].getAttribute("ss:Index");
+                    if (idxAttr) colIdx = parseInt(idxAttr, 10) - 1;
+                    const dataEl = headerCells[c].getElementsByTagNameNS("*", "Data")[0];
+                    headers[colIdx] = dataEl ? dataEl.textContent.trim() : `Col_${colIdx}`;
+                    colIdx++;
+                }
+                const sheetRows = [];
+                for (let r = 1; r < rows.length; r++) {
+                    const cells = rows[r].getElementsByTagNameNS("*", "Cell");
+                    const rowObj = {};
+                    let cIdx = 0;
+                    let hasValue = false;
+                    for (let c = 0; c < cells.length; c++) {
+                        const idxAttr = cells[c].getAttribute("ss:Index");
+                        if (idxAttr) cIdx = parseInt(idxAttr, 10) - 1;
+                        const dataEl = cells[c].getElementsByTagNameNS("*", "Data")[0];
+                        const val = dataEl ? dataEl.textContent.trim() : "";
+                        if (val !== "") hasValue = true;
+                        const hName = headers[cIdx] || `Col_${cIdx}`;
+                        rowObj[hName] = val;
+                        cIdx++;
+                    }
+                    if (hasValue) sheetRows.push(rowObj);
+                }
+                result[sheetName] = sheetRows;
+            }
+            return result;
+        }
+
+        function procesarArchivoIibbUnificado(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const emp = obtenerEmpresaActual();
+            const extension = file.name.split('.').pop().toLowerCase();
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    let agregados = 0;
+                    const hojasDetectadas = [];
+
+                    if (extension === 'csv') {
+                        const lines = evt.target.result.split(/\r\n|\n/);
+                        lines.forEach((line, idx) => {
+                            if (idx === 0 || !line.trim()) return;
+                            const c = line.split(';').map(s => s.replace(/"/g, '').trim());
+                            if (c.length >= 3) {
+                                const fecha = normalizarFechaImportacion(c[0]);
+                                const agente = c[1] || "Agente / Banco IIBB";
+                                const importe = parsearImporteImportacion(c[2] || c[3] || 0);
+                                const tipo = c[4] && c[4].toUpperCase().includes('BANC') ? 'RETENCION BANCARIA' : 'RETENCION';
+                                if (importe !== 0) {
+                                    emp.retencionesIibb.push({ id: Date.now() + agregados + Math.random(), fecha, tipo, agente, importe });
+                                    agregados++;
+                                }
+                            }
+                        });
+                    } else {
+                        const buffer = evt.target.result;
+                        const textPreview = new TextDecoder("utf-8").decode(new Uint8Array(buffer.slice(0, 500)));
+                        let sheetsMap = {};
+
+                        if (textPreview.includes("<?xml") && textPreview.includes("schemas-microsoft-com:office:spreadsheet")) {
+                            const fullXml = new TextDecoder("utf-8").decode(new Uint8Array(buffer));
+                            sheetsMap = parsearXmlSpreadsheet2003(fullXml);
+                        } else {
+                            const data = new Uint8Array(buffer);
+                            const workbook = XLSX.read(data, {type: 'array'});
+                            workbook.SheetNames.forEach(sn => {
+                                sheetsMap[sn] = XLSX.utils.sheet_to_json(workbook.Sheets[sn], {defval: ""});
+                            });
+                        }
+
+                        Object.keys(sheetsMap).forEach(sheetName => {
+                            const json = sheetsMap[sheetName] || [];
+                            const sheetUpper = sheetName.toUpperCase();
+                            let countHoja = 0;
+
+                            json.forEach((row) => {
+                                let tipo = "RETENCION";
+                                if (sheetUpper.includes('DEVOLUC')) {
+                                    tipo = "DEVOLUCION BANCARIA";
+                                } else if (sheetUpper.includes('PERCEP')) {
+                                    tipo = "PERCEPCION";
+                                } else if (sheetUpper.includes('BANC')) {
+                                    tipo = "RETENCION BANCARIA";
+                                }
+
+                                let fechaRaw = row['Fecha'] ||
+                                    row['Fecha Ret./Perc.'] ||
+                                    row['Fecha Retencion'] ||
+                                    row['Fecha Retencion contrib.'] ||
+                                    row['Fecha Retencion agente'] ||
+                                    row['Fecha Percepcion contrib.'] ||
+                                    row['Fecha Percepcion Agente'] ||
+                                    row['Fecha depacho'] ||
+                                    row['Fecha despacho'] ||
+                                    "";
+
+                                if (!fechaRaw) {
+                                    for (let key in row) {
+                                        if (key.toLowerCase().includes('fecha') && row[key]) {
+                                            fechaRaw = row[key];
+                                            break;
+                                        }
+                                    }
+                                }
+                                const fecha = normalizarFechaImportacion(fechaRaw) || `${iibbAnio}-${iibbMes}-01`;
+
+                                let rawImporte = row['Importe'] ||
+                                    row['Importe Ret./Perc.'] ||
+                                    row['Importe contrib.'] ||
+                                    row['Importe percepcion agente'] ||
+                                    row['Importe retencion contrib.'] ||
+                                    row['Importe retencion agente'] ||
+                                    row['Importe devolucion contrib.'] ||
+                                    row['Importe devolucion agente'] ||
+                                    "";
+
+                                if (rawImporte === "" || rawImporte === null || rawImporte === undefined) {
+                                    for (let key in row) {
+                                        if (key.toLowerCase().includes('importe') && row[key] !== "") {
+                                            rawImporte = row[key];
+                                            break;
+                                        }
+                                    }
+                                }
+                                let importe = parsearImporteImportacion(rawImporte);
+
+                                if (importe !== 0 && tipo === "DEVOLUCION BANCARIA") {
+                                    importe = -Math.abs(importe);
+                                }
+
+                                let agente = (row['Agente'] ||
+                                    row['CUIT Agente Ret./Perc.'] ||
+                                    row['CUIT Agente'] ||
+                                    row['CUIT Banco'] ||
+                                    row['CUIT'] ||
+                                    row['Despacho'] ||
+                                    "Agente / CBU IIBB").toString().trim();
+
+                                if (row['CBU']) {
+                                    agente = `${agente} (CBU ${row['CBU']})`;
+                                } else if (row['Sucursal'] && row['Emision']) {
+                                    agente = `${agente} (Comp. ${row['Sucursal']}-${row['Emision']})`;
+                                }
+
+                                if (importe !== 0) {
+                                    emp.retencionesIibb.push({ id: Date.now() + agregados + Math.random(), fecha, tipo, agente, importe });
+                                    agregados++;
+                                    countHoja++;
+                                }
+                            });
+
+                            if (countHoja > 0) {
+                                hojasDetectadas.push(`${sheetName}: ${countHoja}`);
+                            }
+                        });
+                    }
+                    e.target.value = '';
+                    guardarEnLocalStorage();
+                    renderizarVista();
+                    const detalleHojas = hojasDetectadas.length ? `\nDetalle: ${hojasDetectadas.join(' | ')}` : '';
+                    alert(`Empresa: ${emp.razonSocial}\n¡Se importaron ${agregados} registros unificados de IIBB correctamente!${detalleHojas}`);
+                } catch (err) {
+                    console.error("Error al procesar archivo IIBB:", err);
+                    alert("Error al leer el archivo de Ingresos Brutos: " + err.message);
+                }
+            };
+            if (extension === 'csv') reader.readAsText(file, 'utf-8');
+            else reader.readAsArrayBuffer(file);
+        }
+
+        function eliminarRetencionIibb(id) {
+            const emp = obtenerEmpresaActual();
+            emp.retencionesIibb = emp.retencionesIibb.filter(r => r.id !== id);
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function ordenarIibbRetPor(campo) {
+            if (ordenIibbRet.campo === campo) { ordenIibbRet.asc = !ordenIibbRet.asc; }
+            else { ordenIibbRet.campo = campo; ordenIibbRet.asc = true; }
+            renderizarVista();
+        }
+
+        function renderIngresosBrutos(cont) {
+            const emp = obtenerEmpresaActual();
+
+            const ventasPeriodo = emp.comprobantes.filter(c => {
+                if (c.tipoOp !== 'VENTA' || !c.fecha) return false;
+                const partes = c.fecha.split('-');
+                return (partes.length === 3 && partes[1] === iibbMes && partes[0] === iibbAnio);
+            });
+
+            let baseImponibleTotalVentas = 0;
+            ventasPeriodo.forEach(c => {
+                baseImponibleTotalVentas += (c.netoTotal + c.exento + c.noGravado);
+            });
+
+            let baseImponibleJurisdiccion = baseImponibleTotalVentas;
+            if (emp.iibbRegimen === 'CONVENIO') {
+                baseImponibleJurisdiccion = baseImponibleTotalVentas * emp.iibbCoeficiente;
+            }
+
+            const impuestoDeterminado = baseImponibleJurisdiccion * (emp.iibbAlicuota / 100);
+
+            const retPercIibbPeriodo = (emp.retencionesIibb || []).filter(r => {
+                if (!r.fecha) return false;
+                const partes = r.fecha.split('-');
+                return (partes.length === 3 && partes[1] === iibbMes && partes[0] === iibbAnio);
+            });
+
+            let totalRetencionesIibb = 0;
+            let totalPercepcionesIibb = 0;
+            let totalBancariasIibb = 0;
+
+            retPercIibbPeriodo.forEach(r => {
+                if (r.tipo === 'RETENCION') totalRetencionesIibb += r.importe;
+                else if (r.tipo === 'PERCEPCION') totalPercepcionesIibb += r.importe;
+                else if (r.tipo === 'RETENCION BANCARIA' || r.tipo === 'DEVOLUCION BANCARIA') totalBancariasIibb += r.importe;
+            });
+
+            const totalDeducciones = totalRetencionesIibb + totalPercepcionesIibb + totalBancariasIibb + emp.iibbSaldoAnt;
+            const resultadoLiquidacion = impuestoDeterminado - totalDeducciones;
+
+            let etiquetaSaldoIibb = resultadoLiquidacion >= 0 ? "IMPUESTO A PAGAR (IIBB)" : "SALDO A FAVOR REGISTRADO";
+            let montoResultadoAbs = Math.abs(resultadoLiquidacion);
+
+            let listaRetIibb = [...(emp.retencionesIibb || [])];
+            listaRetIibb.sort((a, b) => {
+                let valA = a[ordenIibbRet.campo], valB = b[ordenIibbRet.campo];
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                return valA < valB ? (ordenIibbRet.asc ? -1 : 1) : (valA > valB ? (ordenIibbRet.asc ? 1 : -1) : 0);
+            });
+            let arrowIibb = (campo) => ordenIibbRet.campo !== campo ? '' : (ordenIibbRet.asc ? ' ▲' : ' ▼');
+
+            let filasRetIibb = listaRetIibb.map(r => `
+                <tr class="hover:bg-gray-50 text-xs sm:text-sm">
+                    <td class="px-3 py-2.5 num-row">${formatearFechaAr(r.fecha)}</td>
+                    <td class="px-3 py-2.5 font-bold whitespace-nowrap ${r.tipo === 'RETENCION' ? 'text-blue-700' : (r.tipo === 'PERCEPCION' ? 'text-purple-700' : 'text-emerald-700')}">${r.tipo}</td>
+                    <td class="px-3 py-2.5">${r.agente}</td>
+                    <td class="px-3 py-2.5 text-right font-bold num-row">$ ${fmtMoneda(r.importe)}</td>
+                    <td class="px-3 py-2.5 text-center">
+                        <button onclick="eliminarRetencionIibb(${r.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+
+            cont.innerHTML = `
+                <div class="space-y-4 sm:space-y-6">
+                    <div class="flex flex-wrap justify-between items-center bg-white p-3 sm:p-4 rounded-xl border shadow-sm gap-3">
+                        <div>
+                            <h2 class="text-lg sm:text-xl font-bold text-gray-800">Módulo Impositivo - Ingresos Brutos (IIBB)</h2>
+                            <p class="text-xs text-gray-500">Determinación de IIBB Locales y Convenio Multilateral</p>
+                        </div>
+                        <div>
+                            <input type="file" id="fileIibbUnico" accept=".csv, .xlsx, .xls" class="hidden" onchange="procesarArchivoIibbUnificado(event)">
+                            <button onclick="document.getElementById('fileIibbUnico').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5">
+                                <i data-lucide="upload" class="w-4 h-4"></i><span>+ Importar Unificado (Ret./Perc./Banc.)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-5">
+                        <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-3">
+                            <div>
+                                <span class="block text-[11px] font-bold text-gray-500 uppercase">Régimen Contribuyente:</span>
+                                <select onchange="obtenerEmpresaActual().iibbRegimen=this.value; guardarInmediato();" class="text-xs border border-gray-300 bg-gray-50 rounded-lg p-1.5 font-bold text-gray-800 mt-1">
+                                    <option value="LOCAL" ${emp.iibbRegimen==='LOCAL'?'selected':''}>Local (Directo)</option>
+                                    <option value="CONVENIO" ${emp.iibbRegimen==='CONVENIO'?'selected':''}>Convenio Multilateral</option>
+                                </select>
+                            </div>
+
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold text-gray-500 uppercase">Mes:</span>
+                                <select onchange="iibbMes=this.value; renderizarVista();" class="text-xs border rounded p-1.5 font-bold">
+                                    <option value="01" ${iibbMes==='01'?'selected':''}>Enero</option>
+                                    <option value="02" ${iibbMes==='02'?'selected':''}>Febrero</option>
+                                    <option value="03" ${iibbMes==='03'?'selected':''}>Marzo</option>
+                                    <option value="04" ${iibbMes==='04'?'selected':''}>Abril</option>
+                                    <option value="05" ${iibbMes==='05'?'selected':''}>Mayo</option>
+                                    <option value="06" ${iibbMes==='06'?'selected':''}>Junio</option>
+                                    <option value="07" ${iibbMes==='07'?'selected':''}>Julio</option>
+                                    <option value="08" ${iibbMes==='08'?'selected':''}>Agosto</option>
+                                    <option value="09" ${iibbMes==='09'?'selected':''}>Septiembre</option>
+                                    <option value="10" ${iibbMes==='10'?'selected':''}>Octubre</option>
+                                    <option value="11" ${iibbMes==='11'?'selected':''}>Noviembre</option>
+                                    <option value="12" ${iibbMes==='12'?'selected':''}>Diciembre</option>
+                                </select>
+                                <span class="text-xs font-bold text-gray-500 uppercase">Año:</span>
+                                <input type="number" value="${iibbAnio}" onchange="iibbAnio=this.value; renderizarVista();" class="w-20 text-xs border rounded p-1.5 font-bold">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-3.5 sm:p-4 rounded-xl border">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Ventas Totales Netas (Período)</label>
+                                <div class="w-full bg-white border border-gray-300 rounded p-2 text-sm font-black text-gray-900 num-row">$ ${fmtMoneda(baseImponibleTotalVentas)}</div>
+                            </div>
+                            ${emp.iibbRegimen === 'CONVENIO' ? `
+                            <div>
+                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Coeficiente Unificado</label>
+                                <input type="text" inputmode="decimal" value="${fmtMoneda(emp.iibbCoeficiente, 4)}" onchange="obtenerEmpresaActual().iibbCoeficiente=parsearNumeroAr(this.value); guardarInmediato();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white num-row">
+                            </div>
+                            ` : ''}
+                            <div>
+                                <label class="block text-xs font-bold text-blue-900 uppercase mb-1">Alícuota Actividad (%)</label>
+                                <input type="text" inputmode="decimal" value="${fmtMoneda(emp.iibbAlicuota, 2)}" onchange="obtenerEmpresaActual().iibbAlicuota=parsearNumeroAr(this.value); guardarInmediato();" class="w-full border rounded p-2 text-sm font-bold text-blue-900 bg-white num-row">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 text-xs sm:text-sm">
+                            <div class="space-y-2.5 bg-gray-50 p-3.5 sm:p-4 rounded-xl border">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-2">Base Imponible e Impuesto</h4>
+                                <div class="flex justify-between gap-2">
+                                    <span class="font-semibold text-gray-700">Base Imponible Total:</span>
+                                    <span class="font-bold text-gray-900 num-row">$ ${fmtMoneda(baseImponibleTotalVentas)}</span>
+                                </div>
+                                ${emp.iibbRegimen === 'CONVENIO' ? `
+                                <div class="flex justify-between gap-2">
+                                    <span class="font-semibold text-gray-700">Base Jurisdiccional (${fmtMoneda(emp.iibbCoeficiente * 100, 2)}%):</span>
+                                    <span class="font-bold text-blue-900 num-row">$ ${fmtMoneda(baseImponibleJurisdiccion)}</span>
+                                </div>
+                                ` : ''}
+                                <div class="flex justify-between gap-2 border-t pt-2">
+                                    <span class="font-bold text-gray-900 uppercase">Impuesto Determinado (${fmtMoneda(emp.iibbAlicuota, 2)}%):</span>
+                                    <span class="font-black text-blue-900 num-row">$ ${fmtMoneda(impuestoDeterminado)}</span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2.5 bg-gray-50 p-3.5 sm:p-4 rounded-xl border">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-2">Deducciones y Saldo Anterior</h4>
+                                <div class="flex justify-between gap-2">
+                                    <span class="font-semibold text-gray-700">Retenciones IIBB:</span>
+                                    <span class="font-bold text-blue-700 num-row">$ ${fmtMoneda(totalRetencionesIibb)}</span>
+                                </div>
+                                <div class="flex justify-between gap-2">
+                                    <span class="font-semibold text-gray-700">Percepciones IIBB:</span>
+                                    <span class="font-bold text-purple-700 num-row">$ ${fmtMoneda(totalPercepcionesIibb)}</span>
+                                </div>
+                                <div class="flex justify-between gap-2">
+                                    <span class="font-semibold text-gray-700">Retenciones Bancarias:</span>
+                                    <span class="font-bold text-emerald-700 num-row">$ ${fmtMoneda(totalBancariasIibb)}</span>
+                                </div>
+                                <div class="flex justify-between items-center gap-2 border-b pb-2">
+                                    <span class="font-semibold text-gray-700">Saldo a Favor Ant. ($):</span>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(emp.iibbSaldoAnt)}" onchange="obtenerEmpresaActual().iibbSaldoAnt=parsearNumeroAr(this.value); guardarInmediato();" class="w-28 text-right border rounded p-1 font-bold text-red-600 bg-white num-row">
+                                </div>
+                                <div class="flex justify-between gap-2 pt-1">
+                                    <span class="font-bold uppercase text-gray-900">Total Deducciones:</span>
+                                    <span class="font-bold text-emerald-700 num-row">$ ${fmtMoneda(totalDeducciones)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900 text-white p-4 rounded-xl flex flex-wrap justify-between items-center shadow gap-2">
+                            <div>
+                                <p class="text-[11px] text-slate-400 uppercase font-semibold">Resultado Liquidación IIBB (${emp.iibbRegimen})</p>
+                                <h4 class="text-sm sm:text-lg font-black tracking-wider ${resultadoLiquidacion >= 0 ? 'text-amber-400' : 'text-emerald-400'}">${etiquetaSaldoIibb}</h4>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xl sm:text-2xl font-black num-row">$ ${fmtMoneda(montoResultadoAbs)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl border overflow-x-auto">
+                        <div class="p-3 sm:p-4 border-b bg-gray-50 font-bold text-xs sm:text-sm text-gray-700">Listado de Retenciones, Percepciones y Bancarias de IIBB</div>
+                        <table class="w-full text-left mobile-compact-table">
+                            <thead class="bg-gray-50 text-[11px] text-gray-500 uppercase select-none whitespace-nowrap">
+                                <tr>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('fecha')">FECHA${arrowIibb('fecha')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('tipo')">TIPO${arrowIibb('tipo')}</th>
+                                    <th class="p-3 cursor-pointer" onclick="ordenarIibbRetPor('agente')">AGENTE / BANCO${arrowIibb('agente')}</th>
+                                    <th class="p-3 text-right cursor-pointer" onclick="ordenarIibbRetPor('importe')">IMPORTE${arrowIibb('importe')}</th>
+                                    <th class="p-3 text-center">ACCIÓN</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">${filasRetIibb || `<tr><td colspan="5" class="text-center py-6 text-gray-400">No hay registros de IIBB importados.</td></tr>`}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function calcularEscalaProgresiva(baseImponible, tablaTramos) {
+            if (baseImponible <= 0) return { impuesto: 0, tramo: tablaTramos[0], excedente: 0 };
+            for (let i = 0; i < tablaTramos.length; i++) {
+                const t = tablaTramos[i];
+                if (baseImponible > t.desde && baseImponible <= t.hasta) {
+                    const excedente = baseImponible - t.desde;
+                    const impuesto = t.fijo + (excedente * t.alicuota);
+                    return { impuesto, tramo: t, excedente };
+                }
+            }
+            const ultimo = tablaTramos[tablaTramos.length - 1];
+            const excedente = baseImponible - ultimo.desde;
+            return { impuesto: ultimo.fijo + (excedente * ultimo.alicuota), tramo: ultimo, excedente };
+        }
+
+        function actualizarGananciasField(path, val, mode = 'number') {
+            const emp = obtenerEmpresaActual();
+            const cfg = emp.gananciasConfig;
+            let parsedVal = val;
+
+            if (mode === 'bool') {
+                parsedVal = Boolean(val);
+            } else if (mode === 'string') {
+                parsedVal = String(val);
+            } else if (mode === 'int') {
+                parsedVal = parseInt(val, 10) || 0;
+            } else {
+                parsedVal = parsearNumeroAr(val);
+            }
+
+            if (path.startsWith('rentas.')) {
+                const key = path.split('.')[1];
+                cfg.rentas[key] = parsedVal;
+            } else {
+                cfg[path] = parsedVal;
+            }
+            if (path === 'tipoSujeto') actualizarSelectorEmpresas();
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function agregarDeduccionGeneralGanancias(e) {
+            e.preventDefault();
+            const emp = obtenerEmpresaActual();
+            const tipoId = document.getElementById('ganDedTipo').value;
+            const descripcion = document.getElementById('ganDedDesc').value.trim();
+            const importe = parsearNumeroAr(document.getElementById('ganDedMonto').value);
+
+            if (importe <= 0) {
+                alert("Ingresá un importe mayor a cero.");
+                return;
+            }
+            const meta = TIPOS_DEDUCCION_GENERAL.find(t => t.id === tipoId) || TIPOS_DEDUCCION_GENERAL[0];
+            emp.gananciasConfig.deduccionesGenerales.push({
+                id: Date.now(),
+                tipoId,
+                tipoLabel: meta.label,
+                descripcion: descripcion || meta.label,
+                importe
+            });
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function eliminarDeduccionGeneralGanancias(id) {
+            const emp = obtenerEmpresaActual();
+            emp.gananciasConfig.deduccionesGenerales = emp.gananciasConfig.deduccionesGenerales.filter(d => d.id !== id);
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+
+        function renderGanancias(cont) {
+            const emp = obtenerEmpresaActual();
+            const cfg = emp.gananciasConfig;
+
+            const totalPagosCuenta = (Number(cfg.retencionesSufridas) || 0) +
+                                     (Number(cfg.percepcionesSufridas) || 0) +
+                                     (Number(cfg.anticiposIngresados) || 0) +
+                                     (Number(cfg.saldoFavorAnterior) || 0);
+
+            if (cfg.tipoSujeto === 'PH') {
+                const anio = cfg.anio || "2026";
+                const params = PARAMS_GANANCIAS_ARCA[anio] || PARAMS_GANANCIAS_ARCA["2026"];
+
+                const compsAnio = emp.comprobantes.filter(c => c.fecha && c.fecha.startsWith(anio));
+                let ventasAnioComps = 0, comprasAnioComps = 0;
+                compsAnio.forEach(c => {
+                    const sub = c.netoTotal + c.exento + c.noGravado;
+                    if (c.tipoOp === 'VENTA') ventasAnioComps += sub;
+                    else if (c.tipoOp === 'COMPRA') comprasAnioComps += sub;
+                });
+
+                const r = cfg.rentas;
+                const netoCat1 = (Number(r.cat1Ingresos) || 0) - (Number(r.cat1Gastos) || 0);
+                const netoCat2 = (Number(r.cat2Ingresos) || 0) - (Number(r.cat2Gastos) || 0);
+
+                const ingCat3 = (cfg.vincularComprobantes3ra ? ventasAnioComps : 0) + (Number(r.cat3IngresosManual) || 0);
+                const gasCat3 = (cfg.vincularComprobantes3ra ? comprasAnioComps : 0) + (Number(r.cat3GastosManual) || 0);
+                const netoCat3 = ingCat3 - gasCat3;
+
+                const netoCat4 = (Number(r.cat4Ingresos) || 0) - (Number(r.cat4Gastos) || 0);
+
+                const gananciaNetaAntesDed = netoCat1 + netoCat2 + netoCat3 + netoCat4;
+
+                let totalDedGeneralesDeclaradas = 0;
+                let totalDedGeneralesComputables = 0;
+
+                const baseTope5Porc = Math.max(0, gananciaNetaAntesDed);
+                const filasDedGen = cfg.deduccionesGenerales.map(d => {
+                    const meta = TIPOS_DEDUCCION_GENERAL.find(t => t.id === d.tipoId) || { topeTipo: 'SIN_TOPE' };
+                    let topeAplicable = Infinity;
+                    if (meta.topeTipo === '5_GNI') topeAplicable = baseTope5Porc * 0.05;
+                    else if (meta.topeTipo === 'SEGURO') topeAplicable = params.topeSeguroVida;
+                    else if (meta.topeTipo === 'GNI') topeAplicable = params.gni;
+                    else if (meta.topeTipo === '40_GNI') topeAplicable = params.gni * 0.40;
+                    else if (meta.topeTipo === 'HIPOTECARIO') topeAplicable = params.topeHipotecario;
+                    else if (meta.topeTipo === 'SEPELIO') topeAplicable = params.topeSepelio;
+
+                    const computable = Math.min(d.importe, topeAplicable);
+                    const excedido = d.importe > topeAplicable;
+                    totalDedGeneralesDeclaradas += d.importe;
+                    totalDedGeneralesComputables += computable;
+
+                    return `
+                        <tr class="border-b hover:bg-gray-50 text-xs">
+                            <td class="p-2.5 font-semibold text-gray-800">${d.tipoLabel}<br><span class="text-[11px] text-gray-400 font-normal">${d.descripcion}</span></td>
+                            <td class="p-2.5 text-right num-row">$ ${fmtMoneda(d.importe)}</td>
+                            <td class="p-2.5 text-right font-bold num-row ${excedido ? 'text-amber-700' : 'text-emerald-700'}">$ ${fmtMoneda(computable)} ${excedido ? '<span class="block text-[10px] font-normal">(Topeado)</span>' : ''}</td>
+                            <td class="p-2.5 text-center">
+                                <button onclick="eliminarDeduccionGeneralGanancias(${d.id})" class="text-red-500 hover:text-red-700 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                const gananciaNetaEjercicio = gananciaNetaAntesDed - totalDedGeneralesComputables;
+
+                const dedGni = params.gni;
+                const dedConyuge = cfg.conyuge ? params.conyuge : 0;
+                const dedHijos = (parseInt(cfg.hijos) || 0) * params.hijo;
+                const dedHijosInc = (parseInt(cfg.hijosIncapacitados) || 0) * params.hijoIncapacitado;
+
+                let dedEspecialBase = 0;
+                const tieneRentaTrabajo = (netoCat3 > 0 || netoCat4 > 0);
+                if (cfg.tipoDedEspecial === 'AUTONOMO') dedEspecialBase = params.dedEspAutonomo;
+                else if (cfg.tipoDedEspecial === 'EMPRENDEDOR') dedEspecialBase = params.dedEspEmprendedor;
+                else if (cfg.tipoDedEspecial === 'REL_DEP') dedEspecialBase = params.dedEspRelDep;
+
+                const doceavaParte = cfg.tipoDedEspecial === 'REL_DEP'
+                    ? (dedGni + dedConyuge + dedHijos + dedHijosInc + dedEspecialBase) / 12
+                    : 0;
+
+                const totalDedPersonalesTeoricas = dedGni + dedConyuge + dedHijos + dedHijosInc + dedEspecialBase + doceavaParte;
+                const totalDedPersonalesComputables = gananciaNetaEjercicio > 0
+                    ? Math.min(gananciaNetaEjercicio, totalDedPersonalesTeoricas)
+                    : 0;
+
+                const gananciaNetaSujetaImpuesto = Math.max(0, gananciaNetaEjercicio - totalDedPersonalesComputables);
+
+                const resEscala = calcularEscalaProgresiva(gananciaNetaSujetaImpuesto, params.escalaPH);
+                const impuestoDeterminado = resEscala.impuesto;
+                const alicuotaEfectiva = gananciaNetaEjercicio > 0 ? (impuestoDeterminado / gananciaNetaEjercicio) * 100 : 0;
+
+                const saldoFinal = impuestoDeterminado - totalPagosCuenta;
+
+                cont.innerHTML = `
+                    <div class="space-y-4 sm:space-y-6">
+                        <div class="bg-white p-3.5 sm:p-5 rounded-xl border shadow-sm flex flex-wrap justify-between items-center gap-3">
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <h2 class="text-lg sm:text-xl font-bold text-gray-900">Estimación Impuesto a las Ganancias</h2>
+                                    <span class="bg-blue-100 text-blue-800 text-[11px] font-black px-2.5 py-0.5 rounded-full">ARCA ${anio}</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-0.5">Persona Humana / Sucesión Indivisa — Período Fiscal 01/01/${anio} al 31/12/${anio}</p>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase">Tipo Sujeto</label>
+                                    <select onchange="actualizarGananciasField('tipoSujeto', this.value, 'string')" class="text-xs border-2 border-blue-600 bg-blue-50 text-blue-900 rounded-lg p-1.5 font-bold">
+                                        <option value="PH" selected>Persona Humana (PH)</option>
+                                        <option value="PJ">Persona Jurídica (PJ - Sociedades)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase">Año Fiscal</label>
+                                    <select onchange="actualizarGananciasField('anio', this.value, 'string')" class="text-xs border rounded-lg p-1.5 font-bold bg-gray-50">
+                                        <option value="2026" ${anio==='2026'?'selected':''}>2026 (Vigente ARCA)</option>
+                                        <option value="2025" ${anio==='2025'?'selected':''}>2025 (Anual ARCA)</option>
+                                    </select>
+                                </div>
+                                <button onclick="window.print()" class="bg-gray-900 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1 mt-3 sm:mt-4 no-print">
+                                    <i data-lucide="printer" class="w-3.5 h-3.5"></i><span>PDF</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
+                            <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
+                                <div>
+                                    <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase">1. Determinación de Rentas por Categoría</h3>
+                                    <p class="text-xs text-gray-500">Ingresos gravados menos gastos necesarios para obtener, mantener y conservar la fuente</p>
+                                </div>
+                                <label class="flex items-center space-x-2 text-xs font-bold text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 cursor-pointer">
+                                    <input type="checkbox" ${cfg.vincularComprobantes3ra ? 'checked' : ''} onchange="actualizarGananciasField('vincularComprobantes3ra', this.checked, 'bool')">
+                                    <span>Sumar Comprobantes ${anio} en 3° Cat.</span>
+                                </label>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs mobile-compact-table">
+                                    <thead class="bg-gray-50 text-gray-600 uppercase font-bold border-b whitespace-nowrap">
+                                        <tr>
+                                            <th class="p-2.5">Categoría de Renta (LIG)</th>
+                                            <th class="p-2.5 text-right">Ingresos Gravados ($)</th>
+                                            <th class="p-2.5 text-right">Gastos Deducibles ($)</th>
+                                            <th class="p-2.5 text-right">Resultado Neto ($)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y">
+                                        <tr>
+                                            <td class="p-2.5 font-bold text-gray-800">1° Categoría <span class="block text-[11px] font-normal text-gray-500">Renta del Suelo (Alquileres inmuebles urbanos/rurales)</span></td>
+                                            <td class="p-2.5 text-right"><input type="text" inputmode="decimal" value="${fmtMoneda(r.cat1Ingresos)}" onchange="actualizarGananciasField('rentas.cat1Ingresos', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold num-row"></td>
+                                            <td class="p-2.5 text-right"><input type="text" inputmode="decimal" value="${fmtMoneda(r.cat1Gastos)}" onchange="actualizarGananciasField('rentas.cat1Gastos', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold num-row"></td>
+                                            <td class="p-2.5 text-right font-bold num-row ${netoCat1 >= 0 ? 'text-gray-900' : 'text-red-600'}">$ ${fmtMoneda(netoCat1)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-2.5 font-bold text-gray-800">2° Categoría <span class="block text-[11px] font-normal text-gray-500">Renta de Capitales (Intereses, regalías, rentas vitalicias)</span></td>
+                                            <td class="p-2.5 text-right"><input type="text" inputmode="decimal" value="${fmtMoneda(r.cat2Ingresos)}" onchange="actualizarGananciasField('rentas.cat2Ingresos', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold num-row"></td>
+                                            <td class="p-2.5 text-right"><input type="text" inputmode="decimal" value="${fmtMoneda(r.cat2Gastos)}" onchange="actualizarGananciasField('rentas.cat2Gastos', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold num-row"></td>
+                                            <td class="p-2.5 text-right font-bold num-row ${netoCat2 >= 0 ? 'text-gray-900' : 'text-red-600'}">$ ${fmtMoneda(netoCat2)}</td>
+                                        </tr>
+                                        <tr class="bg-blue-50/30">
+                                            <td class="p-2.5 font-bold text-blue-900">
+                                                3° Categoría <span class="block text-[11px] font-normal text-gray-600">Beneficios Empresariales / Explotación Unipersonal</span>
+                                                ${cfg.vincularComprobantes3ra ? `<span class="text-[10px] text-emerald-700 font-semibold num-row">Comprobantes ${anio}: Vtas $ ${fmtMoneda(ventasAnioComps)} | Cpras $ ${fmtMoneda(comprasAnioComps)}</span>` : ''}
+                                            </td>
+                                            <td class="p-2.5 text-right">
+                                                <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat3IngresosManual)}" onchange="actualizarGananciasField('rentas.cat3IngresosManual', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold bg-white num-row" title="Ingresos adicionales manuales">
+                                                ${cfg.vincularComprobantes3ra ? `<span class="block text-[10px] text-gray-500 num-row">Total: $ ${fmtMoneda(ingCat3)}</span>` : ''}
+                                            </td>
+                                            <td class="p-2.5 text-right">
+                                                <input type="text" inputmode="decimal" value="${fmtMoneda(r.cat3GastosManual)}" onchange="actualizarGananciasField('rentas.cat3GastosManual', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold bg-white num-row" title="Gastos adicionales manuales">
+                                                ${cfg.vincularComprobantes3ra ? `<span class="block text-[10px] text-gray-500 num-row">Total: $ ${fmtMoneda(gasCat3)}</span>` : ''}
+                                            </td>
+                                            <td class="p-2.5 text-right font-bold num-row ${netoCat3 >= 0 ? 'text-blue-900' : 'text-red-600'}">$ ${fmtMoneda(netoCat3)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-2.5 font-bold text-gray-800">4° Categoría <span class="block text-[11px] font-normal text-gray-500">Trabajo Personal (Honorarios prof., sueldos, jubilaciones)</span></td>
+                                            <td class="p-2.5 text-right"><input type="text" inputmode="decimal" value="${fmtMoneda(r.cat4Ingresos)}" onchange="actualizarGananciasField('rentas.cat4Ingresos', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold num-row"></td>
+                                            <td class="p-2.5 text-right"><input type="text" inputmode="decimal" value="${fmtMoneda(r.cat4Gastos)}" onchange="actualizarGananciasField('rentas.cat4Gastos', this.value)" class="w-28 sm:w-36 text-right border rounded p-1.5 font-semibold num-row"></td>
+                                            <td class="p-2.5 text-right font-bold num-row ${netoCat4 >= 0 ? 'text-gray-900' : 'text-red-600'}">$ ${fmtMoneda(netoCat4)}</td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot class="bg-gray-100 font-black border-t-2 border-gray-800">
+                                        <tr>
+                                            <td colspan="3" class="p-2.5 uppercase text-gray-800">Ganancia Neta de las 4 Categorías (Antes de Ded. Generales):</td>
+                                            <td class="p-2.5 text-right text-blue-900 num-row">$ ${fmtMoneda(gananciaNetaAntesDed)}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
+                            <div class="border-b pb-3">
+                                <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase">2. Deducciones Generales (Art. 85 LIG)</h3>
+                                <p class="text-xs text-gray-500">Cargá tus deducciones del período; el sistema aplica automáticamente los topes vigentes de ARCA ${anio} y las guarda en tu perfil</p>
+                            </div>
+
+                            <form onsubmit="agregarDeduccionGeneralGanancias(event)" class="grid grid-cols-1 md:grid-cols-12 gap-2.5 bg-gray-50 p-3 rounded-xl border no-print">
+                                <div class="md:col-span-5">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Concepto Deducible ARCA</label>
+                                    <select id="ganDedTipo" class="w-full border rounded-lg p-2 text-xs font-semibold bg-white">
+                                        ${TIPOS_DEDUCCION_GENERAL.map(t => `<option value="${t.id}">${t.label}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="md:col-span-4">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Detalle / Comprobante</label>
+                                    <input type="text" id="ganDedDesc" placeholder="Ej: OSDE Plan 310 / Autónomos Cat. II" class="w-full border rounded-lg p-2 text-xs bg-white">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Importe Anual ($)</label>
+                                    <input type="text" inputmode="decimal" id="ganDedMonto" required placeholder="0,00" onblur="if(this.value) this.value=fmtMoneda(parsearNumeroAr(this.value))" class="w-full border rounded-lg p-2 text-xs font-bold text-right bg-white num-row">
+                                </div>
+                                <div class="md:col-span-1 flex items-end">
+                                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-2 rounded-lg text-xs shadow flex items-center justify-center">
+                                        <i data-lucide="plus" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs mobile-compact-table">
+                                    <thead class="bg-gray-50 text-gray-500 uppercase font-bold border-b whitespace-nowrap">
+                                        <tr>
+                                            <th class="p-2.5">Concepto / Detalle</th>
+                                            <th class="p-2.5 text-right">Importe Cargado</th>
+                                            <th class="p-2.5 text-right">Importe Computable (c/ Tope)</th>
+                                            <th class="p-2.5 text-center">Quitar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${filasDedGen || `<tr><td colspan="4" class="text-center py-4 text-gray-400">No hay deducciones generales cargadas para este contribuyente.</td></tr>`}
+                                    </tbody>
+                                    <tfoot class="bg-gray-50 font-bold border-t">
+                                        <tr>
+                                            <td class="p-2.5 uppercase">Total Deducciones Generales Computables:</td>
+                                            <td class="p-2.5 text-right text-gray-500 num-row">$ ${fmtMoneda(totalDedGeneralesDeclaradas)}</td>
+                                            <td class="p-2.5 text-right text-emerald-700 num-row">- $ ${fmtMoneda(totalDedGeneralesComputables)}</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
+                            <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
+                                <div>
+                                    <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase">3. Deducciones Personales (Art. 30 LIG - Tabla ARCA ${anio})</h3>
+                                    <p class="text-xs text-gray-500">Importes anuales oficiales actualizados por IPC según normativa ARCA</p>
+                                </div>
+                                ${!tieneRentaTrabajo && cfg.tipoDedEspecial !== 'NINGUNA' ? `
+                                <span class="text-[11px] bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg font-semibold">
+                                    Nota: Deducción Especial requiere rentas de 3° (trabajo personal) o 4° Cat.
+                                </span>` : ''}
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-blue-50/60 p-3.5 rounded-xl border border-blue-200 text-xs">
+                                <div>
+                                    <label class="block font-bold text-blue-900 uppercase mb-1">Cónyuge / Unión Conv.</label>
+                                    <select onchange="actualizarGananciasField('conyuge', this.value === 'true', 'bool')" class="w-full border rounded p-2 font-bold bg-white">
+                                        <option value="false" ${!cfg.conyuge?'selected':''}>No deduce ($ 0,00)</option>
+                                        <option value="true" ${cfg.conyuge?'selected':''}>Sí ($ ${fmtMoneda(params.conyuge)})</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-blue-900 uppercase mb-1">Hijos Menores 18 años</label>
+                                    <input type="number" min="0" max="15" value="${cfg.hijos}" onchange="actualizarGananciasField('hijos', this.value, 'int')" class="w-full border rounded p-2 font-bold bg-white num-row">
+                                    <span class="text-[10px] text-gray-500 num-row">$ ${fmtMoneda(params.hijo)} c/u</span>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-blue-900 uppercase mb-1">Hijos Incapacitados</label>
+                                    <input type="number" min="0" max="15" value="${cfg.hijosIncapacitados}" onchange="actualizarGananciasField('hijosIncapacitados', this.value, 'int')" class="w-full border rounded p-2 font-bold bg-white num-row">
+                                    <span class="text-[10px] text-gray-500 num-row">$ ${fmtMoneda(params.hijoIncapacitado)} c/u</span>
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-blue-900 uppercase mb-1">Deducción Especial (Art. 30 c)</label>
+                                    <select onchange="actualizarGananciasField('tipoDedEspecial', this.value, 'string')" class="w-full border rounded p-2 font-bold bg-white">
+                                        <option value="AUTONOMO" ${cfg.tipoDedEspecial==='AUTONOMO'?'selected':''}>Autónomo ($ ${fmtMoneda(params.dedEspAutonomo)})</option>
+                                        <option value="EMPRENDEDOR" ${cfg.tipoDedEspecial==='EMPRENDEDOR'?'selected':''}>Nuevo Prof./Emp. ($ ${fmtMoneda(params.dedEspEmprendedor)})</option>
+                                        <option value="REL_DEP" ${cfg.tipoDedEspecial==='REL_DEP'?'selected':''}>Rel. Dep. / Jub. ($ ${fmtMoneda(params.dedEspRelDep)})</option>
+                                        <option value="NINGUNA" ${cfg.tipoDedEspecial==='NINGUNA'?'selected':''}>Sin Deducción Especial ($ 0,00)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-gray-50 p-3.5 rounded-xl border">
+                                <div class="space-y-1.5">
+                                    <div class="flex justify-between"><span>Ganancia No Imponible (Art. 30 a):</span><span class="font-bold num-row">$ ${fmtMoneda(dedGni)}</span></div>
+                                    <div class="flex justify-between"><span>Cargas de Familia (Art. 30 b):</span><span class="font-bold num-row">$ ${fmtMoneda(dedConyuge + dedHijos + dedHijosInc)}</span></div>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <div class="flex justify-between"><span>Deducción Especial + 12ava parte:</span><span class="font-bold num-row">$ ${fmtMoneda(dedEspecialBase + doceavaParte)}</span></div>
+                                    <div class="flex justify-between border-t pt-1 font-black text-blue-900"><span>Total Deducciones Personales Art. 30:</span><span class="num-row">$ ${fmtMoneda(totalDedPersonalesTeoricas)}</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-5">
+                            <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase border-b pb-3">4. Liquidación del Impuesto (Escala Art. 94 LIG) y Pagos a Cuenta</h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 text-xs sm:text-sm">
+                                <div class="space-y-2.5 bg-gray-50 p-4 rounded-xl border">
+                                    <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-1.5">Base Imponible y Escala Progresiva</h4>
+                                    <div class="flex justify-between gap-2"><span>Ganancia Neta del Ejercicio:</span><span class="font-bold num-row">$ ${fmtMoneda(gananciaNetaEjercicio)}</span></div>
+                                    <div class="flex justify-between gap-2"><span>(-) Deducciones Personales Computables:</span><span class="font-bold text-emerald-700 num-row">- $ ${fmtMoneda(totalDedPersonalesComputables)}</span></div>
+                                    <div class="flex justify-between gap-2 border-t pt-2 font-bold text-gray-900"><span>Ganancia Neta Sujeta a Impuesto:</span><span class="num-row">$ ${fmtMoneda(gananciaNetaSujetaImpuesto)}</span></div>
+                                    <div class="flex justify-between gap-2 text-xs text-gray-600">
+                                        <span>Tramo Escala Art. 94 (${fmtMoneda(resEscala.tramo.alicuota * 100, 0)}% s/ excedente):</span>
+                                        <span class="num-row">Fijo $ ${fmtMoneda(resEscala.tramo.fijo)} + ${fmtMoneda(resEscala.tramo.alicuota * 100, 0)}%</span>
+                                    </div>
+                                    <div class="flex justify-between gap-2 border-t pt-2 font-black text-blue-900 text-sm sm:text-base">
+                                        <span>IMPUESTO DETERMINADO (${fmtMoneda(alicuotaEfectiva, 2)}% ef.):</span>
+                                        <span class="num-row">$ ${fmtMoneda(impuestoDeterminado)}</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2.5 bg-gray-50 p-4 rounded-xl border">
+                                    <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-1.5">Pagos a Cuenta, Retenciones y Anticipos</h4>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Retenciones Ganancias Sufridas:</span>
+                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.retencionesSufridas)}" onchange="actualizarGananciasField('retencionesSufridas', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Percepciones Ganancias Sufridas:</span>
+                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.percepcionesSufridas)}" onchange="actualizarGananciasField('percepcionesSufridas', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Anticipos Ingresados Período:</span>
+                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.anticiposIngresados)}" onchange="actualizarGananciasField('anticiposIngresados', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Saldo a Favor Período Anterior:</span>
+                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.saldoFavorAnterior)}" onchange="actualizarGananciasField('saldoFavorAnterior', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between gap-2 border-t pt-2 font-bold text-emerald-700">
+                                        <span>Total Pagos a Cuenta:</span>
+                                        <span class="num-row">- $ ${fmtMoneda(totalPagosCuenta)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-900 text-white p-4 sm:p-5 rounded-xl flex flex-wrap justify-between items-center shadow gap-2">
+                                <div>
+                                    <p class="text-[11px] text-slate-400 uppercase font-semibold">Declaración Jurada Anual ${anio} — Persona Humana</p>
+                                    <h4 class="text-sm sm:text-lg font-black tracking-wider ${saldoFinal >= 0 ? 'text-amber-400' : 'text-emerald-400'}">
+                                        ${saldoFinal >= 0 ? 'SALDO A PAGAR GANANCIAS' : 'SALDO A FAVOR DE LIBRE DISPONIBILIDAD'}
+                                    </h4>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xl sm:text-3xl font-black num-row">$ ${fmtMoneda(Math.abs(saldoFinal))}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const mesCierre = cfg.pjMesCierre || "12";
+                const anioCierre = cfg.pjAnioCierre || cfg.anio || "2026";
+                const rangoEj = calcularRangoEjercicioPJ(mesCierre, anioCierre);
+
+                const anioTablaEscala = PARAMS_GANANCIAS_ARCA[rangoEj.anioInicio] ? rangoEj.anioInicio : (PARAMS_GANANCIAS_ARCA[rangoEj.anioCierre] ? rangoEj.anioCierre : "2026");
+                const params = PARAMS_GANANCIAS_ARCA[anioTablaEscala] || PARAMS_GANANCIAS_ARCA["2026"];
+
+                const compsEjercicio = emp.comprobantes.filter(c => c.fecha && c.fecha >= rangoEj.fechaInicio && c.fecha <= rangoEj.fechaFin);
+                let ventasEjComps = 0, comprasEjComps = 0;
+                compsEjercicio.forEach(c => {
+                    const sub = c.netoTotal + c.exento + c.noGravado;
+                    if (c.tipoOp === 'VENTA') ventasEjComps += sub;
+                    else if (c.tipoOp === 'COMPRA') comprasEjComps += sub;
+                });
+
+                const ingTotales = (cfg.vincularComprobantesPJ ? ventasEjComps : 0) + (Number(cfg.pjIngresosManual) || 0);
+                const gasTotales = (cfg.vincularComprobantesPJ ? comprasEjComps : 0) + (Number(cfg.pjCostosGastosManual) || 0);
+                const resultadoContable = ingTotales - gasTotales;
+
+                const ajustesImp = Number(cfg.pjAjustesImpositivos) || 0;
+                const ajusteInflacion = Number(cfg.pjAjusteInflacion) || 0;
+                const quebrantos = Math.max(0, Number(cfg.pjQuebrantosAnt) || 0);
+
+                const gananciaNetaAntesQueb = resultadoContable + ajustesImp + ajusteInflacion;
+                const quebrantosComputables = gananciaNetaAntesQueb > 0 ? Math.min(gananciaNetaAntesQueb, quebrantos) : 0;
+                const gananciaNetaImponible = Math.max(0, gananciaNetaAntesQueb - quebrantosComputables);
+
+                const resEscalaPJ = calcularEscalaProgresiva(gananciaNetaImponible, params.escalaPJ);
+                const impuestoDeterminadoPJ = resEscalaPJ.impuesto;
+                const alicuotaEfectivaPJ = gananciaNetaImponible > 0 ? (impuestoDeterminadoPJ / gananciaNetaImponible) * 100 : 0;
+
+                const dividendos = Math.max(0, Number(cfg.pjDividendosDistribuidos) || 0);
+                const impuestoDividendos7 = dividendos * 0.07;
+
+                const saldoFinalPJ = impuestoDeterminadoPJ - totalPagosCuenta;
+
+                cont.innerHTML = `
+                    <div class="space-y-4 sm:space-y-6">
+                        <div class="bg-white p-3.5 sm:p-5 rounded-xl border shadow-sm space-y-3">
+                            <div class="flex flex-wrap justify-between items-center gap-3">
+                                <div>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h2 class="text-lg sm:text-xl font-bold text-gray-900">Estimación Impuesto a las Ganancias</h2>
+                                        <span class="bg-purple-100 text-purple-900 text-[11px] font-black px-2.5 py-0.5 rounded-full">Sociedades Art. 73</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-0.5">
+                                        Ejercicio Fiscal: <strong class="text-purple-900 num-row">${formatearFechaAr(rangoEj.fechaInicio)} al ${formatearFechaAr(rangoEj.fechaFin)}</strong>
+                                        ${rangoEj.esIrregular ? ' (Ejercicio Irregular)' : ' (Año Calendario)'} — Tabla ARCA Ej. Iniciado en ${anioTablaEscala}
+                                    </p>
+                                </div>
+
+                                <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-gray-500 uppercase">Tipo Sujeto</label>
+                                        <select onchange="actualizarGananciasField('tipoSujeto', this.value, 'string')" class="text-xs border-2 border-purple-600 bg-purple-50 text-purple-900 rounded-lg p-1.5 font-bold">
+                                            <option value="PH">Persona Humana (PH)</option>
+                                            <option value="PJ" selected>Persona Jurídica (PJ - Sociedades)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-gray-500 uppercase">Mes Cierre Ej.</label>
+                                        <select onchange="actualizarGananciasField('pjMesCierre', this.value, 'string')" class="text-xs border rounded-lg p-1.5 font-bold bg-gray-50">
+                                            ${Object.keys(NOMBRES_MESES).map(m => `<option value="${m}" ${mesCierre===m?'selected':''}>${NOMBRES_MESES[m]} (${m})</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-gray-500 uppercase">Año Cierre</label>
+                                        <select onchange="actualizarGananciasField('pjAnioCierre', this.value, 'string')" class="text-xs border rounded-lg p-1.5 font-bold bg-gray-50">
+                                            <option value="2025" ${anioCierre==='2025'?'selected':''}>2025</option>
+                                            <option value="2026" ${anioCierre==='2026'?'selected':''}>2026</option>
+                                            <option value="2027" ${anioCierre==='2027'?'selected':''}>2027</option>
+                                        </select>
+                                    </div>
+                                    <button onclick="window.print()" class="bg-gray-900 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow flex items-center space-x-1 mt-3 sm:mt-4 no-print">
+                                        <i data-lucide="printer" class="w-3.5 h-3.5"></i><span>PDF</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-4">
+                            <div class="flex flex-wrap justify-between items-center border-b pb-3 gap-2">
+                                <div>
+                                    <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase">1. Determinación de la Ganancia Neta Imponible (Sociedad)</h3>
+                                    <p class="text-xs text-gray-500">Operaciones comprendidas entre el ${formatearFechaAr(rangoEj.fechaInicio)} y el ${formatearFechaAr(rangoEj.fechaFin)}</p>
+                                </div>
+                                <label class="flex items-center space-x-2 text-xs font-bold text-purple-900 bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-200 cursor-pointer">
+                                    <input type="checkbox" ${cfg.vincularComprobantesPJ ? 'checked' : ''} onchange="actualizarGananciasField('vincularComprobantesPJ', this.checked, 'bool')">
+                                    <span>Vincular Comprobantes del Ejercicio</span>
+                                </label>
+                            </div>
+
+                            ${cfg.vincularComprobantesPJ ? `
+                            <div class="bg-gray-50 p-3 rounded-lg border text-xs flex flex-wrap justify-between gap-2">
+                                <span class="font-semibold text-gray-700">Comprobantes en Ejercicio (${formatearFechaAr(rangoEj.fechaInicio)} - ${formatearFechaAr(rangoEj.fechaFin)}):</span>
+                                <span class="font-bold text-blue-900 num-row">Ventas Netas: $ ${fmtMoneda(ventasEjComps)} | Compras/Gastos Netos: $ ${fmtMoneda(comprasEjComps)}</span>
+                            </div>` : ''}
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                                <div class="bg-gray-50 p-3 rounded-xl border">
+                                    <label class="block font-bold text-gray-700 uppercase mb-1">Otros Ingresos / Ajuste Contable ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjIngresosManual)}" onchange="actualizarGananciasField('pjIngresosManual', this.value)" class="w-full border rounded p-2 font-bold bg-white num-row">
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded-xl border">
+                                    <label class="block font-bold text-gray-700 uppercase mb-1">Otros Gastos / Sueldos / Amort. ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjCostosGastosManual)}" onchange="actualizarGananciasField('pjCostosGastosManual', this.value)" class="w-full border rounded p-2 font-bold bg-white num-row">
+                                </div>
+                                <div class="bg-blue-50/70 p-3 rounded-xl border border-blue-200">
+                                    <label class="block font-bold text-blue-900 uppercase mb-1">Resultado Contable del Ejercicio</label>
+                                    <div class="w-full bg-white border rounded p-2 font-black text-sm num-row ${resultadoContable >= 0 ? 'text-blue-900' : 'text-red-600'}">$ ${fmtMoneda(resultadoContable)}</div>
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded-xl border">
+                                    <label class="block font-bold text-gray-700 uppercase mb-1">Ajustes Impositivos (+ / -)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjAjustesImpositivos)}" onchange="actualizarGananciasField('pjAjustesImpositivos', this.value)" class="w-full border rounded p-2 font-bold bg-white num-row">
+                                    <span class="text-[10px] text-gray-400">Positivo suma ganancia · Negativo resta</span>
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded-xl border">
+                                    <label class="block font-bold text-gray-700 uppercase mb-1">Ajuste por Inflación Impositivo (+ / -)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjAjusteInflacion)}" onchange="actualizarGananciasField('pjAjusteInflacion', this.value)" class="w-full border rounded p-2 font-bold bg-white num-row">
+                                </div>
+                                <div class="bg-gray-50 p-3 rounded-xl border">
+                                    <label class="block font-bold text-gray-700 uppercase mb-1">Quebrantos Impositivos Anteriores ($)</label>
+                                    <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjQuebrantosAnt)}" onchange="actualizarGananciasField('pjQuebrantosAnt', this.value)" class="w-full border rounded p-2 font-bold bg-white num-row">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl border shadow-sm p-4 sm:p-6 space-y-5">
+                            <h3 class="text-sm sm:text-base font-bold text-gray-900 uppercase border-b pb-3">2. Escala Sociedades (Art. 73 LIG) y Saldo a Pagar</h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 text-xs sm:text-sm">
+                                <div class="space-y-2.5 bg-gray-50 p-4 rounded-xl border">
+                                    <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-1.5">Determinación del Impuesto</h4>
+                                    <div class="flex justify-between gap-2"><span>Resultado Contable:</span><span class="font-bold num-row">$ ${fmtMoneda(resultadoContable)}</span></div>
+                                    <div class="flex justify-between gap-2"><span>(+) Ajustes Impositivos + AxI:</span><span class="font-bold num-row">$ ${fmtMoneda(ajustesImp + ajusteInflacion)}</span></div>
+                                    <div class="flex justify-between gap-2"><span>(-) Quebrantos Computados:</span><span class="font-bold text-emerald-700 num-row">- $ ${fmtMoneda(quebrantosComputables)}</span></div>
+                                    <div class="flex justify-between gap-2 border-t pt-2 font-bold text-gray-900"><span>Ganancia Neta Imponible:</span><span class="num-row">$ ${fmtMoneda(gananciaNetaImponible)}</span></div>
+                                    <div class="flex justify-between gap-2 text-xs text-gray-600">
+                                        <span>Tramo Art. 73 (${fmtMoneda(resEscalaPJ.tramo.alicuota * 100, 0)}% s/ excedente):</span>
+                                        <span class="num-row">Fijo $ ${fmtMoneda(resEscalaPJ.tramo.fijo)} + ${fmtMoneda(resEscalaPJ.tramo.alicuota * 100, 0)}%</span>
+                                    </div>
+                                    <div class="flex justify-between gap-2 border-t pt-2 font-black text-purple-950 text-sm sm:text-base">
+                                        <span>IMPUESTO DETERMINADO (${fmtMoneda(alicuotaEfectivaPJ, 2)}% ef.):</span>
+                                        <span class="num-row">$ ${fmtMoneda(impuestoDeterminadoPJ)}</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2.5 bg-gray-50 p-4 rounded-xl border">
+                                    <h4 class="text-xs font-bold text-gray-500 uppercase border-b pb-1.5">Pagos a Cuenta y Retención Dividendos (7%)</h4>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Retenciones Sufridas:</span>
+                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.retencionesSufridas)}" onchange="actualizarGananciasField('retencionesSufridas', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Percepciones Sufridas:</span>
+                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.percepcionesSufridas)}" onchange="actualizarGananciasField('percepcionesSufridas', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Anticipos Ingresados:</span>
+                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.anticiposIngresados)}" onchange="actualizarGananciasField('anticiposIngresados', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span>(-) Saldo a Favor Anterior:</span>
+                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.saldoFavorAnterior)}" onchange="actualizarGananciasField('saldoFavorAnterior', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between items-center gap-2 border-t pt-2">
+                                        <span class="text-xs font-semibold text-gray-700">Dividendos Distribuidos (7%):</span>
+                                        <input type="text" inputmode="decimal" value="${fmtMoneda(cfg.pjDividendosDistribuidos)}" onchange="actualizarGananciasField('pjDividendosDistribuidos', this.value)" class="w-28 sm:w-32 text-right border rounded p-1 font-bold bg-white num-row">
+                                    </div>
+                                    <div class="flex justify-between gap-2 text-xs text-purple-900 font-bold">
+                                        <span>Impuesto Cedular / Ret. Dividendos (7%):</span>
+                                        <span class="num-row">$ ${fmtMoneda(impuestoDividendos7)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-900 text-white p-4 sm:p-5 rounded-xl flex flex-wrap justify-between items-center shadow gap-2">
+                                <div>
+                                    <p class="text-[11px] text-slate-400 uppercase font-semibold">Ejercicio ${formatearFechaAr(rangoEj.fechaInicio)} al ${formatearFechaAr(rangoEj.fechaFin)} — Persona Jurídica</p>
+                                    <h4 class="text-sm sm:text-lg font-black tracking-wider ${saldoFinalPJ >= 0 ? 'text-amber-400' : 'text-emerald-400'}">
+                                        ${saldoFinalPJ >= 0 ? 'SALDO A PAGAR GANANCIAS (SOCIEDAD)' : 'SALDO A FAVOR DE LIBRE DISPONIBILIDAD'}
+                                    </h4>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xl sm:text-3xl font-black num-row">$ ${fmtMoneda(Math.abs(saldoFinalPJ))}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function guardarInmediato() {
+            guardarEnLocalStorage();
+            renderizarVista();
+        }
+    </script>
+</body>
+</html>
